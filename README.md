@@ -1,19 +1,72 @@
-# Bitcoin Wallet v58 – Android UI/resource cleanup
+B-Lite
 
-Based on v57.
+A lightweight, open-source Bitcoin wallet for Android, built with BitcoinJ.
 
-This revision applies a standards-based Android cleanup without changing the wallet feature set:
+Features
 
-- Replaced the legacy application logo and old logo assets with a new vector Bitcoin logo.
-- Uses theme-derived system colors instead of hard-coded UI colors.
-- Uses a dedicated white system-color notification icon for foreground-service notifications.
-- Removed the internal AppCompat `MenuBuilder` icon-forcing hack; the app now uses the public XML menu/inflater path.
-- Keeps Wallet Tools as a standard XML-defined submenu under the Toolbar menu.
-- Moved static Address Book row presentation into XML.
-- Moved static transaction-detail row and entry presentation into XML.
-- Moved static dialog content for Address Book, recovery password, recovery phrase, wallet diagnostics, WIF information, and RBF fee input into XML.
-- Reused the XML empty-state layout for dynamic empty lists.
-- Removed the old logo PNG/vector resources and their references.
-- Preserved dynamic UI generation only where the number of rows is data-driven at runtime (wallet selectors and send/watch lists).
+- Bitcoin Mainnet wallet
+- Create and load wallet
+- Wallet backup and restore
+- Send Bitcoin
+- Receive Bitcoin
+- Transaction history
+- Watch-only addresses
+- QR code support
+- Bitcoin network synchronization
+- Light and dark theme support using the Android system theme
 
-The source was structurally checked and all XML resources parse successfully. Gradle compilation was attempted, but this environment could not download Gradle 5.6.4 because `services.gradle.org` was unreachable. Therefore this package is not claimed as locally Gradle-compiled.
+Network
+
+B-Lite is designed for Bitcoin Mainnet.
+
+This application does not use Bitcoin Testnet or Signet.
+
+Technology
+
+- Android
+- Java
+- BitcoinJ
+- Gradle
+
+Watch-Only
+
+B-Lite supports watch-only Bitcoin addresses for monitoring balances and transactions.
+
+Watch-only addresses do not contain private keys and cannot be used to spend Bitcoin from the application.
+
+Build
+
+Clone the repository:
+
+git clone https://github.com/buli-net/B-Lite.git
+cd B-Lite
+
+Build the release APK:
+
+./gradlew assembleRelease
+
+The APK will be generated in:
+
+app/build/outputs/apk/release/
+
+Security
+
+Wallet data is stored locally on the device.
+
+Always keep a secure backup of your wallet before restoring, moving, or modifying wallet data.
+
+Never share your wallet backup, private keys, seed phrase, or other wallet credentials.
+
+Bitcoin transactions are irreversible. Always verify the recipient address and transaction amount before sending.
+
+License
+
+B-Lite is licensed under the Apache License 2.0.
+
+See ""LICENSE"" (LICENSE) for the complete license text.
+
+Disclaimer
+
+B-Lite is open-source software provided for informational and personal use.
+
+Use the application at your own risk and maintain secure backups of your wallet data.
