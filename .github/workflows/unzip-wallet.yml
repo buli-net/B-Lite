@@ -1,0 +1,38 @@
+name: Extract wallet.zip
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip wallet.zip
+        run: |
+          set -e
+
+          test -f wallet.zip
+          unzip -o wallet.zip -d .
+          rm -f wallet.zip
+
+      - name: Commit extracted source
+        run: |
+          git config user.name "buli-net"
+          git config user.email "hvlrcb@gmail.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Extract wallet source"
+          git push
