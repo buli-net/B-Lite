@@ -10,16 +10,32 @@ B-Lite is a lightweight, open-source Bitcoin wallet for Android, built with Bitc
 
 ✨ Features
 
-Feature| Description
-₿ Bitcoin Mainnet| Send and receive real Bitcoin
-👛 Wallet| Create and load a Bitcoin wallet
-🔐 Backup & Restore| Securely backup and restore wallet data
-📤 Send| Send Bitcoin with transaction details and fee information
-📥 Receive| Display Bitcoin addresses and QR codes
-👁️ Watch-Only| Monitor addresses without private keys
-📜 Transactions| View wallet transaction history
-🔄 Synchronization| Synchronize wallet data with the Bitcoin network
-🌓 System Theme| Automatically follows Android light/dark theme
+- ₿ Bitcoin Mainnet
+  Send and receive real Bitcoin.
+
+- 👛 Wallet
+  Create and load a Bitcoin wallet.
+
+- 🔐 Backup & Restore
+  Securely backup and restore wallet data.
+
+- 📤 Send
+  Send Bitcoin with transaction details and fee information.
+
+- 📥 Receive
+  Display Bitcoin addresses and QR codes.
+
+- 👁️ Watch-Only
+  Monitor Bitcoin addresses without private keys.
+
+- 📜 Transactions
+  View wallet transaction history.
+
+- 🔄 Synchronization
+  Synchronize wallet data with the Bitcoin network.
+
+- 🌓 System Theme
+  Automatically follows the Android light/dark system theme.
 
 ---
 
