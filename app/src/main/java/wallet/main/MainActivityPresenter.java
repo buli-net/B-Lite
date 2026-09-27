@@ -1006,7 +1006,7 @@ public class MainActivityPresenter
 
         WalletAppKit kit = walletAppKit;
 
-        if (!walletReady || kit == null) {
+        if (!walletReady || kit == null || restartInProgress.get()) {
             return;
         }
 
@@ -1375,6 +1375,19 @@ public class MainActivityPresenter
             WalletAppKit oldKit = null;
             Exception failure = null;
             File safetyCopy = null;
+
+            // A watch-only rescan replaces the running WalletAppKit. Serialize it with
+            // the normal watchdog/reconnect path so the kit cannot be restarted twice
+            // while the wallet file and SPV chain are being replaced.
+            if (!restartInProgress.compareAndSet(false, true)) {
+                failure = new IOException("Wallet is already restarting");
+                if (finished != null) {
+                    final Exception result = failure;
+                    runOnUi(() -> finished.accept(result));
+                }
+                return;
+            }
+
             try {
                 Context.propagate(Context.getOrCreate(parameters));
 
@@ -1427,7 +1440,6 @@ public class MainActivityPresenter
                 shuttingDown = false;
                 autoRestartCount = 0;
                 startWalletKit();
-                startWatchdog();
             } catch (Exception error) {
                 failure = error;
                 if (safetyCopy != null && safetyCopy.exists()) {
@@ -1450,6 +1462,7 @@ public class MainActivityPresenter
                     }
                 }
             } finally {
+                restartInProgress.set(false);
                 final Exception result = failure;
                 if (finished != null) {
                     runOnUi(() -> finished.accept(result));
