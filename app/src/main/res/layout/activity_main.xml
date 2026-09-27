@@ -195,8 +195,7 @@
                                 android:layout_height="wrap_content"
                                 android:minWidth="0dp"
                                 android:text="@string/export_transactions"
-    style="@style/WalletSecondaryButton"
-/>
+                                style="@style/WalletSecondaryButton" />
 
                             <ImageButton
                                 android:id="@+id/transactionsExpand"
