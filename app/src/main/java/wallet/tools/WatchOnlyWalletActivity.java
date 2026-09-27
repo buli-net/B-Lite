@@ -87,7 +87,6 @@ public final class WatchOnlyWalletActivity extends AppCompatActivity {
                 MainActivityPresenter presenter = MainActivityPresenter.getActivePresenter();
                 if (presenter != null) {
                     presenter.saveWalletNow();
-                    presenter.refresh();
                 }
                 runOnUiThread(() -> {
                     addWatchAddressButton.setEnabled(true);
@@ -97,19 +96,26 @@ public final class WatchOnlyWalletActivity extends AppCompatActivity {
                         watchDateInput.setText("");
                         refreshWatchedAddresses();
                         Toast.makeText(this, R.string.watch_address_added, Toast.LENGTH_LONG).show();
-                        // Adding a watch-only address after the wallet is already synced does not replay old blocks.
-                        // Start a real bitcoinj chain replay so historical UTXOs are discovered.
-                        Instant scanFrom = null;
-                        try {
-                            scanFrom = TextUtils.isEmpty(scanDate)
-                                    ? Instant.ofEpochSecond(1231006505L)
-                                    : parseDate(scanDate);
-                        } catch (Exception ignored) {
-                            // The date was already validated above; keep the normal add result if parsing changes.
-                        }
-                        if (scanFrom != null) {
-                            final Instant finalScanFrom = scanFrom;
-                            rescanWatchedAddresses(finalScanFrom, false);
+                        // A rescan replaces WalletAppKit and the SPV chain. Do not start that
+                        // replacement in the same UI turn as the wallet mutation: on a fresh
+                        // install the wallet, presenter, and watchdog can still be settling.
+                        // If normal sync is active, leave the explicit Rescan action to the user.
+                        MainActivityPresenter activePresenter = MainActivityPresenter.getActivePresenter();
+                        if (activePresenter != null && !activePresenter.isSyncing()) {
+                            Instant scanFrom = null;
+                            try {
+                                scanFrom = TextUtils.isEmpty(scanDate)
+                                        ? Instant.ofEpochSecond(1231006505L)
+                                        : parseDate(scanDate);
+                            } catch (Exception ignored) {
+                                // The date was already validated above.
+                            }
+                            if (scanFrom != null) {
+                                final Instant finalScanFrom = scanFrom;
+                                new android.os.Handler(getMainLooper()).postDelayed(
+                                        () -> rescanWatchedAddresses(finalScanFrom, false),
+                                        1000L);
+                            }
                         }
                     } else {
                         refreshWatchedAddresses();
