@@ -17,8 +17,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="12dp"
         android:text="@string/address_book_add"
-    style="@style/WalletPrimaryButton"
-/>
+        style="@style/WalletPrimaryButton" />
 
     <ScrollView
         android:layout_width="match_parent"
