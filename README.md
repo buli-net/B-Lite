@@ -1,12 +1,10 @@
-₿ B-Lite
+#  ₿itcoin Wallet B-Lite
 
 Lightweight Bitcoin Wallet for Android
 
 B-Lite is a lightweight, open-source Bitcoin wallet for Android, built with BitcoinJ and designed with a simple, clean interface.
 
-<p align="center">Bitcoin Mainnet · Open Source · Android
-
-</p>---
+---
 
 ✨ Features
 
@@ -84,23 +82,6 @@ Bitcoin Mainnet
 - Java
 - BitcoinJ
 - Gradle
-
----
-
-📦 Build
-
-Clone the repository:
-
-git clone https://github.com/buli-net/B-Lite.git
-cd B-Lite
-
-Build the release APK:
-
-./gradlew assembleRelease
-
-The generated APK will be available at:
-
-app/build/outputs/apk/release/
 
 ---
 
