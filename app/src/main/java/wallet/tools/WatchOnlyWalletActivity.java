@@ -34,19 +34,77 @@ import java.util.Set;
 
 public final class WatchOnlyWalletActivity extends AppCompatActivity {
     private EditText watchAddressInput; private EditText watchDateInput; private Button addWatchAddressButton; private Button rescanWatchedButton; private Button deleteWatchedButton; private LinearLayout watchedAddressList; private TextView watchedBalanceSummary; private Wallet watchedWallet; private WalletChangeEventListener walletChangeListener; private final Set<Script> selectedWatchedScripts = new HashSet<>();
+    private MainActivityPresenter syncPresenter;
+    private final android.os.Handler watchRefreshHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean watchRefreshQueued;
+    private static final long WATCH_REFRESH_DEBOUNCE_MS = 500L;
+    private final Runnable syncStateListener = () -> runOnUiThread(() -> {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        attachWalletListener();
+        scheduleWatchedRefresh();
+    });
 
-    private Wallet getWallet(){ WalletAppKit kit=MainActivityPresenter.getActiveWalletAppKit(); return kit==null?null:kit.wallet(); }
+    private Wallet getWallet(){
+        MainActivityPresenter presenter = MainActivityPresenter.getActivePresenter();
+        if (presenter == null || !presenter.isWalletReady()) {
+            return null;
+        }
+        WalletAppKit kit = MainActivityPresenter.getActiveWalletAppKit();
+        if (kit == null) {
+            return null;
+        }
+        try {
+            return kit.wallet();
+        } catch (IllegalStateException ignored) {
+            // WalletAppKit exposes wallet() only after startup has completed. During a
+            // rescan the old kit is stopped and the replacement kit starts asynchronously.
+            return null;
+        }
+    }
     private NetworkParameters getParameters(){ return MainActivityPresenter.getActiveParameters(); }
     private void show(int messageId){ Toast.makeText(this,messageId,Toast.LENGTH_LONG).show(); }
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state); setContentView(R.layout.activity_watch_only_wallet); Toolbar toolbar=findViewById(R.id.toolbar_watch_only); setSupportActionBar(toolbar);
         if(getSupportActionBar()!=null){getSupportActionBar().setTitle(R.string.watch_only_title);getSupportActionBar().setDisplayHomeAsUpEnabled(true);}
         toolbar.setNavigationOnClickListener(v->finish());
+        syncPresenter = MainActivityPresenter.getActivePresenter();
+        if (syncPresenter != null) {
+            syncPresenter.addSyncStateListener(syncStateListener);
+        }
         watchAddressInput=findViewById(R.id.watchAddressInput); watchDateInput=findViewById(R.id.watchDateInput); addWatchAddressButton=findViewById(R.id.addWatchAddressButton); rescanWatchedButton=findViewById(R.id.rescanWatchedButton); deleteWatchedButton=findViewById(R.id.deleteWatchedButton); watchedBalanceSummary=findViewById(R.id.watchedBalanceSummary); watchedAddressList=findViewById(R.id.watchedAddressList);
         addWatchAddressButton.setOnClickListener(v->addWatchAddress()); rescanWatchedButton.setOnClickListener(v->rescanWatchedAddresses()); deleteWatchedButton.setOnClickListener(v->deleteSelectedWatchedAddresses()); attachWalletListener(); refreshWatchedAddresses();
     }
-    @Override protected void onResume(){super.onResume();attachWalletListener();refreshWatchedAddresses();}
-    @Override protected void onPause(){detachWalletListener();super.onPause();}
+    @Override protected void onResume(){
+        super.onResume();
+        if (syncPresenter == null) {
+            syncPresenter = MainActivityPresenter.getActivePresenter();
+        }
+        if (syncPresenter != null) {
+            syncPresenter.addSyncStateListener(syncStateListener);
+        }
+        attachWalletListener();
+        refreshWatchedAddresses();
+    }
+    @Override protected void onPause(){
+        if (syncPresenter != null) {
+            syncPresenter.removeSyncStateListener(syncStateListener);
+        }
+        detachWalletListener();
+        watchRefreshHandler.removeCallbacksAndMessages(null);
+        watchRefreshQueued = false;
+        super.onPause();
+    }
+    @Override protected void onDestroy(){
+        if (syncPresenter != null) {
+            syncPresenter.removeSyncStateListener(syncStateListener);
+        }
+        detachWalletListener();
+        watchRefreshHandler.removeCallbacksAndMessages(null);
+        watchRefreshQueued = false;
+        super.onDestroy();
+    }
 
     private void addWatchAddress() {
         String encoded = watchAddressInput.getText().toString().trim();
@@ -235,8 +293,7 @@ public final class WatchOnlyWalletActivity extends AppCompatActivity {
         }
 
         watchedWallet = wallet;
-        walletChangeListener = changedWallet ->
-                runOnUiThread(this::refreshWatchedAddresses);
+        walletChangeListener = changedWallet -> scheduleWatchedRefresh();
         wallet.addChangeEventListener(walletChangeListener);
     }
     private void detachWalletListener() {
@@ -246,6 +303,23 @@ public final class WatchOnlyWalletActivity extends AppCompatActivity {
         watchedWallet = null;
         walletChangeListener = null;
     }
+    private void scheduleWatchedRefresh() {
+        if (isFinishing() || isDestroyed() || watchedAddressList == null) {
+            return;
+        }
+        if (watchRefreshQueued) {
+            return;
+        }
+        watchRefreshQueued = true;
+        watchRefreshHandler.postDelayed(() -> {
+            watchRefreshQueued = false;
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            refreshWatchedAddresses();
+        }, WATCH_REFRESH_DEBOUNCE_MS);
+    }
+
     private void refreshWatchedAddresses() {
         Wallet wallet = getWallet();
         if (wallet == null || watchedAddressList == null) {
