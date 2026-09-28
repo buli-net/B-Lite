@@ -51,10 +51,11 @@ public class MainActivityPresenter
     private static volatile MainActivityPresenter activePresenter;
 
     private static final String TAG = "BitcoinWalletSync";
-
     private static final int MAX_CONNECTIONS = 8;
 
     private static final long STALL_TIMEOUT_MS = 90_000L;
+
+    private static final long REFRESH_DEBOUNCE_MS = 500L;
 
     private static final int MAX_AUTO_RESTARTS = 8;
 
@@ -76,6 +77,12 @@ public class MainActivityPresenter
     private final Object kitLock = new Object();
 
     private final AtomicBoolean restartInProgress =
+            new AtomicBoolean(false);
+
+    private final AtomicBoolean refreshInProgress =
+            new AtomicBoolean(false);
+
+    private final AtomicBoolean refreshPending =
             new AtomicBoolean(false);
 
     private volatile boolean walletReady = false;
@@ -1010,12 +1017,52 @@ public class MainActivityPresenter
             return;
         }
 
+        refreshPending.set(true);
+
+        if (refreshInProgress.compareAndSet(false, true)) {
+            startRefreshWorker();
+        }
+    }
+
+    private void startRefreshWorker() {
         new Thread(() -> {
-            Context.propagate(Context.getOrCreate(parameters));
+            long lastRefreshAt = 0L;
             try {
-                renderSelectedWallet(kit.wallet());
-            } catch (Exception e) {
-                Log.w(TAG, "Refresh failed", e);
+                while (refreshPending.getAndSet(false)) {
+                    long now = System.currentTimeMillis();
+                    long waitMs = REFRESH_DEBOUNCE_MS - (now - lastRefreshAt);
+                    if (lastRefreshAt != 0L && waitMs > 0L) {
+                        try {
+                            Thread.sleep(waitMs);
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
+
+                    WalletAppKit currentKit = walletAppKit;
+                    if (!walletReady || currentKit == null || restartInProgress.get()) {
+                        continue;
+                    }
+
+                    try {
+                        Context.propagate(Context.getOrCreate(parameters));
+                        renderSelectedWallet(currentKit.wallet());
+                        lastRefreshAt = System.currentTimeMillis();
+                    } catch (Exception e) {
+                        Log.w(TAG, "Refresh failed", e);
+                    }
+                }
+            } finally {
+                refreshInProgress.set(false);
+
+                // A refresh may have been requested just after the loop
+                // checked the pending flag. Start one more worker only when
+                // needed, while keeping at most one refresh thread active.
+                if (refreshPending.get()
+                        && refreshInProgress.compareAndSet(false, true)) {
+                    startRefreshWorker();
+                }
             }
         }, "bitcoinj-refresh").start();
     }
@@ -1752,9 +1799,10 @@ public class MainActivityPresenter
 
     public String getNetworkCapabilities() {
         WalletAppKit kit = walletAppKit;
-        if (kit == null || kit.peerGroup() == null) return "—";
+        if (kit == null) return "—";
         try {
             PeerGroup group = kit.peerGroup();
+            if (group == null) return "—";
             return "Max connections: " + group.getMaxConnections()
                     + "\nMin broadcast connections: " + group.getMinBroadcastConnections()
                     + "\nMin protocol version: " + group.getMinRequiredProtocolVersion()
@@ -1808,11 +1856,15 @@ public class MainActivityPresenter
 
     public String getDownloadPeerDetails() {
         WalletAppKit kit = walletAppKit;
-        if (kit == null || kit.peerGroup() == null) {
+        if (kit == null) {
             return "—";
         }
         try {
-            Peer peer = kit.peerGroup().getDownloadPeer();
+            PeerGroup group = kit.peerGroup();
+            if (group == null) {
+                return "—";
+            }
+            Peer peer = group.getDownloadPeer();
             if (peer == null) {
                 return "None";
             }
