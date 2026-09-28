@@ -51,13 +51,13 @@ public class MainActivityPresenter
     private static volatile MainActivityPresenter activePresenter;
 
     private static final String TAG = "BitcoinWalletSync";
-    private static final int MAX_CONNECTIONS = 8;
+    private static final int MAX_CONNECTIONS = 88;
 
     private static final long STALL_TIMEOUT_MS = 90_000L;
 
     private static final long REFRESH_DEBOUNCE_MS = 500L;
 
-    private static final int MAX_AUTO_RESTARTS = 8;
+    private static final int MAX_AUTO_RESTARTS = 88;
 
     private MainActivityContract.MainActivityView view;
 
