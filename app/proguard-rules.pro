@@ -1,10 +1,11 @@
--keepclassmembers class * implements java.io.Serializable {
-    private static final java.io.ObjectStreamField[] serialPersistentFields;
-    private void writeObject(java.io.ObjectOutputStream);
-    private void readObject(java.io.ObjectInputStream);
-    java.lang.Object writeReplace();
-    java.lang.Object readResolve();
-}
+-dontskipnonpubliclibraryclasses
+-dontpreverify
+-dontobfuscate
+-verbose
+
+# ============================================================
+# Android / Java
+# ============================================================
 
 -keepattributes *Annotation*
 
@@ -30,29 +31,63 @@
     public static <fields>;
 }
 
--dontwarn module-info
--dontwarn java.lang.invoke.**
 
+# ============================================================
 # Android Support Library 28
+# ============================================================
+
 -dontnote android.widget.SearchView
 
 
-# bitcoinj
--keep,includedescriptorclasses class org.bitcoinj.wallet.Protos$** { *; }
--keepclassmembers class org.bitcoinj.wallet.Protos { com.google.protobuf.Descriptors$FileDescriptor descriptor; }
--keep,includedescriptorclasses class org.bitcoin.protocols.payments.Protos$** { *; }
--keepclassmembers class org.bitcoin.protocols.payments.Protos { com.google.protobuf.Descriptors$FileDescriptor descriptor; }
+# ============================================================
+# bitcoinj 0.17.1 - protobuf wallet
+#
+# IMPORTANT:
+# The generated wallet protobuf classes are under
+# org.bitcoinj.protobuf.wallet.Protos
+# NOT org.bitcoinj.wallet.Protos
+# ============================================================
+
+-keep class org.bitcoinj.protobuf.wallet.Protos { *; }
+-keep class org.bitcoinj.protobuf.wallet.Protos$* { *; }
+
+
+# ============================================================
+# bitcoinj - payment protocol protobuf
+# ============================================================
+
+-keep class org.bitcoin.protocols.payments.Protos { *; }
+-keep class org.bitcoin.protocols.payments.Protos$* { *; }
+
+
+# ============================================================
+# bitcoinj optional / platform-dependent classes
+# ============================================================
+
 -dontwarn org.bitcoinj.store.LevelDBBlockStore
--dontnote org.bitcoinj.crypto.DRMWorkaround
--dontnote org.bitcoinj.crypto.TrustStoreLoader$DefaultTrustStoreLoader
 -dontwarn org.bitcoinj.store.LevelDBFullPrunedBlockStore**
-
-
-# Bouncy Castle
-
+-dontwarn org.bitcoinj.crypto.DRMWorkaround
 -dontwarn javax.naming.**
 
-# protobuf-java
+
+# ============================================================
+# Java platform / Guava
+# ============================================================
+
+-dontwarn sun.misc.Unsafe
+-dontwarn java.lang.ClassValue
+-dontwarn java.lang.invoke.**
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn module-info
+
+
+# ============================================================
+# protobuf-javalite
+#
+# Keep warnings/notes suppressed only.
+# Generated bitcoinj protobuf classes themselves are kept above.
+# ============================================================
+
 -dontnote com.google.protobuf.Android
 -dontnote com.google.protobuf.ExtensionRegistryFactory
 -dontnote com.google.protobuf.ExtensionRegistryLite$ExtensionClassHolder
@@ -70,22 +105,17 @@
 -dontnote com.google.protobuf.SchemaUtil
 -dontnote com.google.protobuf.UnsafeUtil
 
-# Guava
 
--dontwarn sun.misc.Unsafe
--dontwarn java.lang.ClassValue
--dontwarn com.google.errorprone.annotations.**
+# ============================================================
+# Guava
+# ============================================================
 
 -dontnote com.google.common.reflect.**
 -dontnote com.google.common.util.concurrent.MoreExecutors
-
 -dontnote com.google.common.hash.Striped64
 -dontnote com.google.common.hash.Striped64$Cell
-
 -dontnote com.google.common.cache.Striped64
 -dontnote com.google.common.cache.Striped64$Cell
-
 -dontnote com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
-
 -dontnote com.google.common.io.TempFileCreator
 -dontnote com.google.common.io.TempFileCreator$JavaNioCreator
