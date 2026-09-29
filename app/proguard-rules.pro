@@ -1,5 +1,5 @@
 -dontskipnonpubliclibraryclasses
--dontoptimize
+
 -dontpreverify
 -dontobfuscate
 -verbose
