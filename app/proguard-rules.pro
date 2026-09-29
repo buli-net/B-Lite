@@ -1,6 +1,8 @@
 -dontskipnonpubliclibraryclasses
 -dontoptimize
-
+-dontpreverify
+-dontobfuscate
+-verbose
 
 -keepclassmembers class * implements java.io.Serializable {
     private static final java.io.ObjectStreamField[] serialPersistentFields;
