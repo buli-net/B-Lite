@@ -15,12 +15,13 @@ defaultConfig {
 }
 
 buildTypes {
-    release {
-        minifyEnabled true
-        shrinkResources true
-        crunchPngs false
-        proguardFiles getDefaultProguardFile('proguard-android.txt'),
-                'proguard-rules.pro'
+release {
+    minifyEnabled true
+    shrinkResources true
+    crunchPngs true
+
+    proguardFiles getDefaultProguardFile('proguard-android.txt'),
+            'proguard-rules.pro'
     }
 }
 
@@ -30,25 +31,11 @@ compileOptions {
 }
 
 packagingOptions {
-    exclude 'META-INF/androidx/**/LICENSE.txt'
     exclude 'META-INF/*.version'
     exclude 'META-INF/proguard/**'
-    exclude 'META-INF/*.kotlin_module'
-    exclude 'META-INF/kotlin-project-structure-metadata.json'
     exclude 'META-INF/**/coroutines.pro'
-    exclude 'DebugProbesKt.bin'
     exclude '**/*.proto'
-    exclude 'core/**'
-    exclude 'kotlin/**'
-    exclude 'kotlinx/**'
-    exclude 'commonMain/**'
-    exclude 'nativeMain/default/**'
-    exclude 'nativeOtherMain/default/**'
-    exclude 'nonJvmMain/default/**'
-    exclude 'concurrentMain/default/**'
-    exclude 'linuxMain/default/**'
     exclude 'org/bouncycastle/**/*.properties'
-    exclude 'okhttp3/internal/publicsuffix/*'
     exclude 'org/bitcoinj/crypto/cacerts'
     exclude 'org.bitcoin.*.checkpoints.txt'
     }
