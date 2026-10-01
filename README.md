@@ -113,7 +113,7 @@ B-Lite is licensed under the:
 
 Apache License 2.0
 
-See ""LICENSE"" (LICENSE) for the complete license text.
+See `LICENSE` for the complete license text.
 
 ---
 
