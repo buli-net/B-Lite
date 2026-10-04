@@ -1225,6 +1225,17 @@ public class MainActivityPresenter
 
     @Override
     public void restoreWallet(final android.net.Uri backupUri) {
+        restoreWallet(backupUri, null);
+    }
+
+    /**
+     * Restores a wallet backup after the current wallet password has been
+     * verified. The authorization key is kept local to this restore operation
+     * and is never installed as the persistent WalletSecurity session key.
+     */
+    public void restoreWallet(
+            final android.net.Uri backupUri,
+            final AesKey currentWalletAuthorizationKey) {
 
         if (backupUri == null) {
             runOnUi(() ->
@@ -1249,6 +1260,7 @@ public class MainActivityPresenter
                     );
 
             WalletAppKit oldKit;
+            boolean restoreNeedsWalletRestart = false;
 
             try {
 
@@ -1265,7 +1277,9 @@ public class MainActivityPresenter
                 if (currentWallet == null && walletFile.exists()) {
                     currentWallet = Wallet.loadFromFile(walletFile);
                 }
-                captureRestoreSecondaryWalletData(currentWallet);
+                captureRestoreSecondaryWalletData(
+                        currentWallet,
+                        currentWalletAuthorizationKey);
                 WalletSecurity.clearSessionKey();
 
                 try (InputStream input =
@@ -1318,14 +1332,10 @@ public class MainActivityPresenter
                 }
 
                 if (oldKit != null) {
+                    restoreNeedsWalletRestart = true;
                     try {
                         oldKit.stopAsync().awaitTerminated();
                     } catch (Exception stopError) {
-                        synchronized (kitLock) {
-                            walletAppKit = oldKit;
-                        }
-                        walletReady = false;
-                        startWatchdog();
                         throw new IOException(
                                 text(R.string.restore_stop_failed),
                                 stopError
@@ -1401,6 +1411,15 @@ public class MainActivityPresenter
                     backupOfCurrent.renameTo(walletFile);
                 }
                 clearPendingRestoreSecondaryData();
+
+                if (restoreNeedsWalletRestart && !shuttingDown) {
+                    autoRestartCount = 0;
+                    lastPercent = -1;
+                    lastChainHeight = -1;
+                    downloadFinished = false;
+                    startWalletKit();
+                    startWatchdog();
+                }
 
                 runOnUi(() ->
                         view.showToastMessage(
@@ -1521,6 +1540,12 @@ public class MainActivityPresenter
     }
 
     private void captureRestoreSecondaryWalletData(Wallet source) throws IOException {
+        captureRestoreSecondaryWalletData(source, null);
+    }
+
+    private void captureRestoreSecondaryWalletData(
+            Wallet source,
+            AesKey authorizationKey) throws IOException {
         pendingRestoreImportedKeys = new ArrayList<>();
         pendingRestoreWatchedScripts = new ArrayList<>();
         pendingRestoreSourceSessionKey = null;
@@ -1528,8 +1553,12 @@ public class MainActivityPresenter
         if (source == null) return;
 
         pendingRestoreSourceEncrypted = WalletSecurity.isEncrypted(source);
-        if (pendingRestoreSourceEncrypted && WalletSecurity.isSessionValid(source)) {
-            pendingRestoreSourceSessionKey = WalletSecurity.getSessionKey();
+        if (pendingRestoreSourceEncrypted) {
+            if (authorizationKey != null && source.checkAESKey(authorizationKey)) {
+                pendingRestoreSourceSessionKey = authorizationKey;
+            } else if (WalletSecurity.isSessionValid(source)) {
+                pendingRestoreSourceSessionKey = WalletSecurity.getSessionKey();
+            }
         }
         pendingRestoreImportedKeys.addAll(source.getImportedKeys());
         pendingRestoreWatchedScripts.addAll(source.getWatchedScripts());
