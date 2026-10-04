@@ -1,6 +1,7 @@
 package wallet.main;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Build;
@@ -207,9 +208,7 @@ public class SyncActivity extends BaseActivity {
     private void setTextIfChanged(TextView view, CharSequence value) {
         if (view == null || view.hasSelection()) return;
         CharSequence current = view.getText();
-        String currentText = current == null ? "" : current.toString();
-        String nextText = value == null ? "" : value.toString();
-        if (!currentText.equals(nextText)) {
+        if (!TextUtils.equals(current, value)) {
             view.setText(value);
         }
     }
