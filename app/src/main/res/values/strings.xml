@@ -371,9 +371,9 @@ Never send a WIF to anyone, put it in screenshots, chat messages, cloud notes, o
     <string name="imported_wallet_not_found">Imported wallet was not found.</string>
     <string name="imported_wallets_title">Imported wallets</string>
     <string name="imported_wallet_total_zero">Imported wallets total: 0 BTC
-Last scanned block: 0</string>
+        \nLast scanned block: 0</string>
     <string name="imported_wallet_total_with_scan">Imported wallets total: %1$s
-Last scanned block: %2$d</string>
+        \nLast scanned block: %2$d</string>
     <string name="imported_wallets_empty">No imported wallets.</string>
     <string name="imported_wallet_select">SELECT</string>
     <string name="imported_wallet_selected">SELECTED</string>
@@ -417,7 +417,8 @@ Last scanned block: %2$d</string>
     <string name="watch_address_failed">Unable to add watch-only address: %1$s</string>
     <string name="watched_addresses_title">Watched addresses</string>
     <string name="watch_balance_total_zero">Watch-only total: 0 BTC</string>
-    <string name="watch_balance_total_with_scan">Watch-only total: %1$s\nLast scanned block: %2$d</string>
+    <string name="watch_balance_total_with_scan">Watch-only total: %1$s
+        \nLast scanned block: %2$d</string>
     <string name="watch_confirmed_value">Confirmed: %1$s</string>
     <string name="watch_pending_value">Pending: %1$s</string>
     <string name="watch_address_empty">No watch-only addresses.</string>
@@ -534,19 +535,19 @@ Last scanned block: %2$d</string>
     <string name="paper_wallet_print_warning">WARNING: With this key can spend all coins.</string>
     <string name="paper_wallet_export_template">Bitcoin Paper Wallet
 
-Bitcoin address:
+\nBitcoin address:
 %1$s
 
-Address hex:
+\nAddress hex:
 %2$s
 
-Private key / BIP38:
+\nPrivate key / BIP38:
 %3$s
 
-Private key / BIP38 hex:
+\nPrivate key / BIP38 hex:
 %4$s
 
-Keep the private key secure. Anyone with it can spend the funds.
+\nKeep the private key secure. Anyone with it can spend the funds.
 </string>
     <string name="paper_wallet_export_success">Paper wallet exported.</string>
     <string name="paper_wallet_export_failed">Unable to create the export file.</string>
