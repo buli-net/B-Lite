@@ -244,20 +244,6 @@ public final class WalletImportWifActivity extends BaseActivity {
             final org.bitcoinj.script.Script importedScript = WalletAddressType.scriptForKey(
                     addressParameters, key, addressType);
 
-            // Like Watch-only, persist and render the management entry before
-            // touching WalletAppKit. This keeps this screen responsive.
-            runOnUiThread(() -> {
-                ImportedWalletStore.register(this, importedAddress);
-                ImportedWalletStore.setAddressType(this, importedAddress, addressType);
-                int index = ImportedWalletStore.getAddresses(this).indexOf(importedAddress) + 1;
-                if (index < 1) index = 1;
-                ImportedWalletStore.setName(this, importedAddress,
-                        ImportedWalletStore.getName(this, importedAddress, index));
-                privateKeyInput.setText("");
-                renderImportedWallets();
-                refreshImportedWalletSummary();
-            });
-
             Wallet wallet = getWalletSafely();
             if (wallet == null) {
                 runOnUiThread(() -> {
@@ -291,14 +277,35 @@ public final class WalletImportWifActivity extends BaseActivity {
                 }
             }
 
-            final int result = added;
+            // Only register the management entry after the private key is confirmed
+            // to be in the active wallet. This prevents a failed/locked import from
+            // leaving a stale entry that looks like an imported wallet but has no key.
+            if (WalletSelection.findImportedKey(wallet, importedAddress) == null) {
+                runOnUiThread(() -> {
+                    importPrivateKeyButton.setEnabled(true);
+                    Toast.makeText(this, R.string.imported_wallet_not_found, Toast.LENGTH_LONG).show();
+                });
+                return;
+            }
+
+            ImportedWalletStore.register(this, importedAddress);
+            ImportedWalletStore.setAddressType(this, importedAddress, addressType);
+            int index = ImportedWalletStore.getAddresses(this).indexOf(importedAddress) + 1;
+            if (index < 1) index = 1;
+            ImportedWalletStore.setName(this, importedAddress,
+                    ImportedWalletStore.getName(this, importedAddress, index));
             if (originalBip38Key != null) {
                 ImportedWalletStore.setBip38Key(this, importedAddress, originalBip38Key);
             } else {
                 ImportedWalletStore.clearBip38Key(this, importedAddress);
             }
+
+            final int result = added;
             runOnUiThread(() -> {
                 importPrivateKeyButton.setEnabled(true);
+                privateKeyInput.setText("");
+                renderImportedWallets();
+                refreshImportedWalletSummary();
                 new AlertDialog.Builder(this)
                         .setTitle(result == 0
                                 ? R.string.private_key_already_present
