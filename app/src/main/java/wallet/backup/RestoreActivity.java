@@ -124,7 +124,7 @@ public class RestoreActivity extends BaseActivity {
         }
 
         if (!WalletSecurity.isEncrypted(wallet)) {
-            startRestore(presenter, backupUri);
+            startRestore(presenter, backupUri, null);
             return;
         }
 
@@ -149,15 +149,18 @@ public class RestoreActivity extends BaseActivity {
                                         Toast.LENGTH_LONG).show();
                                 return;
                             }
-                            startRestore(presenter, backupUri);
+                            startRestore(presenter, backupUri, authorizationKey);
                         });
                     }, "wallet-restore-authorize").start();
                 })
                 .show();
     }
 
-    private void startRestore(MainActivityPresenter presenter, Uri backupUri) {
-        presenter.restoreWallet(backupUri);
+    private void startRestore(
+            MainActivityPresenter presenter,
+            Uri backupUri,
+            AesKey authorizationKey) {
+        presenter.restoreWallet(backupUri, authorizationKey);
         Toast.makeText(
                 this,
                 R.string.restore_in_progress,
