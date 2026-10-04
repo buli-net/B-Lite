@@ -77,7 +77,11 @@ public final class TextViewUtils {
                 @Override
                 public void afterTextChanged(Editable s) {
                     if (!state.applying) {
-                        view.post(() -> apply(view, state));
+                        // Apply the existing middle-ellipsis span synchronously.
+                        // Posting this to the main queue briefly exposes the full
+                        // source string between Sync refresh and the ellipsis pass,
+                        // which causes visible flicker/jitter on live-updating views.
+                        apply(view, state);
                     }
                 }
             });
