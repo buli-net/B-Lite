@@ -424,10 +424,17 @@ public class MainActivity extends BaseActivity
             showToastMessage(getString(R.string.wallet_address_missing));
             return;
         }
+
+        View content = getLayoutInflater().inflate(R.layout.dialog_address_tools, null);
+        TextView type = content.findViewById(R.id.addressToolsType);
+        TextView addressValue = content.findViewById(R.id.addressToolsAddress);
+        TextViewUtils.setTextIfChanged(type, walletTypeText.getText());
+        TextViewUtils.configureSelectableMiddleEllipsis(addressValue);
+        TextViewUtils.setTextIfChanged(addressValue, address);
+
         new AlertDialog.Builder(this)
                 .setTitle(R.string.address_tools_title)
-                .setMessage(getString(R.string.address_tools_message, address,
-                        walletTypeText.getText().toString()))
+                .setView(content)
                 .setPositiveButton(R.string.copy_address, (dialog, which) -> copyAddress())
                 .setNeutralButton(R.string.receive_qr_title, (dialog, which) -> showReceiveQr())
                 .setNegativeButton(R.string.close, null)
