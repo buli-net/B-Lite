@@ -4,7 +4,6 @@ import android.graphics.Paint;
 import android.text.Editable;
 import android.text.SpannableString;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.ReplacementSpan;
 import android.view.View;
@@ -20,6 +19,7 @@ import java.util.WeakHashMap;
 public final class TextViewUtils {
     private static final int MIN_LONG_VALUE_LENGTH = 26;
     private static final Map<TextView, State> STATES = new WeakHashMap<>();
+    private static final Map<TextView, TextWatcher> DISCOVERY_WATCHERS = new WeakHashMap<>();
 
     private TextViewUtils() {
     }
@@ -47,6 +47,7 @@ public final class TextViewUtils {
     public static void configureSelectableMiddleEllipsis(TextView view) {
         if (view == null) return;
 
+        removeDiscoveryWatcher(view);
         view.setMaxLines(1);
         view.setHorizontallyScrolling(false);
         view.setTextIsSelectable(true);
@@ -122,6 +123,8 @@ public final class TextViewUtils {
             TextView textView = (TextView) view;
             if (isLongValue(textView.getText())) {
                 configureSelectableMiddleEllipsis(textView);
+            } else {
+                watchForLongValue(textView);
             }
             return;
         }
@@ -131,6 +134,49 @@ public final class TextViewUtils {
             for (int i = 0; i < group.getChildCount(); i++) {
                 configureLongValueViewTree(group.getChildAt(i));
             }
+        }
+    }
+
+    /**
+     * Watches initially short TextViews so values populated later (for example
+     * sync hashes) automatically adopt the same long-value display/copy behavior.
+     * This keeps the behavior centralized instead of requiring screen-specific fixes.
+     */
+    private static void watchForLongValue(TextView view) {
+        synchronized (DISCOVERY_WATCHERS) {
+            if (DISCOVERY_WATCHERS.containsKey(view) || STATES.containsKey(view)) {
+                return;
+            }
+
+            TextWatcher watcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (!isLongValue(s)) {
+                        return;
+                    }
+                    view.post(() -> configureSelectableMiddleEllipsis(view));
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                }
+            };
+            DISCOVERY_WATCHERS.put(view, watcher);
+            view.addTextChangedListener(watcher);
+        }
+    }
+
+    private static void removeDiscoveryWatcher(TextView view) {
+        TextWatcher watcher;
+        synchronized (DISCOVERY_WATCHERS) {
+            watcher = DISCOVERY_WATCHERS.remove(view);
+        }
+        if (watcher != null) {
+            view.removeTextChangedListener(watcher);
         }
     }
 
