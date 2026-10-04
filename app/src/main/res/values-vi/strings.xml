@@ -317,7 +317,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
 
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
     <string name="wallet_address_type">Loại địa chỉ</string>
-    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Paper Wallet này.</string>
+    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Ví Giấy này.</string>
     <string name="paper_wallet_address_type_compressed_required">Loại địa chỉ này yêu cầu khóa riêng dạng compressed (WIF compressed).</string>
     <string name="wallet_address_type_p2pkh">P2PKH</string>
     <string name="wallet_address_type_p2wpkh">P2WPKH</string>
