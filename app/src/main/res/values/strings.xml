@@ -367,7 +367,6 @@ Never send a WIF to anyone, put it in screenshots, chat messages, cloud notes, o
     <string name="bip38_wrong_passphrase">Incorrect BIP38 passphrase.</string>
     <string name="imported_wallet_default_name">Imported Wallet</string>
     <string name="imported_wallet_default_name_numbered">Imported Wallet %1$d</string>
-    <string name="imported_wallet_clipboard_label">Bitcoin address</string>
     <string name="imported_wallet_not_found">Imported wallet was not found.</string>
     <string name="imported_wallets_title">Imported wallets</string>
     <string name="imported_wallet_total_zero">Imported wallets total: 0 BTC
