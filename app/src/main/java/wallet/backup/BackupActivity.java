@@ -75,6 +75,50 @@ public class BackupActivity extends BaseActivity {
 
     private void prepareBackup() {
         WalletAppKit walletAppKit = MainActivityPresenter.getActiveWalletAppKit();
+        Wallet wallet = walletAppKit == null ? null : walletAppKit.wallet();
+        if (wallet == null) {
+            showToast(getString(R.string.wallet_not_ready));
+            return;
+        }
+
+        if (!WalletSecurity.isEncrypted(wallet) || WalletSecurity.getSessionKey() != null) {
+            performBackup();
+            return;
+        }
+
+        View passwordView = getLayoutInflater().inflate(R.layout.dialog_password, null);
+        final EditText password = passwordView.findViewById(R.id.dialogPasswordInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.backup_unlock_title)
+                .setMessage(R.string.unlock_before_backup)
+                .setView(passwordView)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.create_backup, (dialog, which) ->
+                        unlockAndBackup(wallet, password.getText().toString()))
+                .show();
+    }
+
+    private void unlockAndBackup(Wallet wallet, String password) {
+        new Thread(() -> {
+            try {
+                if (!WalletSecurity.unlock(wallet, password)) {
+                    showToast(getString(R.string.wrong_password));
+                    return;
+                }
+                performBackup();
+            } catch (Exception error) {
+                showToast(getString(
+                        R.string.security_operation_failed,
+                        error.getMessage() == null
+                                ? error.getClass().getSimpleName()
+                                : error.getMessage()));
+            }
+        }, "wallet-backup-unlock").start();
+    }
+
+    private void performBackup() {
+        WalletAppKit walletAppKit = MainActivityPresenter.getActiveWalletAppKit();
         org.bitcoinj.core.NetworkParameters parameters =
                 MainActivityPresenter.getActiveParameters();
 
