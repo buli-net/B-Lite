@@ -5,8 +5,8 @@
         <item name="android:windowBackground">?android:attr/colorBackground</item>
         <item name="android:statusBarColor">?android:attr/colorBackground</item>
         <item name="android:navigationBarColor">?android:attr/colorBackground</item>
-        <item name="android:windowLightStatusBar">@bool/blite_light_system_bars</item>
-        <item name="android:windowLightNavigationBar">@bool/blite_light_system_bars</item>
+        <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
     </style>
 
     <!-- Consistent AppCompat button roles: primary actions use the accent color,
