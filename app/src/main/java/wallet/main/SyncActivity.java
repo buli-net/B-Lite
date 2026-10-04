@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import wallet.ui.TextViewUtils;
 /** Live blockchain and BitcoinJ synchronization monitor. */
 public class SyncActivity extends BaseActivity {
 
@@ -119,6 +120,8 @@ public class SyncActivity extends BaseActivity {
         chainTechnical = findViewById(R.id.syncChainTechnical);
         merkleRoot = findViewById(R.id.syncMerkleRoot);
         walletChainState = findViewById(R.id.syncWalletChainState);
+        TextViewUtils.configureSelectableMiddleEllipsis(chainHash);
+        TextViewUtils.configureSelectableMiddleEllipsis(merkleRoot);
         refresh = findViewById(R.id.syncRefreshButton);
         reconnect = findViewById(R.id.syncReconnectButton);
         rescan = findViewById(R.id.syncRescanButton);
