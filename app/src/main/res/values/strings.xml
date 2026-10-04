@@ -186,6 +186,8 @@ Use the application responsibly and keep independent backups of your wallet.</st
     <string name="backup_success">Wallet backup created successfully.</string>
     <string name="backup_destination_open_failed">Unable to open the backup destination.</string>
     <string name="backup_title_file">%1$s-backup.wallet</string>
+    <string name="restore_unlock_title">Unlock wallet to restore backup</string>
+    <string name="restore_unlock_message">Enter the current wallet password before replacing this wallet with the selected backup.</string>
     <string name="restore_question">Restore wallet?</string>
     <string name="restore_message">The current wallet will be replaced by the wallet in the selected backup. Continue?</string>
     <string name="wallet_core_not_ready">Wallet core is not ready.</string>
