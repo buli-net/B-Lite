@@ -84,10 +84,6 @@ public final class WalletSelection {
         return null;
     }
 
-    public static boolean isImportedSelected(Context context) {
-        return getSelectedImportedAddress(context) != null;
-    }
-
     public static java.util.List<String> getImportedAddresses(Wallet wallet) {
         java.util.ArrayList<String> result = new java.util.ArrayList<>();
         if (wallet == null) return result;
@@ -98,33 +94,6 @@ public final class WalletSelection {
             }
         }
         return result;
-    }
-
-    /**
-     * Returns imported addresses that are actually present in the wallet, while
-     * also registering them for the Import WIF management screen.
-     */
-    public static java.util.List<String> getManagedImportedAddresses(Context context, Wallet wallet) {
-        java.util.ArrayList<String> walletAddresses = new java.util.ArrayList<>();
-        if (wallet != null) {
-            for (ECKey key : wallet.getImportedKeys()) {
-                try {
-                    walletAddresses.add(LegacyAddress.fromKey(wallet.getParams(), key).toString());
-                } catch (Exception ignored) {
-                }
-            }
-        }
-
-        java.util.LinkedHashSet<String> result = new java.util.LinkedHashSet<>();
-        for (String address : ImportedWalletStore.getAddresses(context)) {
-            if (walletAddresses.contains(address)) result.add(address);
-        }
-        // Migrate keys imported by an older build into the management registry.
-        for (String address : walletAddresses) {
-            ImportedWalletStore.register(context, address);
-            result.add(address);
-        }
-        return new java.util.ArrayList<>(result);
     }
 
     public static Script findImportedScriptForAddress(Wallet wallet, String address) {
@@ -156,17 +125,6 @@ public final class WalletSelection {
         for (TransactionOutput output : wallet.getUnspents()) {
             if (script.equals(output.getScriptPubKey()) && output.isAvailableForSpending()
                     && output.getParentTransactionDepthInBlocks() > 0) {
-                total = total.add(output.getValue());
-            }
-        }
-        return total;
-    }
-
-    public static Coin selectedImportedEstimatedBalance(Wallet wallet, Script script) {
-        if (wallet == null || script == null) return Coin.ZERO;
-        Coin total = Coin.ZERO;
-        for (TransactionOutput output : wallet.getUnspents()) {
-            if (script.equals(output.getScriptPubKey()) && output.isAvailableForSpending()) {
                 total = total.add(output.getValue());
             }
         }
