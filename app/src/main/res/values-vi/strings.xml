@@ -358,10 +358,7 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="scan_wif_qr">QUÉT MÃ QR</string>
     <string name="private_key_required">Nhập khóa riêng.</string>
     <string name="private_key_imported">Đã nhập khóa riêng.</string>
-    <string name="private_key_import_address">Địa chỉ đã nhập:
-%1$s
-
-Địa chỉ này hiện là một phần của ví và được hiển thị trong bộ chọn ví trên màn hình chính.</string>
+    <string name="private_key_import_address">Địa chỉ đã nhập:\n%1$s\nĐịa chỉ này hiện là một phần của ví và được hiển thị trong bộ chọn ví trên màn hình chính.</string>
     <string name="private_key_already_present">Khóa riêng đã có trong ví.</string>
     <string name="private_key_import_failed">Nhập khóa riêng thất bại: %1$s</string>
     <string name="bip38_passphrase_title">Khóa được mã hóa BIP38</string>
