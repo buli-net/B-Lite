@@ -186,6 +186,8 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="backup_success">Đã tạo bản sao lưu ví thành công.</string>
     <string name="backup_destination_open_failed">Không thể mở vị trí lưu bản sao lưu.</string>
     <string name="backup_title_file">%1$s-backup.wallet</string>
+    <string name="restore_unlock_title">Mở khóa ví để khôi phục backup</string>
+    <string name="restore_unlock_message">Nhập mật khẩu của ví hiện tại trước khi thay thế ví này bằng backup đã chọn.</string>
     <string name="restore_question">Khôi phục ví?</string>
     <string name="restore_message">Ví hiện tại sẽ được thay thế bằng ví trong bản sao lưu đã chọn. Tiếp tục?</string>
     <string name="wallet_core_not_ready">Lõi ví chưa sẵn sàng.</string>
