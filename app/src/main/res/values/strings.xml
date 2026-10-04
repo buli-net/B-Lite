@@ -96,6 +96,8 @@ Use the application responsibly and keep independent backups of your wallet.</st
     <string name="sync_background_cancel_title">Cancel background synchronization?</string>
     <string name="sync_background_cancel_message">The wallet will no longer be exempt from Android battery optimization. You will be taken to the system screen for this app so you can turn off unrestricted battery usage.</string>
     <string name="sync_background_cancel_confirm">OK</string>
+    <string name="sync_yes">Yes</string>
+    <string name="sync_no">No</string>
 
     <string name="send_sync_blocked">Bitcoin is still synchronizing. Sending is temporarily unavailable.</string>
     <string name="total_balance">Total balance</string>
