@@ -96,6 +96,8 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="sync_background_cancel_title">Hủy đồng bộ nền?</string>
     <string name="sync_background_cancel_message">Ví sẽ không còn được miễn tối ưu hóa pin của Android. Bạn sẽ được đưa đến màn hình hệ thống của ứng dụng này để tắt việc sử dụng pin không giới hạn.</string>
     <string name="sync_background_cancel_confirm">OK</string>
+    <string name="sync_yes">Có</string>
+    <string name="sync_no">Không</string>
 
     <string name="send_sync_blocked">Bitcoin vẫn đang được đồng bộ. Tạm thời không thể gửi.</string>
     <string name="total_balance">Tổng số dư</string>
