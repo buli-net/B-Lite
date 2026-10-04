@@ -219,7 +219,6 @@ public final class TransactionDetailActivity extends BaseActivity {
                 sentEntries,
                 receivedEntries,
                 buildTransactionRows(transaction),
-                isReceived && !transaction.getInputs().isEmpty(),
                 canBoostRbf(transaction, wallet, selectedWatchScript, net),
                 transaction.getTxId().toString());
     }
@@ -259,7 +258,7 @@ public final class TransactionDetailActivity extends BaseActivity {
         }
 
         sentDetailsCard.setVisibility(
-                data.showSentCard || !data.sentEntries.isEmpty() ? View.VISIBLE : View.GONE);
+                data.sentEntries.isEmpty() ? View.GONE : View.VISIBLE);
         receivedDetailsCard.setVisibility(
                 data.receivedEntries.isEmpty() ? View.GONE : View.VISIBLE);
         TextViewUtils.setTextIfChanged(transactionIdValue, data.txid);
@@ -982,13 +981,12 @@ public final class TransactionDetailActivity extends BaseActivity {
         final List<TxEntry> sentEntries;
         final List<TxEntry> receivedEntries;
         final List<RowData> detailRows;
-        final boolean showSentCard;
         final boolean canBoost;
         final String txid;
 
         DetailData(boolean isReceived, Coin net, String from, String to,
                    List<TxEntry> sentEntries, List<TxEntry> receivedEntries,
-                   List<RowData> detailRows, boolean showSentCard, boolean canBoost, String txid) {
+                   List<RowData> detailRows, boolean canBoost, String txid) {
             this.isReceived = isReceived;
             this.net = net;
             this.from = from;
@@ -996,7 +994,6 @@ public final class TransactionDetailActivity extends BaseActivity {
             this.sentEntries = sentEntries;
             this.receivedEntries = receivedEntries;
             this.detailRows = detailRows;
-            this.showSentCard = showSentCard;
             this.canBoost = canBoost;
             this.txid = txid;
         }
