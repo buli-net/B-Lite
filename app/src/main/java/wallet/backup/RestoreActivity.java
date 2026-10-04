@@ -13,6 +13,13 @@ import androidx.appcompat.widget.Toolbar;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.view.View;
+
+import org.bitcoinj.crypto.AesKey;
+import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.wallet.Wallet;
+
+import wallet.security.WalletSecurity;
 
 import wallet.main.MainActivityPresenter;
 import wallet.main.R;
@@ -98,25 +105,63 @@ public class RestoreActivity extends BaseActivity {
                 .setTitle(R.string.restore_question)
                 .setMessage(R.string.restore_message)
                 .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.restore_action, (dialog, which) ->
+                        authorizeCurrentWalletForRestore(backupUri))
+                .show();
+    }
+
+    private void authorizeCurrentWalletForRestore(Uri backupUri) {
+        MainActivityPresenter presenter = MainActivityPresenter.getActivePresenter();
+        WalletAppKit kit = MainActivityPresenter.getActiveWalletAppKit();
+        Wallet wallet = kit == null ? null : kit.wallet();
+
+        if (presenter == null || wallet == null) {
+            Toast.makeText(
+                    this,
+                    R.string.wallet_core_not_ready,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (!WalletSecurity.isEncrypted(wallet)) {
+            startRestore(presenter, backupUri);
+            return;
+        }
+
+        View passwordView = getLayoutInflater().inflate(R.layout.dialog_password, null);
+        final EditText password = passwordView.findViewById(R.id.dialogPasswordInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.restore_unlock_title)
+                .setMessage(R.string.restore_unlock_message)
+                .setView(passwordView)
+                .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.restore_action, (dialog, which) -> {
-                    MainActivityPresenter presenter =
-                            MainActivityPresenter.getActivePresenter();
-
-                    if (presenter == null) {
-                        Toast.makeText(
-                                this,
-                                R.string.wallet_core_not_ready,
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-
-                    presenter.restoreWallet(backupUri);
-                    Toast.makeText(
-                            this,
-                            R.string.restore_in_progress,
-                            Toast.LENGTH_LONG).show();
-                    finish();
+                    String enteredPassword = password.getText().toString();
+                    new Thread(() -> {
+                        AesKey authorizationKey = WalletSecurity.verifyPassword(
+                                wallet, enteredPassword);
+                        runOnUiThread(() -> {
+                            if (authorizationKey == null) {
+                                Toast.makeText(
+                                        this,
+                                        R.string.wrong_password,
+                                        Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            startRestore(presenter, backupUri);
+                        });
+                    }, "wallet-restore-authorize").start();
                 })
                 .show();
+    }
+
+    private void startRestore(MainActivityPresenter presenter, Uri backupUri) {
+        presenter.restoreWallet(backupUri);
+        Toast.makeText(
+                this,
+                R.string.restore_in_progress,
+                Toast.LENGTH_LONG).show();
+        finish();
     }
 }
