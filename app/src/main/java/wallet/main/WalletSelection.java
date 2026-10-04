@@ -83,16 +83,15 @@ public final class WalletSelection {
         }
     }
 
-    /** Returns imported addresses registered by the management screen and backed by wallet keys. */
+    /** Returns all imported addresses registered by the management screen.
+     *
+     * The selector must use the same registry as the Import WIF management screen.
+     * Key/script validation remains in findSelectedImportedScript() and the send
+     * flow, so displaying a registered address here does not make an unbacked entry
+     * spendable.
+     */
     public static java.util.List<String> getImportedAddresses(Context context, Wallet wallet) {
-        java.util.ArrayList<String> result = new java.util.ArrayList<>();
-        if (wallet == null) return result;
-        for (String address : ImportedWalletStore.getAddresses(context)) {
-            if (findImportedKey(wallet, address) != null) {
-                result.add(address);
-            }
-        }
-        return result;
+        return new java.util.ArrayList<>(ImportedWalletStore.getAddresses(context));
     }
 
     /** Legacy fallback for callers that do not have a Context; derives every supported address. */
