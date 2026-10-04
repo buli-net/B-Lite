@@ -11,6 +11,8 @@
     <string name="wallet_title">Wallet</string>
     <string name="about_title">About</string>
     <string name="backup_title">Backup wallet</string>
+    <string name="backup_unlock_title">Unlock to create wallet backup</string>
+    <string name="unlock_before_backup">Enter the wallet password to unlock it before creating the backup.</string>
     <string name="backup_recovery_title">Backup &amp; Recovery</string>
     <string name="backup_recovery_description">Create a wallet backup, restore an existing backup, or view the recovery phrase.</string>
     <string name="backup_wallet_action">BACKUP WALLET</string>
