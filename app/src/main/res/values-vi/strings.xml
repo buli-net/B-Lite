@@ -297,13 +297,13 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
 
     <string name="menu_wallet_tools">Công cụ ví</string>
     <string name="wallet_import_wif_title">Nhập WIF</string>
-    <string name="wallet_tool_import_wif">Nhập / Quét Paper Wallet</string>
+    <string name="wallet_tool_import_wif">Nhập / Quét Ví Giấy</string>
     <string name="wallet_tool_watch_only">Ví chỉ theo dõi</string>
-    <string name="wallet_tool_paper_wallet">Paper Wallet</string>
+    <string name="wallet_tool_paper_wallet">Ví Giấy</string>
 
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
-    <string name="paper_wallet_title">Paper Wallet</string>
-    <string name="paper_wallet_generator_title">Trình tạo Paper Wallet</string>
+    <string name="paper_wallet_title">Ví Giấy</string>
+    <string name="paper_wallet_generator_title">Trình tạo Ví Giấy</string>
     <string name="paper_wallet_generator_subtitle">Tạo một khóa Bitcoin duy nhất với mã QR địa chỉ và khóa riêng có thể in.</string>
     <string name="paper_wallet_generate_random">TẠO VÍ NGẪU NHIÊN</string>
     <string name="paper_wallet_import_title">Nhập khóa riêng hiện có</string>
@@ -312,7 +312,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="paper_wallet_file">TỆP</string>
     <string name="paper_wallet_import">NHẬP KHÓA</string>
     <string name="paper_wallet_bip38">Mã hóa khóa riêng bằng BIP38</string>
-    <string name="paper_wallet_result_title">Paper Wallet</string>
+    <string name="paper_wallet_result_title">Ví Giấy</string>
     <string name="paper_wallet_address_label">Địa chỉ Bitcoin</string>
     <string name="paper_wallet_private_label">Khóa riêng</string>
     <string name="paper_wallet_address_qr">Mã QR địa chỉ Bitcoin</string>
@@ -521,8 +521,8 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="paper_wallet_copied">Đã sao chép vào bộ nhớ tạm.</string>
     <string name="paper_wallet_print">IN</string>
     <string name="paper_wallet_export_txt">XUẤT TXT</string>
-    <string name="paper_wallet_print_job">Paper Wallet Bitcoin</string>
-    <string name="paper_wallet_print_title">In Paper Wallet</string>
+    <string name="paper_wallet_print_job">Ví Giấy Bitcoin</string>
+    <string name="paper_wallet_print_title">In Ví Giấy</string>
     <string name="paper_wallet_print_public_key_format">Khóa công khai (%1$s)</string>
     <string name="paper_wallet_print_private_key_format">Khóa riêng (%1$s)</string>
     <string name="paper_wallet_print_type_p2pkh">P2PKH</string>
