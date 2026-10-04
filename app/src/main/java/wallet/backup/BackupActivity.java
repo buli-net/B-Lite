@@ -139,7 +139,7 @@ public class BackupActivity extends BaseActivity {
             return;
         }
 
-        if (!WalletSecurity.isEncrypted(wallet)) {
+        if (!WalletSecurity.isEncrypted(wallet) || WalletSecurity.getSessionKey() != null) {
             revealRecoveryPhrase(wallet, "");
             return;
         }
