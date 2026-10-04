@@ -323,7 +323,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
 
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
     <string name="wallet_address_type">Loại địa chỉ</string>
-    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Paper Wallet này.</string>
+    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Ví Giấy này.</string>
     <string name="paper_wallet_address_type_compressed_required">Loại địa chỉ này yêu cầu khóa riêng dạng compressed (WIF compressed).</string>
     <string name="wallet_address_type_p2pkh">P2PKH</string>
     <string name="wallet_address_type_p2wpkh">P2WPKH</string>
@@ -356,7 +356,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="paper_wallet_unlock">MỞ KHÓA</string>
     <string name="paper_wallet_bip38_compressed_required">Mã hóa BIP38 tại đây yêu cầu khóa riêng dạng compressed.</string>
     <string name="paper_wallet_bip38_title">Mã hóa BIP38</string>
-    <string name="paper_wallet_bip38_message">Mật khẩu dùng để mã hóa khóa riêng này. Ứng dụng không lưu mật khẩu. Hãy giữ mật khẩu cùng Paper Wallet nếu cần khôi phục khóa.</string>
+    <string name="paper_wallet_bip38_message">Mật khẩu dùng để mã hóa khóa riêng này. Ứng dụng không lưu mật khẩu. Hãy giữ mật khẩu cùng Ví Giấy nếu cần khôi phục khóa.</string>
     <string name="paper_wallet_encrypt">MÃ HÓA</string>
     <string name="paper_wallet_file_failed">Không thể đọc tệp đã chọn.</string>
     <string name="paper_wallet_file_too_large">Tệp đã chọn quá lớn. Hãy sử dụng tệp văn bản nhỏ chỉ chứa một WIF.</string>
@@ -563,32 +563,32 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="paper_wallet_print_type_bip38">BIP38</string>
     <string name="paper_wallet_print_type_unknown">KHÔNG XÁC ĐỊNH</string>
     <string name="paper_wallet_print_warning">CẢNH BÁO: Với khóa này, có thể chi tiêu toàn bộ coin.</string>
-    <string name="paper_wallet_export_template">Paper Wallet Bitcoin
+    <string name="paper_wallet_export_template">Ví Giấy Bitcoin
 
 
-Loại địa chỉ:
+\nLoại địa chỉ:
 %1$s
 
 
-Địa chỉ Bitcoin:
+\nĐịa chỉ Bitcoin:
 %2$s
 
 
-Hex địa chỉ:
+\nHex địa chỉ:
 %3$s
 
 
-Khóa riêng / BIP38:
+\nKhóa riêng / BIP38:
 %4$s
 
 
-Hex khóa riêng / BIP38:
+\nHex khóa riêng / BIP38:
 %5$s
 
 
-Hãy giữ khóa riêng an toàn. Bất kỳ ai có khóa này đều có thể chi tiêu số tiền được kiểm soát bởi khóa.
+\nHãy giữ khóa riêng an toàn. Bất kỳ ai có khóa này đều có thể chi tiêu số tiền được kiểm soát bởi khóa.
 </string>
-    <string name="paper_wallet_export_success">Đã xuất Paper Wallet.</string>
+    <string name="paper_wallet_export_success">Đã xuất Ví Giấy.</string>
     <string name="paper_wallet_export_failed">Không thể tạo tệp xuất.</string>
 
     <string name="sync_peers_none">Không có peer nào đang kết nối</string>
