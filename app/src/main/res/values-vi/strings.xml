@@ -375,9 +375,9 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="imported_wallet_not_found">Không tìm thấy ví đã nhập.</string>
     <string name="imported_wallets_title">Các ví đã nhập</string>
     <string name="imported_wallet_total_zero">Tổng các ví đã nhập: 0 BTC
-Last scanned block: 0</string>
+\nLast scanned block: 0</string>
     <string name="imported_wallet_total_with_scan">Tổng các ví đã nhập: %1$s
-Block quét cuối: %2$d</string>
+\nBlock quét cuối: %2$d</string>
     <string name="imported_wallets_empty">Không có ví đã nhập.</string>
     <string name="imported_wallet_select">CHỌN</string>
     <string name="imported_wallet_selected">ĐÃ CHỌN</string>
@@ -422,7 +422,7 @@ Block quét cuối: %2$d</string>
     <string name="watched_addresses_title">Các địa chỉ đang theo dõi</string>
     <string name="watch_balance_total_zero">Tổng ví chỉ theo dõi: 0 BTC</string>
     <string name="watch_balance_total_with_scan">Tổng ví chỉ theo dõi: %1$s
-Block quét cuối: %2$d</string>
+\nBlock quét cuối: %2$d</string>
     <string name="watch_confirmed_value">Đã xác nhận: %1$s</string>
     <string name="watch_pending_value">Đang chờ: %1$s</string>
     <string name="watch_address_empty">Không có địa chỉ chỉ theo dõi.</string>
