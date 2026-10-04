@@ -484,7 +484,7 @@ Never send a WIF to anyone, put it in screenshots, chat messages, cloud notes, o
     <string name="export_transactions_success">Transaction history exported.</string>
     <string name="export_transactions_failed">Export failed: %1$s</string>
     <string name="address_tools_title">Address tools</string>
-    <string name="address_tools_message">%1$s\n\n%2$s</string>
+    <string name="address_tools_message">%2$s\n\n%1$s</string>
 
 
     <string name="send_review_fee_rate">Fee rate</string>
