@@ -11,6 +11,8 @@
     <string name="wallet_title">Ví</string>
     <string name="about_title">Giới thiệu</string>
     <string name="backup_title">Sao lưu ví</string>
+    <string name="backup_unlock_title">Mở khóa để tạo bản sao lưu ví</string>
+    <string name="unlock_before_backup">Nhập mật khẩu ví để mở khóa trước khi tạo bản sao lưu.</string>
     <string name="backup_recovery_title">Sao lưu &amp; Khôi phục</string>
     <string name="backup_recovery_description">Tạo bản sao lưu ví, khôi phục bản sao lưu hiện có hoặc xem cụm từ khôi phục.</string>
     <string name="backup_wallet_action">SAO LƯU VÍ</string>
@@ -317,7 +319,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
 
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
     <string name="wallet_address_type">Loại địa chỉ</string>
-    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Ví Giấy này.</string>
+    <string name="wallet_address_type_help">WIF không chứa thông tin loại địa chỉ. Chọn loại được dùng cho Paper Wallet này.</string>
     <string name="paper_wallet_address_type_compressed_required">Loại địa chỉ này yêu cầu khóa riêng dạng compressed (WIF compressed).</string>
     <string name="wallet_address_type_p2pkh">P2PKH</string>
     <string name="wallet_address_type_p2wpkh">P2WPKH</string>
