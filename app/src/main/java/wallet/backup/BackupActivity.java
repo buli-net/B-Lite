@@ -139,6 +139,11 @@ public class BackupActivity extends BaseActivity {
             return;
         }
 
+        if (!WalletSecurity.isEncrypted(wallet)) {
+            revealRecoveryPhrase(wallet, "");
+            return;
+        }
+
         View passwordView = getLayoutInflater().inflate(R.layout.dialog_password, null);
         final EditText password = passwordView.findViewById(R.id.dialogPasswordInput);
 
