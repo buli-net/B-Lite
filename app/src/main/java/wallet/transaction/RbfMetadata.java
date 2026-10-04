@@ -12,8 +12,6 @@ public final class RbfMetadata {
     private static final String PREFS = "rbf_metadata";
     private static final String PREFIX = "tx.";
     private static final String CHANGE_INDEX = ".change_index";
-    private static final String REPLACED_BY = ".replaced_by";
-    private static final String REPLACES = ".replaces";
 
     private RbfMetadata() {}
 
@@ -32,23 +30,11 @@ public final class RbfMetadata {
     public static void recordReplacement(Context context, String oldTxid, String newTxid,
                                          int newChangeIndex) {
         if (context == null || oldTxid == null || newTxid == null) return;
-        SharedPreferences.Editor editor = prefs(context).edit()
-                .putString(PREFIX + oldTxid + REPLACED_BY, newTxid)
-                .putString(PREFIX + newTxid + REPLACES, oldTxid);
+        SharedPreferences.Editor editor = prefs(context).edit();
         if (newChangeIndex >= 0) {
             editor.putInt(PREFIX + newTxid + CHANGE_INDEX, newChangeIndex);
         }
         editor.apply();
-    }
-
-    public static String replacedBy(Context context, String txid) {
-        if (context == null || txid == null) return null;
-        return prefs(context).getString(PREFIX + txid + REPLACED_BY, null);
-    }
-
-    public static String replaces(Context context, String txid) {
-        if (context == null || txid == null) return null;
-        return prefs(context).getString(PREFIX + txid + REPLACES, null);
     }
 
     private static SharedPreferences prefs(Context context) {
