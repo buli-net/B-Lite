@@ -487,9 +487,7 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="export_transactions_success">Đã xuất lịch sử giao dịch.</string>
     <string name="export_transactions_failed">Xuất thất bại: %1$s</string>
     <string name="address_tools_title">Công cụ địa chỉ</string>
-    <string name="address_tools_message">%1$s
-
-%2$s</string>
+    <string name="address_tools_message">%1$s %2$s</string>
 
 
     <string name="send_review_fee_rate">Mức phí</string>
