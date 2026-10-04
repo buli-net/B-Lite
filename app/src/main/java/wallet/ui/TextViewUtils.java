@@ -203,8 +203,6 @@ public final class TextViewUtils {
             state.lastText = raw;
             state.lastWidth = width;
 
-            TextViewUtils.removeEllipsisSpans(view.getText());
-
             if (view.getPaint().measureText(raw) <= width) {
                 if (!(view.getText() instanceof Spanned)
                         || view.getText().toString().equals(raw)) {
@@ -232,15 +230,6 @@ public final class TextViewUtils {
         } finally {
             state.applying = false;
         }
-    }
-
-    private static void removeEllipsisSpans(CharSequence text) {
-        if (!(text instanceof Spanned)) return;
-        Spanned spanned = (Spanned) text;
-        EllipsisSpan[] spans = spanned.getSpans(0, spanned.length(), EllipsisSpan.class);
-        if (spans.length == 0) return;
-        // The current TextView text is replaced with the raw string on the next
-        // apply() pass. No mutation of the caller's CharSequence is needed here.
     }
 
     private static int[] findVisibleRange(Paint paint, String text, float available) {
