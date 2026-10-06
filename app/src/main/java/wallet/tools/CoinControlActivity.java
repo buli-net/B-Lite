@@ -33,6 +33,7 @@ public final class CoinControlActivity extends BaseActivity {
     private TextView totalText;
     private final Set<String> selected = new HashSet<>();
     private final Map<String, View> coinRows = new HashMap<>();
+    private String renderedScope;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -61,6 +62,7 @@ public final class CoinControlActivity extends BaseActivity {
             finish();
         });
 
+        renderedScope = selectionScope();
         selected.addAll(CoinControl.getSelected());
         render();
     }
@@ -83,11 +85,26 @@ public final class CoinControlActivity extends BaseActivity {
         }
 
         Wallet wallet = kit.wallet();
+        String currentScope = selectionScope();
+        if (!currentScope.equals(renderedScope)) {
+            selected.clear();
+            CoinControl.clear();
+            renderedScope = currentScope;
+        }
+
+        org.bitcoinj.script.Script selectedImportedScript =
+                WalletSelection.findSelectedImportedScript(this, wallet);
         List<TransactionOutput> outputs = wallet.getUnspents();
         java.util.ArrayList<TransactionOutput> mainOutputs = new java.util.ArrayList<>();
         for (TransactionOutput output : outputs) {
-            if (output.isAvailableForSpending()
-                    && !WalletSelection.isWatchedOutput(wallet, output)) {
+            if (!output.isAvailableForSpending()) {
+                continue;
+            }
+            if (selectedImportedScript != null) {
+                if (selectedImportedScript.equals(output.getScriptPubKey())) {
+                    mainOutputs.add(output);
+                }
+            } else if (!WalletSelection.isWatchedOutput(wallet, output)) {
                 mainOutputs.add(output);
             }
         }
@@ -185,6 +202,18 @@ public final class CoinControlActivity extends BaseActivity {
         totalText.setText(getString(
                 R.string.coin_control_selected_total,
                 org.bitcoinj.base.Coin.valueOf(total).toFriendlyString()));
+    }
+
+    private String selectionScope() {
+        String imported = WalletSelection.getSelectedImportedAddress(this);
+        if (imported != null) {
+            return "imported:" + imported;
+        }
+        String watched = WalletSelection.getSelectedWatchAddress(this);
+        if (watched != null) {
+            return "watch:" + watched;
+        }
+        return "main";
     }
 
     private void updateTotal(List<TransactionOutput> outputs) {
