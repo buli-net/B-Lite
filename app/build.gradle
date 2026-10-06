@@ -18,7 +18,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles project.android.getDefaultProguardFile('proguard-android-optimize.txt'),
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     'proguard-rules.pro'
         }
     }
@@ -37,24 +37,18 @@ android {
     packaging {
         resources {
             excludes += [
-                    'META-INF/*.version',
-                    'META-INF/proguard/**',
-                    'META-INF/**/coroutines.pro',
-                    '**/*.proto',
-                    'org/bouncycastle/**/*.properties',
-                    'org/bitcoinj/crypto/cacerts',
-                    'org.bitcoin.*.checkpoints.txt'
+                  //  'META-INF/*.version',
+                 //   'META-INF/proguard/**',
+                 //   'META-INF/**/coroutines.pro'
             ]
         }
     }
-}
+} 
+
 
 configurations.configureEach {
     exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
     exclude group: 'com.google.code.findbugs', module: 'annotations'
-    resolutionStrategy {
-        force 'org.slf4j:slf4j-api:1.7.36'
-    }
 }
 
 dependencies {
@@ -67,5 +61,6 @@ dependencies {
     implementation 'org.bitcoinj:bitcoinj-core:0.17.1'
     implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
     implementation 'com.google.guava:guava:33.7.2-android'
-    implementation 'org.slf4j:slf4j-android:1.7.36'
+    implementation 'org.slf4j:slf4j-api:2.0.17'
+    implementation 'uk.uuid.slf4j:slf4j-android:2.0.17-0'
 }
