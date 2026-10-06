@@ -201,7 +201,6 @@ public final class SendPresenter {
             Context.propagate(Context.getOrCreate(parameters));
             try {
                 Address destination = Address.fromString(parameters, recipientText);
-                Wallet wallet = walletAppKit.wallet();
                 SendRequest request = SendRequest.emptyWallet(destination);
                 request.aesKey = WalletSecurity.getSessionKey();
                 request.setFeePerVkb(Coin.valueOf(feeSatVb * 1000L));
