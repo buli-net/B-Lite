@@ -632,7 +632,6 @@ public final class SendPresenter {
                     }
                     view.showMessage(message);
                     {
-                        Wallet wallet = walletAppKit.wallet();
                         Script selectedWatchScript = WalletSelection.findSelectedScript(
                                 view.getActivityContext(), wallet);
                         Script selectedImportedScript = selectedWatchScript == null
@@ -640,7 +639,6 @@ public final class SendPresenter {
                                 view.getActivityContext(), wallet) : null;
                         Coin available;
                         Coin pending;
-                        Coin balance;
                         if (selectedWatchScript != null || selectedImportedScript != null) {
                             Script selectedScript = selectedWatchScript != null
                                     ? selectedWatchScript : selectedImportedScript;
