@@ -535,15 +535,20 @@ public final class TransactionDetailActivity extends BaseActivity {
     private boolean isFeeBoostCandidate(
             Wallet wallet, TransactionOutput output, Script selectedImportedScript,
             java.util.Set<Script> importedScripts) {
-        if (output == null || !output.isMine(wallet)
-                || !output.isAvailableForSpending() || !output.getValue().isPositive()) {
+        if (output == null || !output.isAvailableForSpending()
+                || !output.getValue().isPositive()) {
             return false;
         }
         Script outputScript = output.getScriptPubKey();
         if (selectedImportedScript != null) {
+            // For a selected imported wallet, the exact imported script is the ownership
+            // boundary. Do not additionally depend on Wallet.isMine(), because imported
+            // P2WPKH outputs can be spendable by the imported key while bitcoinj does not
+            // classify the output through the normal keychain ownership check.
             return selectedImportedScript.equals(outputScript);
         }
-        return !WalletSelection.isWatchedOutput(wallet, output)
+        return output.isMine(wallet)
+                && !WalletSelection.isWatchedOutput(wallet, output)
                 && !importedScripts.contains(outputScript);
     }
 
