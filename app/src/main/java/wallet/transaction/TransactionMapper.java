@@ -65,12 +65,14 @@ public final class TransactionMapper {
     }
 
     /**
-     * Maps transactions for the exact main-wallet scope.
+     * Maps transactions for the main wallet using bitcoinj's signed transaction
+     * value as the primary classification source. bitcoinj defines
+     * Transaction#getValue(TransactionBag) as received-minus-sent, so a negative
+     * value is an outgoing transaction even when it has a change output back to
+     * the wallet.
      *
-     * bitcoinj 0.17.1 defines the wallet transaction value as received-minus-sent.
-     * Because imported keys are intentionally kept in the same Wallet instance,
-     * the main view applies that same rule after excluding imported and watched
-     * scripts. This avoids double-counting imported values against getValue(wallet).
+     * Imported-wallet scripts live in the same bitcoinj Wallet instance, so their
+     * signed value is removed afterwards to keep the main-wallet scope separate.
      */
     public static List<TransactionItem> mapForMainWallet(Context context, Wallet wallet) {
         List<TransactionItem> items = new ArrayList<>();
@@ -82,28 +84,14 @@ public final class TransactionMapper {
                 "yyyy-MM-dd HH:mm:ss", Locale.US);
 
         Map<Sha256Hash, Transaction> walletTransactions = indexWalletTransactions(wallet);
-        java.util.Set<org.bitcoinj.script.Script> importedScripts =
-                WalletSelection.getImportedScripts(context, wallet);
 
         for (Transaction transaction : wallet.getTransactionsByTime()) {
-            // bitcoinj's Transaction#getValue(wallet) is the canonical signed
-            // value for one Wallet instance. B-Lite stores imported keys in that
-            // same Wallet, so subtracting imported values from getValue(wallet)
-            // can double-count an input or change output. Apply the same
-            // received-minus-sent rule over the exact main-wallet scope instead.
-            Coin received = Coin.ZERO;
-            for (org.bitcoinj.core.TransactionOutput output : transaction.getOutputs()) {
-                org.bitcoinj.script.Script script = output.getScriptPubKey();
-                if (output.isMine(wallet)
-                        && !WalletSelection.isWatchedOutput(wallet, output)
-                        && !importedScripts.contains(script)) {
-                    received = received.add(output.getValue());
-                }
-            }
-
-            Coin sent = valueSentFromMainWallet(
-                    wallet, walletTransactions, transaction, importedScripts);
-            Coin net = received.subtract(sent);
+            // The Wallet object also contains imported and watched scopes.
+            // Use the bitcoinj aggregate value first, then remove every
+            // explicitly separated scope exactly once. This keeps the main
+            // wallet classification consistent with the same signed-value
+            // semantics while preserving B-Lite wallet separation.
+            Coin net = valueForMainWallet(context, wallet, transaction, walletTransactions);
 
             if (net.isZero()) {
                 continue;
@@ -112,6 +100,125 @@ public final class TransactionMapper {
             addItem(items, context, wallet, walletTransactions, transaction, net, dateFormat);
         }
         return items;
+    }
+
+    /**
+     * Signed value for the main wallet scope. bitcoinj's transaction value is
+     * the authoritative aggregate for the Wallet, so start with it and then
+     * remove the exact scripts that B-Lite intentionally keeps outside the
+     * main-wallet scope (watched and imported).
+     */
+    public static Coin valueForMainWallet(
+            Context context, Wallet wallet, Transaction transaction) {
+        return valueForMainWallet(context, wallet, transaction, indexWalletTransactions(wallet));
+    }
+
+    private static Coin valueForMainWallet(
+            Context context, Wallet wallet, Transaction transaction,
+            Map<Sha256Hash, Transaction> walletTransactions) {
+        Coin net = safeTransactionValue(transaction, wallet);
+        if (context == null || wallet == null || transaction == null) {
+            return net;
+        }
+
+        java.util.Set<org.bitcoinj.script.Script> excludedScripts =
+                new java.util.HashSet<>();
+        excludedScripts.addAll(wallet.getWatchedScripts());
+        excludedScripts.addAll(WalletSelection.getImportedScripts(context, wallet));
+
+        for (org.bitcoinj.script.Script excludedScript : excludedScripts) {
+            net = net.subtract(valueForScript(
+                    walletTransactions, transaction, excludedScript));
+        }
+        return net;
+    }
+
+    /** Gross value sent from the main-wallet scope, excluding separated scopes. */
+    public static Coin valueSentFromMainWallet(
+            Context context, Wallet wallet, Transaction transaction) {
+        Coin value = safeValueSentFromMe(transaction, wallet);
+        if (context == null || wallet == null || transaction == null) {
+            return value;
+        }
+
+        Map<Sha256Hash, Transaction> walletTransactions = indexWalletTransactions(wallet);
+        java.util.Set<org.bitcoinj.script.Script> excludedScripts = new java.util.HashSet<>();
+        excludedScripts.addAll(wallet.getWatchedScripts());
+        excludedScripts.addAll(WalletSelection.getImportedScripts(context, wallet));
+
+        for (org.bitcoinj.script.Script excludedScript : excludedScripts) {
+            value = value.subtract(valueSentFromScript(
+                    walletTransactions, transaction, excludedScript));
+        }
+        return value.isNegative() ? Coin.ZERO : value;
+    }
+
+    /** Gross value received by the main-wallet scope, excluding separated scopes. */
+    public static Coin valueSentToMainWallet(
+            Context context, Wallet wallet, Transaction transaction) {
+        Coin value = safeValueSentToMe(transaction, wallet);
+        if (context == null || wallet == null || transaction == null) {
+            return value;
+        }
+
+        Map<Sha256Hash, Transaction> walletTransactions = indexWalletTransactions(wallet);
+        java.util.Set<org.bitcoinj.script.Script> excludedScripts = new java.util.HashSet<>();
+        excludedScripts.addAll(wallet.getWatchedScripts());
+        excludedScripts.addAll(WalletSelection.getImportedScripts(context, wallet));
+
+        for (org.bitcoinj.script.Script excludedScript : excludedScripts) {
+            value = value.subtract(valueReceivedForScript(
+                    transaction, excludedScript));
+        }
+        return value.isNegative() ? Coin.ZERO : value;
+    }
+
+    /** Gross value received by an exact script scope. */
+    public static Coin valueReceivedForScript(
+            Transaction transaction, org.bitcoinj.script.Script script) {
+        if (transaction == null || script == null) {
+            return Coin.ZERO;
+        }
+        Coin received = Coin.ZERO;
+        for (org.bitcoinj.core.TransactionOutput output : transaction.getOutputs()) {
+            if (script.equals(output.getScriptPubKey())) {
+                received = received.add(output.getValue());
+            }
+        }
+        return received;
+    }
+
+    /** Gross value spent from an exact script scope. */
+    public static Coin valueSentFromScript(
+            Map<Sha256Hash, Transaction> walletTransactions,
+            Transaction transaction, org.bitcoinj.script.Script script) {
+        return valueSentFromWatchedScript(walletTransactions, transaction, script);
+    }
+
+    /** Signed value for an exact script scope. */
+    public static Coin valueForScriptScope(
+            Map<Sha256Hash, Transaction> walletTransactions,
+            Transaction transaction, org.bitcoinj.script.Script script) {
+        return valueReceivedForScript(transaction, script)
+                .subtract(valueSentFromScript(walletTransactions, transaction, script));
+    }
+
+    private static Coin safeValueSentFromMe(Transaction transaction, Wallet wallet) {
+        try {
+            Coin value = transaction.getValueSentFromMe(wallet);
+            return value == null ? Coin.ZERO : value;
+        } catch (Exception ignored) {
+            return Coin.ZERO;
+        }
+    }
+
+    private static Coin safeValueSentToMe(Transaction transaction, Wallet wallet) {
+        try {
+            Coin value = transaction.getValueSentToMe(wallet);
+            return value == null ? Coin.ZERO : value;
+        } catch (Exception ignored) {
+            return Coin.ZERO;
+        }
     }
 
     /** Sum inputs that spend outputs belonging to the exact watched script. */
@@ -128,28 +235,25 @@ public final class TransactionMapper {
         return sent;
     }
 
-    /** Sum inputs spent from the exact main-wallet scope. */
-    private static Coin valueSentFromMainWallet(
-            Wallet wallet,
+    /**
+     * bitcoinj 0.17.1's canonical signed wallet value:
+     * getValue(wallet) = valueSentToMe(wallet) - valueSentFromMe(wallet).
+     */
+    private static Coin safeTransactionValue(Transaction transaction, Wallet wallet) {
+        try {
+            Coin value = transaction.getValue(wallet);
+            return value == null ? Coin.ZERO : value;
+        } catch (Exception ignored) {
+            return Coin.ZERO;
+        }
+    }
+
+    /** Calculates the signed value belonging to one exact script scope. */
+    private static Coin valueForScript(
             Map<Sha256Hash, Transaction> walletTransactions,
             Transaction transaction,
-            java.util.Set<org.bitcoinj.script.Script> importedScripts) {
-        Coin sent = Coin.ZERO;
-        for (org.bitcoinj.core.TransactionInput input : transaction.getInputs()) {
-            org.bitcoinj.core.TransactionOutput connected = findConnectedOutput(walletTransactions, input);
-            if (connected == null || !connected.isMine(wallet)) {
-                continue;
-            }
-
-            org.bitcoinj.script.Script script = connected.getScriptPubKey();
-            if (WalletSelection.isWatchedOutput(wallet, connected)
-                    || importedScripts.contains(script)) {
-                continue;
-            }
-
-            sent = sent.add(connected.getValue());
-        }
-        return sent;
+            org.bitcoinj.script.Script script) {
+        return valueForScriptScope(walletTransactions, transaction, script);
     }
 
     /**

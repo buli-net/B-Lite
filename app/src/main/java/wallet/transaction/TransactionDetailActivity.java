@@ -143,13 +143,27 @@ public final class TransactionDetailActivity extends BaseActivity {
 
     private DetailData prepareDetail(Transaction transaction, Wallet wallet) {
         Script selectedWatchScript = WalletSelection.findSelectedScript(this, wallet);
+        Script selectedImportedScript = selectedWatchScript == null
+                ? WalletSelection.findSelectedImportedScript(this, wallet) : null;
+        Script selectedScopeScript = selectedWatchScript != null
+                ? selectedWatchScript : selectedImportedScript;
 
-        Coin received = selectedWatchScript == null
-                ? safeValueSentToMe(transaction, wallet)
-                : sumWalletOutputs(transaction, wallet, selectedWatchScript);
-        Coin sent = selectedWatchScript == null
-                ? safeValueSentFromMe(transaction, wallet)
-                : sumWatchedInputs(transaction, selectedWatchScript);
+        Coin received;
+        Coin sent;
+        if (selectedScopeScript != null) {
+            java.util.Map<Sha256Hash, Transaction> walletTransactions =
+                    indexWalletTransactions(wallet);
+            received = TransactionMapper.valueReceivedForScript(
+                    transaction, selectedScopeScript);
+            sent = TransactionMapper.valueSentFromScript(
+                    walletTransactions, transaction, selectedScopeScript);
+        } else {
+            // Main-wallet scope: bitcoinj's Wallet contains the imported and
+            // watched scopes too, so use the same separated-scope calculation
+            // as the transaction list instead of getValueSent*() directly.
+            received = TransactionMapper.valueSentToMainWallet(this, wallet, transaction);
+            sent = TransactionMapper.valueSentFromMainWallet(this, wallet, transaction);
+        }
 
         Coin net = received.subtract(sent);
         boolean isReceived = net.isPositive();
@@ -159,22 +173,15 @@ public final class TransactionDetailActivity extends BaseActivity {
 
         if (isReceived) {
             // Incoming: show where the value came from, then the outputs
-            // that actually belong to this wallet. The two cards therefore
-            // answer two different questions instead of reusing "sent/received"
-            // labels that can be mistaken for the wallet's net amount.
+            // that actually belong to this wallet scope.
             sentEntries = collectAllInputEntries(transaction);
-            receivedEntries = collectWalletOutputs(transaction, wallet, selectedWatchScript);
+            receivedEntries = collectWalletOutputs(transaction, wallet, selectedScopeScript);
         } else if (net.isNegative()) {
-            // Outgoing: show only the outputs sent to other parties in the
-            // "Sent" card. Wallet-owned outputs are change and are shown in
-            // the second card. This avoids presenting the gross input value
-            // or the gross output value as the amount actually sent.
-            sentEntries = collectExternalOutputs(transaction, wallet, selectedWatchScript);
-            receivedEntries = collectWalletOutputs(transaction, wallet, selectedWatchScript);
+            // Outgoing: external outputs are the actual recipients and
+            // selected-wallet outputs are change.
+            sentEntries = collectExternalOutputs(transaction, wallet, selectedScopeScript);
+            receivedEntries = collectWalletOutputs(transaction, wallet, selectedScopeScript);
         } else {
-            // Self-transfer/neutral transaction: fall back to an explicit
-            // transaction-wide input/output view rather than implying a
-            // direction that is not present.
             sentEntries = collectAllInputEntries(transaction);
             receivedEntries = collectAllOutputEntries(transaction);
         }
@@ -186,16 +193,16 @@ public final class TransactionDetailActivity extends BaseActivity {
                     ? getString(R.string.transaction_unknown_address)
                     : sentEntries.get(0).address;
             to = receivedEntries.isEmpty()
-                    ? firstWalletOutput(transaction, wallet, selectedWatchScript)
+                    ? firstWalletOutput(transaction, wallet, selectedScopeScript)
                     : receivedEntries.get(0).address;
         } else if (net.isNegative()) {
             List<TxEntry> walletInputs = collectOwnInputs(
-                    transaction, wallet, selectedWatchScript);
+                    transaction, wallet, selectedScopeScript);
             from = walletInputs.isEmpty()
                     ? getString(R.string.transaction_unknown_address)
                     : walletInputs.get(0).address;
             to = sentEntries.isEmpty()
-                    ? firstExternalOutput(transaction, wallet, selectedWatchScript)
+                    ? firstExternalOutput(transaction, wallet, selectedScopeScript)
                     : sentEntries.get(0).address;
         } else {
             from = sentEntries.isEmpty()
@@ -758,11 +765,22 @@ public final class TransactionDetailActivity extends BaseActivity {
     }
 
     private boolean belongsToSelectedWallet(
-            TransactionOutput output, Wallet wallet, Script selectedWatchScript) {
-        if (selectedWatchScript != null) {
-            return selectedWatchScript.equals(output.getScriptPubKey());
+            TransactionOutput output, Wallet wallet, Script selectedScopeScript) {
+        if (selectedScopeScript != null) {
+            return selectedScopeScript.equals(output.getScriptPubKey());
         }
-        return output.isMine(wallet) && !WalletSelection.isWatchedOutput(wallet, output);
+        return output.isMine(wallet)
+                && !WalletSelection.isWatchedOutput(wallet, output)
+                && !WalletSelection.getImportedScripts(this, wallet)
+                .contains(output.getScriptPubKey());
+    }
+
+    private java.util.Map<Sha256Hash, Transaction> indexWalletTransactions(Wallet wallet) {
+        java.util.Map<Sha256Hash, Transaction> result = new java.util.HashMap<>();
+        for (Transaction value : wallet.getTransactions(true)) {
+            result.put(value.getTxId(), value);
+        }
+        return result;
     }
 
     private TransactionOutput connectedOutput(TransactionInput input) {
