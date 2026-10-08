@@ -277,7 +277,7 @@ public final class TransactionDetailActivity extends BaseActivity {
             }
         }
         return findSpendableOutput(
-                wallet, transaction, Transaction.DEFAULT_TX_FEE, selectedImportedScript) != null;
+                wallet, transaction, Coin.ZERO, selectedImportedScript) != null;
     }
 
     private void showBoostFeeDialog() {
@@ -517,8 +517,18 @@ public final class TransactionDetailActivity extends BaseActivity {
                 ? WalletSelection.getImportedScripts(this, wallet)
                 : java.util.Collections.emptySet();
         for (TransactionOutput output : transaction.getOutputs()) {
-            if (isFeeBoostCandidate(wallet, output, selectedImportedScript, importedScripts)
-                    && output.getValue().isGreaterThan(minimumOutputValue)) {
+            if (!isFeeBoostCandidate(wallet, output, selectedImportedScript, importedScripts)) {
+                continue;
+            }
+            // A CPFP child must leave a non-dust output after paying at least 1 sat
+            // of child fee. Do not use DEFAULT_TX_FEE here: a small imported-wallet
+            // change output can still be valid for CPFP even when it is below that
+            // default fee amount. The actual target fee is checked when building the
+            // child and will reject the boost if the selected target cannot fit.
+            Coin minimumChildValue = output.getMinNonDustValue();
+            Coin requiredValue = minimumChildValue.add(Coin.SATOSHI);
+            if (output.getValue().isGreaterThan(minimumOutputValue)
+                    && output.getValue().isGreaterThan(requiredValue)) {
                 return output;
             }
         }
