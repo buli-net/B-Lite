@@ -2,7 +2,7 @@ package wallet.tools;
 
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
-import android.nfc.Ndef;
+import android.nfc.tech.Ndef;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.os.Bundle;
