@@ -68,9 +68,9 @@
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:text="@string/nfc_reader_decoded_card_title" android:textColor="?android:attr/textColorPrimary"
                     android:textStyle="bold" android:textSize="17sp" />
-                <TextView android:id="@+id/nfc_reader_decoded_value" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="14dp"
-                    android:textColor="?android:attr/textColorPrimary" android:textIsSelectable="true" />
+                <LinearLayout android:id="@+id/nfc_reader_decoded_fields" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                    android:orientation="vertical" />
             </LinearLayout>
             <LinearLayout android:id="@+id/nfc_reader_ndef_card" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="10dp" android:background="@drawable/bg_card"

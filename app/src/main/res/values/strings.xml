@@ -867,10 +867,28 @@ Keep the private key secure. Anyone with it can spend the funds.
     <string name="nfc_reader_ultralight_public_pages">Read-only page scan (only pages exposed by the tag):</string>
     <string name="nfc_reader_page_read_stopped">Stopped reading at page %1$d (%2$s).</string>
     <string name="nfc_reader_no_pages_read">No readable pages were returned by the tag.</string>
-    <string name="nfc_reader_decoded_card_title">Decoded content</string>
+    <string name="nfc_reader_content_type_label">Content type</string>
+    <string name="nfc_reader_text_content_label">Text content</string>
+    <string name="nfc_reader_url_content_label">Website address</string>
+    <string name="nfc_reader_generic_content_label">Content</string>
+    <string name="nfc_reader_name_label">Full name</string>
+    <string name="nfc_reader_organization_label">Company / organization</string>
+    <string name="nfc_reader_job_title_label">Job title</string>
+    <string name="nfc_reader_phone_label">Phone</string>
+    <string name="nfc_reader_email_label">Email</string>
+    <string name="nfc_reader_website_label">Website</string>
+    <string name="nfc_reader_phone_link_type">Phone link</string>
+    <string name="nfc_reader_email_link_type">Email link</string>
+    <string name="nfc_reader_link_type">Link</string>
+    <string name="nfc_reader_link_content_label">Link address</string>
+    <string name="nfc_reader_decoded_card_title">Content on tag</string>
     <string name="nfc_reader_vcard_form_title">Contact card (vCard)</string>
     <string name="nfc_reader_vcard_name_parts">Family: %1$s\nGiven: %2$s\nAdditional: %3$s\nPrefix: %4$s\nSuffix: %5$s</string>
     <string name="nfc_reader_vcard_original">Original vCard text:</string>
     <string name="nfc_reader_field_empty">Not provided</string>
 
+    <string name="nfc_reader_vcard_data_type">Business card (vCard)</string>
+    <string name="nfc_reader_text_data_type">Text</string>
+    <string name="nfc_reader_url_data_type">URL</string>
+    <string name="nfc_writer_optional_value">Optional</string>
 </resources>

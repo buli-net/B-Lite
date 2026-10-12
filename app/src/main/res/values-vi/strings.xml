@@ -867,10 +867,28 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="nfc_reader_ultralight_public_pages">Quét trang chỉ đọc (chỉ các trang thẻ cho phép truy cập):</string>
     <string name="nfc_reader_page_read_stopped">Dừng đọc tại trang %1$d (%2$s).</string>
     <string name="nfc_reader_no_pages_read">Thẻ không trả về trang nào có thể đọc.</string>
-    <string name="nfc_reader_decoded_card_title">Nội dung đã giải mã</string>
+    <string name="nfc_reader_content_type_label">Loại nội dung</string>
+    <string name="nfc_reader_text_content_label">Nội dung văn bản</string>
+    <string name="nfc_reader_url_content_label">Địa chỉ website</string>
+    <string name="nfc_reader_generic_content_label">Nội dung</string>
+    <string name="nfc_reader_name_label">Họ và tên</string>
+    <string name="nfc_reader_organization_label">Công ty / tổ chức</string>
+    <string name="nfc_reader_job_title_label">Chức vụ</string>
+    <string name="nfc_reader_phone_label">Điện thoại</string>
+    <string name="nfc_reader_email_label">Email</string>
+    <string name="nfc_reader_website_label">Website</string>
+    <string name="nfc_reader_phone_link_type">Liên kết gọi điện</string>
+    <string name="nfc_reader_email_link_type">Liên kết email</string>
+    <string name="nfc_reader_link_type">Liên kết</string>
+    <string name="nfc_reader_link_content_label">Địa chỉ liên kết</string>
+    <string name="nfc_reader_decoded_card_title">Nội dung trên thẻ</string>
     <string name="nfc_reader_vcard_form_title">Danh thiếp (vCard)</string>
     <string name="nfc_reader_vcard_name_parts">Họ: %1$s\nTên: %2$s\nTên đệm: %3$s\nTiền tố: %4$s\nHậu tố: %5$s</string>
     <string name="nfc_reader_vcard_original">Nội dung vCard gốc:</string>
     <string name="nfc_reader_field_empty">Không có dữ liệu</string>
 
+    <string name="nfc_reader_vcard_data_type">Danh thiếp (vCard)</string>
+    <string name="nfc_reader_text_data_type">Văn bản (Text)</string>
+    <string name="nfc_reader_url_data_type">Địa chỉ URL</string>
+    <string name="nfc_writer_optional_value">Không bắt buộc</string>
 </resources>

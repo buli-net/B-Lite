@@ -2,6 +2,8 @@ package wallet.tools;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
 import android.content.Context;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
@@ -19,14 +21,18 @@ import android.nfc.tech.NfcF;
 import android.nfc.tech.NfcV;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.content.res.AppCompatResources;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -53,7 +59,7 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
     private TextView idView;
     private TextView technologiesView;
     private TextView ndefView;
-    private TextView decodedView;
+    private LinearLayout decodedFieldsContainer;
     private TextView protocolView;
     private Button copyButton;
     private View protocolCard;
@@ -77,7 +83,7 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         idView = findViewById(R.id.nfc_reader_id);
         technologiesView = findViewById(R.id.nfc_reader_technologies_value);
         ndefView = findViewById(R.id.nfc_reader_ndef_value);
-        decodedView = findViewById(R.id.nfc_reader_decoded_value);
+        decodedFieldsContainer = findViewById(R.id.nfc_reader_decoded_fields);
         decodedCard = findViewById(R.id.nfc_reader_decoded_card);
         protocolView = findViewById(R.id.nfc_reader_protocol_value);
         protocolCard = findViewById(R.id.nfc_reader_protocol_card);
@@ -123,7 +129,7 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         String id = toHex(tag.getId());
         String technologies = buildTechnologyReport(tag);
         String ndefText = readNdef(tag);
-        String decodedText = readDecodedContent(tag);
+        List<DecodedField> decodedFields = readDecodedContent(tag);
         String protocolText = readProtocolDetails(tag);
         boolean hasNdef = Ndef.get(tag) != null;
         boolean isMifareClassic = MifareClassic.get(tag) != null;
@@ -148,8 +154,8 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
             idView.setText(id.isEmpty() ? getString(R.string.nfc_reader_unknown) : id);
             technologiesView.setText(technologies);
             ndefView.setText(ndefText);
-            decodedView.setText(decodedText);
-            decodedCard.setVisibility(decodedText.isEmpty() ? View.GONE : View.VISIBLE);
+            renderDecodedFields(decodedFields);
+            decodedCard.setVisibility(decodedFields.isEmpty() ? View.GONE : View.VISIBLE);
             protocolView.setText(protocolText);
             copyButton.setEnabled(true);
         });
@@ -208,97 +214,88 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         appendPayloadHex(out, record.getPayload(), indent);
     }
 
-    /** Build a human-readable reconstruction of the stored NDEF content, separate from tag diagnostics. */
-    private String readDecodedContent(Tag tag) {
+    /** Read only the user-facing NDEF content. Protocol details and raw payload are rendered in separate cards. */
+    private List<DecodedField> readDecodedContent(Tag tag) {
+        List<DecodedField> fields = new ArrayList<>();
         Ndef ndef = Ndef.get(tag);
-        if (ndef == null) return "";
+        if (ndef == null) return fields;
         try {
             ndef.connect();
             NdefMessage message = ndef.getNdefMessage();
-            if (message == null) return "";
-            StringBuilder out = new StringBuilder();
-            for (NdefRecord record : message.getRecords()) {
-                if (out.length() > 0) out.append("\n\n");
-                appendDecodedRecord(out, record);
+            if (message != null) {
+                for (NdefRecord record : message.getRecords()) appendDecodedRecord(fields, record);
             }
-            return out.toString().trim();
-        } catch (IOException | FormatException | RuntimeException e) {
-            return "";
+        } catch (IOException | FormatException | RuntimeException ignored) {
+            fields.clear();
         } finally {
             try { ndef.close(); } catch (IOException ignored) { }
         }
+        return fields;
     }
 
-    private void appendDecodedRecord(StringBuilder out, NdefRecord record) {
+    private static final class DecodedField {
+        final String label;
+        final String value;
+        DecodedField(String label, String value) {
+            this.label = label;
+            this.value = value;
+        }
+    }
+
+    private void addDecodedField(List<DecodedField> fields, int labelRes, String value) {
+        fields.add(new DecodedField(getString(labelRes), value == null ? "" : value));
+    }
+
+    private void appendDecodedRecord(List<DecodedField> fields, NdefRecord record) {
         byte[] type = record.getType();
         byte[] payload = record.getPayload();
         if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(type, NdefRecord.RTD_TEXT)) {
-            out.append(getString(R.string.nfc_reader_decoded_text, decodeTextPayload(payload)));
+            addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_text_data_type));
+            addDecodedField(fields, R.string.nfc_reader_text_content_label, decodeTextPayload(payload));
         } else if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(type, NdefRecord.RTD_URI)) {
-            appendDecodedUri(out, decodeUriPayload(payload), "");
+            appendDecodedUri(fields, decodeUriPayload(payload));
         } else if (record.getTnf() == NdefRecord.TNF_ABSOLUTE_URI) {
-            appendDecodedUri(out, printableUtf8(type), "");
+            appendDecodedUri(fields, printableUtf8(type));
         } else if (record.getTnf() == NdefRecord.TNF_MIME_MEDIA) {
             String mimeType = printableUtf8(type);
             String content = decodeUtf8IfReadable(payload);
             String normalizedType = mimeType == null ? "" : mimeType.trim().toLowerCase(Locale.ROOT);
             boolean isVCard = normalizedType.equals("text/vcard") || normalizedType.equals("text/x-vcard");
             if (isVCard && content != null && content.toUpperCase(Locale.ROOT).contains("BEGIN:VCARD")) {
-                appendVCardForm(out, content);
-            } else if (content != null && (normalizedType.startsWith("text/") || normalizedType.equals("application/json")
-                    || normalizedType.equals("application/xml") || normalizedType.endsWith("+json") || normalizedType.endsWith("+xml"))) {
-                out.append(getString(R.string.nfc_reader_decoded_mime_content, content));
-            } else if (content != null) {
-                out.append(getString(R.string.nfc_reader_decoded_mime_content, content));
-            } else {
-                out.append(getString(R.string.nfc_reader_mime_type, mimeType));
+                appendVCardFields(fields, content);
+            } else if (content != null && !content.trim().isEmpty()) {
+                int label = normalizedType.startsWith("text/")
+                        ? R.string.nfc_reader_text_content_label : R.string.nfc_reader_generic_content_label;
+                addDecodedField(fields, label, content);
             }
         } else if (record.getTnf() == NdefRecord.TNF_EXTERNAL_TYPE) {
-            out.append(getString(R.string.nfc_reader_external_type, printableUtf8(type)));
             String text = decodeUtf8IfReadable(payload);
-            if (text != null && !text.trim().isEmpty()) out.append("\n").append(getString(R.string.nfc_reader_decoded_mime_content, text));
+            if (text != null && !text.trim().isEmpty()) {
+                addDecodedField(fields, R.string.nfc_reader_generic_content_label, text);
+            }
         } else if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(type, NdefRecord.RTD_SMART_POSTER)) {
             try {
                 NdefMessage nested = new NdefMessage(payload);
-                for (NdefRecord child : nested.getRecords()) appendDecodedRecord(out, child);
+                for (NdefRecord child : nested.getRecords()) appendDecodedRecord(fields, child);
             } catch (FormatException ignored) { }
         } else {
             String text = decodeUtf8IfReadable(payload);
-            if (text != null && !text.trim().isEmpty()) out.append(getString(R.string.nfc_reader_decoded_mime_content, text));
+            if (text != null && !text.trim().isEmpty()) {
+                addDecodedField(fields, R.string.nfc_reader_generic_content_label, text);
+            }
         }
     }
 
-    /** Render the decoded vCard like a read-only version of the input form; raw bytes stay in the technical card. */
-    private void appendVCardForm(StringBuilder out, String content) {
+    /** Recreate the write form's field layout as read-only output, without input hints or technical metadata. */
+    private void appendVCardFields(List<DecodedField> fields, String content) {
         java.util.Map<String, List<String>> values = parseVCardProperties(content);
-        out.append(getString(R.string.nfc_reader_vcard_form_title)).append('\n');
-        appendVCardFormField(out, R.string.nfc_reader_vcard_name, firstVCard(values, "FN"));
-        String structured = firstVCard(values, "N");
-        String[] nameParts = structured.split(";", -1);
-        String family = nameParts.length > 0 ? nameParts[0] : "";
-        String given = nameParts.length > 1 ? nameParts[1] : "";
-        String additional = nameParts.length > 2 ? nameParts[2] : "";
-        String prefix = nameParts.length > 3 ? nameParts[3] : "";
-        String suffix = nameParts.length > 4 ? nameParts[4] : "";
-        String structuredDisplay = getString(R.string.nfc_reader_vcard_name_parts, displayOrDash(family), displayOrDash(given), displayOrDash(additional), displayOrDash(prefix), displayOrDash(suffix));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_structured_name, structuredDisplay);
-        appendVCardFormField(out, R.string.nfc_reader_vcard_organization, firstVCard(values, "ORG"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_title, firstVCard(values, "TITLE"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_phone, joinVCard(values, "TEL"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_email, joinVCard(values, "EMAIL"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_url, joinVCard(values, "URL"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_address, joinVCard(values, "ADR"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_note, joinVCard(values, "NOTE"));
-        appendVCardFormField(out, R.string.nfc_reader_vcard_birthday, firstVCard(values, "BDAY"));
-        out.append("\n").append(getString(R.string.nfc_reader_vcard_original)).append('\n').append(content.trim());
-    }
-
-    private void appendVCardFormField(StringBuilder out, int labelRes, String value) {
-        out.append("\n\n").append(getString(labelRes)).append('\n').append(displayOrDash(value));
-    }
-
-    private String displayOrDash(String value) {
-        return value == null || value.trim().isEmpty() ? getString(R.string.nfc_reader_field_empty) : value;
+        addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_vcard_data_type));
+        addDecodedField(fields, R.string.nfc_reader_name_label, firstVCard(values, "FN"));
+        addDecodedField(fields, R.string.nfc_reader_organization_label, firstVCard(values, "ORG"));
+        addDecodedField(fields, R.string.nfc_reader_job_title_label, firstVCard(values, "TITLE"));
+        addDecodedField(fields, R.string.nfc_reader_phone_label, joinVCard(values, "TEL"));
+        addDecodedField(fields, R.string.nfc_reader_email_label, joinVCard(values, "EMAIL"));
+        addDecodedField(fields, R.string.nfc_reader_website_label, joinVCard(values, "URL"));
     }
 
     private String firstVCard(java.util.Map<String, List<String>> values, String key) {
@@ -309,6 +306,80 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
     private String joinVCard(java.util.Map<String, List<String>> values, String key) {
         List<String> list = values.get(key);
         return list == null || list.isEmpty() ? "" : TextUtils.join("\n", list);
+    }
+
+    private void appendDecodedUri(List<DecodedField> fields, String uri) {
+        if (uri == null || uri.isEmpty()) return;
+        String lower = uri.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("tel:")) {
+            addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_phone_link_type));
+            addDecodedField(fields, R.string.nfc_reader_phone_label, uri.substring(4));
+        } else if (lower.startsWith("mailto:")) {
+            String address = uri.substring(7);
+            int queryIndex = address.indexOf('?');
+            if (queryIndex >= 0) address = address.substring(0, queryIndex);
+            addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_email_link_type));
+            addDecodedField(fields, R.string.nfc_reader_email_label, address);
+        } else if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_url_data_type));
+            addDecodedField(fields, R.string.nfc_reader_url_content_label, uri);
+        } else {
+            addDecodedField(fields, R.string.nfc_reader_content_type_label, getString(R.string.nfc_reader_link_type));
+            addDecodedField(fields, R.string.nfc_reader_link_content_label, uri);
+        }
+    }
+
+    private void renderDecodedFields(List<DecodedField> fields) {
+        decodedFieldsContainer.removeAllViews();
+        for (int i = 0; i < fields.size(); i++) {
+            DecodedField field = fields.get(i);
+            TextView label = new TextView(this);
+            label.setText(field.label);
+            label.setTextColor(resolveThemeColor(android.R.attr.textColorSecondary));
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            label.setTypeface(label.getTypeface(), Typeface.BOLD);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.topMargin = dp(i == 0 ? 8 : 16);
+            decodedFieldsContainer.addView(label, labelParams);
+
+            TextView value = new TextView(this);
+            String displayed = field.value == null || field.value.trim().isEmpty()
+                    ? getString(R.string.nfc_reader_field_empty) : field.value;
+            value.setText(displayed);
+            value.setTextColor(resolveThemeColor(android.R.attr.textColorPrimary));
+            value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+            value.setGravity(Gravity.TOP | Gravity.START);
+            value.setMinHeight(dp(48));
+            value.setPadding(dp(8), dp(10), dp(8), dp(10));
+            value.setTextIsSelectable(true);
+            decodedFieldsContainer.addView(value, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            View underline = new View(this);
+            underline.setBackgroundColor(resolveThemeColor(android.R.attr.textColorSecondary));
+            underline.setAlpha(0.65f);
+            decodedFieldsContainer.addView(underline, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(1)));
+        }
+    }
+
+    private int dp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int resolveThemeColor(int attribute) {
+        TypedValue value = new TypedValue();
+        if (getTheme().resolveAttribute(attribute, value, true)) {
+            if (value.resourceId != 0) {
+                try {
+                    ColorStateList colors = AppCompatResources.getColorStateList(this, value.resourceId);
+                    if (colors != null) return colors.getDefaultColor();
+                } catch (RuntimeException ignored) { }
+            }
+            return value.data;
+        }
+        return 0;
     }
 
     private java.util.Map<String, List<String>> parseVCardProperties(String content) {
@@ -333,53 +404,6 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         return values;
     }
 
-    private void appendDecodedUri(StringBuilder out, String uri, String indent) {
-        if (uri == null || uri.isEmpty()) return;
-        String lower = uri.toLowerCase(Locale.ROOT);
-        if (lower.startsWith("tel:")) {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_phone, uri.substring(4))).append('\n');
-        } else if (lower.startsWith("mailto:")) {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_email, uri.substring(7))).append('\n');
-        } else if (lower.startsWith("http://") || lower.startsWith("https://")) {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_url, uri)).append('\n');
-        } else {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_uri, uri)).append('\n');
-        }
-    }
-
-    private void appendDecodedMime(StringBuilder out, String mimeType, byte[] payload, String indent) {
-        String normalizedType = mimeType == null ? "" : mimeType.trim().toLowerCase(Locale.ROOT);
-        String content = decodeUtf8IfReadable(payload);
-        boolean isVCard = normalizedType.equals("text/vcard") || normalizedType.equals("text/x-vcard");
-        if (isVCard && content != null && content.toUpperCase(Locale.ROOT).contains("BEGIN:VCARD")) {
-            List<String> fields = parseVCardFields(content);
-            out.append(indent).append(getString(R.string.nfc_reader_vcard_heading)).append('\n');
-            if (fields.isEmpty()) {
-                out.append(indent).append(getString(R.string.nfc_reader_vcard_no_fields)).append('\n');
-            } else {
-                for (String field : fields) out.append(indent).append("  ").append(field).append('\n');
-            }
-            out.append(indent).append(getString(R.string.nfc_reader_vcard_full, content)).append('\n');
-        } else if (content != null && (normalizedType.startsWith("text/")
-                || normalizedType.equals("application/json")
-                || normalizedType.equals("application/xml")
-                || normalizedType.endsWith("+json") || normalizedType.endsWith("+xml"))) {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_mime_content, content)).append('\n');
-        } else if (content != null && isVCard) {
-            // Some tags omit or alter the expected vCard header; show the text, but do not invent fields.
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_mime_content, content)).append('\n');
-        } else {
-            appendDecodedTextIfReadable(out, payload, indent);
-        }
-    }
-
-    private void appendDecodedTextIfReadable(StringBuilder out, byte[] payload, String indent) {
-        String text = decodeUtf8IfReadable(payload);
-        if (text != null && !text.trim().isEmpty()) {
-            out.append(indent).append(getString(R.string.nfc_reader_decoded_mime_content, text)).append('\n');
-        }
-    }
-
     /** Return UTF-8 text only when the bytes form valid, printable text rather than binary data. */
     @Nullable
     private String decodeUtf8IfReadable(byte[] payload) {
@@ -401,52 +425,9 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         }
     }
 
-    private List<String> parseVCardFields(String content) {
-        List<String> fields = new ArrayList<>();
-        List<String> unfolded = new ArrayList<>();
-        String normalized = content.replace("\r\n", "\n").replace('\r', '\n');
-        for (String line : normalized.split("\n", -1)) {
-            if ((line.startsWith(" ") || line.startsWith("\t")) && !unfolded.isEmpty()) {
-                int last = unfolded.size() - 1;
-                unfolded.set(last, unfolded.get(last) + line.substring(1));
-            } else {
-                unfolded.add(line);
-            }
-        }
-        for (String line : unfolded) {
-            int colon = line.indexOf(':');
-            if (colon <= 0) continue;
-            String property = line.substring(0, colon).split("[;.]", 2)[0].toUpperCase(Locale.ROOT);
-            String value = unescapeVCardValue(line.substring(colon + 1));
-            String label = vCardFieldLabel(property);
-            if (label != null && !value.trim().isEmpty()) {
-                String field = getString(R.string.nfc_reader_vcard_field, label, value);
-                if (!fields.contains(field)) fields.add(field);
-            }
-        }
-        return fields;
-    }
-
     private String unescapeVCardValue(String value) {
         return value.replace("\\n", "\n").replace("\\N", "\n")
                 .replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\");
-    }
-
-    @Nullable
-    private String vCardFieldLabel(String property) {
-        switch (property) {
-            case "FN": return getString(R.string.nfc_reader_vcard_name);
-            case "N": return getString(R.string.nfc_reader_vcard_structured_name);
-            case "ORG": return getString(R.string.nfc_reader_vcard_organization);
-            case "TITLE": return getString(R.string.nfc_reader_vcard_title);
-            case "TEL": return getString(R.string.nfc_reader_vcard_phone);
-            case "EMAIL": return getString(R.string.nfc_reader_vcard_email);
-            case "URL": return getString(R.string.nfc_reader_vcard_url);
-            case "ADR": return getString(R.string.nfc_reader_vcard_address);
-            case "NOTE": return getString(R.string.nfc_reader_vcard_note);
-            case "BDAY": return getString(R.string.nfc_reader_vcard_birthday);
-            default: return null;
-        }
     }
 
     private void appendPayloadHex(StringBuilder out, byte[] payload, String indent) {
@@ -694,9 +675,8 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         int textOffset = 1 + languageLength;
         if (textOffset > payload.length) return getString(R.string.nfc_reader_invalid_text_record);
         Charset charset = (status & 0x80) != 0 ? StandardCharsets.UTF_16 : StandardCharsets.UTF_8;
-        String language = new String(payload, 1, languageLength, StandardCharsets.US_ASCII);
         String text = new String(payload, textOffset, payload.length - textOffset, charset);
-        return (language.isEmpty() ? "" : "[" + language + "] ") + text;
+        return text;
     }
 
     private static String decodeUriPayload(byte[] payload) {
@@ -765,7 +745,7 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
         idView.setText(R.string.nfc_reader_not_scanned);
         technologiesView.setText(R.string.nfc_reader_not_scanned);
         ndefView.setText(R.string.nfc_reader_not_scanned);
-        decodedView.setText("");
+        decodedFieldsContainer.removeAllViews();
         protocolView.setText(R.string.nfc_reader_not_scanned);
         protocolCard.setVisibility(View.GONE);
         ndefCard.setVisibility(View.GONE);
