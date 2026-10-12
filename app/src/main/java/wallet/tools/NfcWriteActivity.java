@@ -280,7 +280,7 @@ public class NfcWriteActivity extends BaseActivity implements NfcAdapter.ReaderC
             } else {
                 try {
                     formatable.connect();
-                    formatable.formatAndWriteNdefMessage(message);
+                    formatable.format(message);
                     result = getString(R.string.nfc_writer_success_format);
                 } catch (IOException | FormatException | RuntimeException e) {
                     result = getString(R.string.nfc_writer_failed, e.getClass().getSimpleName(), safeMessage(e));
