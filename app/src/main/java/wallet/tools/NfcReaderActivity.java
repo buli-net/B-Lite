@@ -331,7 +331,7 @@ public class NfcReaderActivity extends BaseActivity implements NfcAdapter.Reader
     /** Read only the pages the tag exposes through the standard Ultralight read command. */
     private List<String> readUltralightPages(MifareUltralight tag) {
         List<String> lines = new ArrayList<>();
-        MifareUltralight.Type type = tag.getType();
+        int type = tag.getType();
         int pageLimit = type == MifareUltralight.TYPE_ULTRALIGHT ? 16
                 : type == MifareUltralight.TYPE_ULTRALIGHT_C ? 48 : 64;
         lines.add(getString(R.string.nfc_reader_ultralight_public_pages));
