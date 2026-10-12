@@ -308,17 +308,7 @@ public class NfcWriteActivity extends BaseActivity implements NfcAdapter.ReaderC
             pendingMessage = null;
             if (prepareButton != null) prepareButton.setText(R.string.nfc_writer_prepare);
         }
-        if (clearArmed) {
-            clearArmed = false;
-            runOnUiThread(() -> {
-                statusView.setText(R.string.nfc_writer_clear_running);
-                detectedView.setText(getString(R.string.nfc_writer_detected_tag, tagId, techText));
-                clearTagButton.setEnabled(false);
-            });
-            clearNdefTag(tag, tagId, techText);
-            return;
-        }
-
+        // Destructive NFC actions are cancelled when the activity leaves the foreground.
         if (clearArmed) clearArmed = false;
         if (checkArmed) {
             checkArmed = false;
@@ -335,6 +325,16 @@ public class NfcWriteActivity extends BaseActivity implements NfcAdapter.ReaderC
         String[] technologies = tag.getTechList();
         String techText = technologies == null || technologies.length == 0
                 ? getString(R.string.nfc_reader_unknown) : TextUtils.join(", ", technologies);
+        if (clearArmed) {
+            clearArmed = false;
+            runOnUiThread(() -> {
+                statusView.setText(R.string.nfc_writer_clear_running);
+                detectedView.setText(getString(R.string.nfc_writer_detected_tag, tagId, techText));
+                clearTagButton.setEnabled(false);
+            });
+            clearNdefTag(tag, tagId, techText);
+            return;
+        }
         if (checkArmed) {
             checkArmed = false;
             NdefMessage checkMessage = pendingCheckMessage;
