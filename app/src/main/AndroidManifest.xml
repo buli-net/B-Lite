@@ -80,11 +80,6 @@
                 <data android:mimeType="application/bitcoin-paymentrequest" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <intent-filter android:label="@string/menu_send">
-                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
-                <data android:mimeType="application/bitcoin-paymentrequest" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
         <activity
             android:name="wallet.request.RequestCoinsActivity"
