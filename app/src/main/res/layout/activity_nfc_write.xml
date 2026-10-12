@@ -283,22 +283,6 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/nfc_writer_clear_button" />
 
-                <CheckBox
-                    android:id="@+id/nfc_writer_allow_classic_format"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:buttonTint="?attr/colorControlActivated"
-                    android:text="@string/nfc_writer_allow_classic_format"
-                    android:textColor="?android:attr/textColorPrimary" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/nfc_writer_allow_classic_format_note"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="12sp" />
             </LinearLayout>
 
             <TextView
