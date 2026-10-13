@@ -3,7 +3,6 @@ package wallet.tools;
 import android.nfc.Tag;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.MifareClassic;
 import android.nfc.tech.MifareUltralight;
@@ -642,7 +641,7 @@ public final class NfcHardwareSecurity {
         }
     }
 
-    private static boolean canReadClassicBlockWithKey(MifareClassic classic, int sector, int block, byte[] key) {
+    private static boolean canReadClassicBlockWithKey(MifareClassic classic, int sector, int block, byte[] key) throws IOException {
         if (classic.authenticateSectorWithKeyA(sector, key)) {
             try {
                 byte[] data = classic.readBlock(block);
