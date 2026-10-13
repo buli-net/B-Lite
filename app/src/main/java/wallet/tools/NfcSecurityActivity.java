@@ -233,7 +233,7 @@ public class NfcSecurityActivity extends BaseActivity implements NfcAdapter.Read
                     NdefRecord.TNF_EMPTY, null, null, new byte[0]));
             NfcHardwareSecurity.writeProtectedNdef(tag, password, emptyMessage.toByteArray());
             result = getString(R.string.nfc_security_clear_verified);
-        } catch (IOException | FormatException | RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
             result = getString(R.string.nfc_security_operation_failed,
                     e.getClass().getSimpleName(), safeMessage(e));
         }
