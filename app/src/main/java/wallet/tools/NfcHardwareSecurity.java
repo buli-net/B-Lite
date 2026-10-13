@@ -3,6 +3,7 @@ package wallet.tools;
 import android.nfc.Tag;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.MifareClassic;
 import android.nfc.tech.MifareUltralight;
