@@ -9,17 +9,5 @@
         android:strokeColor="?attr/colorControlNormal"
         android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:pathData="M6,5 L6,19" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="?attr/colorControlNormal"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:pathData="M10,7 C14,9 14,15 10,17" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="?attr/colorControlNormal"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:pathData="M14,4 C21,8 21,16 14,20" />
+        android:pathData="M6,5 L6,19 M10,7 C14,9 14,15 10,17 M14,4 C21,8 21,16 14,20" />
 </vector>
