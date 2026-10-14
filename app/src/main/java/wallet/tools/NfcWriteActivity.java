@@ -251,8 +251,9 @@ public class NfcWriteActivity extends BaseActivity implements NfcAdapter.ReaderC
             message = buildMessage(true);
         } catch (IllegalArgumentException e) {
             String validationMessage = e.getMessage();
-            Toast.makeText(this, validationMessage == null || validationMessage.trim().isEmpty()
-                    ? R.string.nfc_writer_invalid_input : validationMessage, Toast.LENGTH_LONG).show();
+            CharSequence messageText = validationMessage == null || validationMessage.trim().isEmpty()
+                    ? getString(R.string.nfc_writer_invalid_input) : validationMessage;
+            Toast.makeText(this, messageText, Toast.LENGTH_LONG).show();
             return;
         }
         int bytes = message.toByteArray().length;
