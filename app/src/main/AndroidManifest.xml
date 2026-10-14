@@ -80,6 +80,16 @@
                 <data android:mimeType="application/bitcoin-paymentrequest" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Password-protected NDEF tags may not expose a URI/MIME record to Android.
+                 Register the underlying tag technology so B-Lite appears in the system
+                 chooser alongside other compatible handlers before password entry. -->
+            <intent-filter android:label="@string/menu_send">
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_send_tech_filter" />
         </activity>
         <activity
             android:name="wallet.tools.NfcReaderActivity"
