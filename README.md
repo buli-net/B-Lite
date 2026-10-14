@@ -134,3 +134,8 @@ Use the application responsibly and always maintain secure backups of your walle
 Request Coins creates a BIP21 `bitcoin:` URI and QR code from the selected receive address, optional amount, and label. The same request can be copied, shared, opened in another installed Bitcoin wallet, or sent as a standard `application/bitcoin-paymentrequest` NDEF message when legacy NFC push is available on the device.
 
 The QR and URI flow is available on Mainnet and Signet; incoming requests are checked against the currently selected network. Android versions without legacy NDEF push can still use QR, copy, share, and local-app handling.
+
+
+### Manual NFC receive behavior
+
+While **Receive NFC** is active on the Send screen, B-Lite uses explicit foreground NFC dispatch so Bitcoin URI, PaymentRequest NDEF, HCE/ISO-DEP, and supported protected-tag discoveries are routed back to `SendActivity` before Android's normal activity chooser. The same existing receive handler handles the tag; protected tags add only the password prompt. Automatic NFC launch behavior outside this manual receive mode remains registered through the existing manifest filters.
