@@ -56,7 +56,7 @@ public class MainActivityPresenter
     private static final long STALL_TIMEOUT_MS = 90_000L;
     private static final long NO_PEER_RECONNECT_TIMEOUT_MS = 45_000L;
 
-    private static final long REFRESH_DEBOUNCE_MS = 100L;
+    private static final long REFRESH_DEBOUNCE_MS = 500L;
     // Never push historical-sync progress to the Android main thread for every block.
     // During fast catch-up bitcoinj can report thousands of blocks per second.
     private static final long PROGRESS_UI_UPDATE_MS = 500L;
@@ -226,43 +226,6 @@ public class MainActivityPresenter
     }
 
     /**
-     * Best-effort local-only preview used before WalletAppKit opens the SPV chain file.
-     * Wallet.loadFromFile reads the authoritative wallet state but does not start network IO.
-     * Any failure is intentionally ignored: WalletAppKit remains the single owner of the live
-     * wallet lifecycle and will provide the definitive state after setup completes.
-     */
-    private void renderLocalWalletBeforeSync(
-            File localWalletFile,
-            BitcoinNetwork expectedNetwork,
-            NetworkParameters expectedParameters) {
-        if (localWalletFile == null || !localWalletFile.isFile()
-                || localWalletFile.length() <= 0L) {
-            return;
-        }
-        try {
-            Wallet localWallet = Wallet.loadFromFile(localWalletFile);
-            if (localWallet == null
-                    || expectedParameters == null
-                    || !expectedParameters.equals(localWallet.getParams())) {
-                return;
-            }
-
-            synchronized (kitLock) {
-                if (shuttingDown
-                        || activeNetwork != expectedNetwork
-                        || walletFile == null
-                        || !walletFile.equals(localWalletFile)) {
-                    return;
-                }
-            }
-
-            renderSelectedWallet(localWallet, true);
-        } catch (Exception ignored) {
-            // A failed preview must not block or change normal WalletAppKit startup.
-        }
-    }
-
-    /**
      * Calculates progress for the current sync session. The session starts at the chain height
      * already present when WalletAppKit is (re)started, so a reconnect measures only the blocks
      * that remain instead of falling back to a whole-chain percentage.
@@ -328,15 +291,6 @@ public class MainActivityPresenter
             if (shuttingDown) {
                 startupInProgress = false;
                 return;
-            }
-
-            // Fast startup: show locally available wallet data without waiting
-            // for the SPV block store or peer discovery. The normal cache handles subsequent
-            // launches; this file-backed preview is only needed when no usable cache exists
-            // (for example, immediately after upgrading to a version with the home cache).
-            // It is presentation-only and does not mark the wallet ready or enable spending.
-            if (!WalletHomeCache.hasSnapshot(applicationContext, startNetwork)) {
-                renderLocalWalletBeforeSync(startWalletFile, startNetwork, startParameters);
             }
 
             WalletAppKit kit = null;
