@@ -387,7 +387,6 @@ public class MainActivity extends BaseActivity
         // Render the last local display snapshot immediately. WalletAppKit still
         // opens the authoritative wallet and syncs in the background; this cache
         // never participates in balance calculation or spending decisions.
-        WalletHomeCache.restore(this, NetworkConfig.get(this));
 
         MainActivityPresenter active = MainActivityPresenter.getActivePresenter();
         if (active != null) {
