@@ -403,7 +403,7 @@ public final class NestedSegwitSpend {
         List<TransactionInput> signedInputs = new ArrayList<>();
         for (int index = 0; index < outputs.size(); index++) {
             signedInputs.add(signRequestInput(
-                    transaction, index, outputs.get(index), sourceScript, key, aesKey));
+                    transaction, index, outputs.get(index), sourceScript, key, parameters, aesKey));
         }
 
         transaction.clearInputs();
