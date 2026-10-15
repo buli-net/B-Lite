@@ -138,4 +138,4 @@ The QR and URI flow is available on Mainnet and Signet; incoming requests are ch
 
 ### Manual NFC receive behavior
 
-While **Receive NFC** is active on the Send screen, the app uses explicit foreground NFC dispatch so Bitcoin URI, PaymentRequest NDEF, HCE/ISO-DEP, and supported protected-tag discoveries are routed back to `SendActivity` before Android's normal activity chooser. The same existing receive handler handles the tag; protected tags add only the password prompt. Automatic NFC launch behavior outside this manual receive mode remains registered through the existing manifest filters.
+While **Receive NFC** is active on the Send screen, B-Lite uses explicit foreground NFC dispatch so Bitcoin URI, PaymentRequest NDEF, HCE/ISO-DEP, and supported protected-tag discoveries are routed back to `SendActivity` before Android's normal activity chooser. The same existing receive handler handles the tag; protected tags add only the password prompt. Automatic NFC launch behavior outside this manual receive mode remains registered through the existing manifest filters.
