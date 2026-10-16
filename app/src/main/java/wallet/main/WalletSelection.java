@@ -3,6 +3,8 @@ package wallet.main;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.bitcoinj.base.Address;
+import org.bitcoinj.base.ScriptType;
 import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.Coin;
 import org.bitcoinj.crypto.ECKey;
