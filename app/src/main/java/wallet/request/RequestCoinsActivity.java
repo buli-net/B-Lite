@@ -34,7 +34,9 @@ import org.bitcoinj.base.Coin;
 import org.bitcoinj.crypto.ECKey;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.script.Script;
 
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
