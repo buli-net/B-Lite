@@ -39,6 +39,11 @@ import java.time.Instant;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.WeakHashMap;
+import java.util.Collections;
+import java.util.function.Supplier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -92,6 +97,25 @@ public class MainActivityPresenter
             new AtomicBoolean(false);
 
     private final Object refreshLock = new Object();
+
+    // Retain transaction rows independently for each live wallet and selected scope.
+    // Wallet objects are weak keys so closed/replaced wallets are not kept alive.
+    private static final class HistoryCacheEntry {
+        final int transactionCount;
+        final String newestTransactionId;
+        final int chainHeight;
+        final List<TransactionItem> items;
+
+        HistoryCacheEntry(int count, String newestId, int height, List<TransactionItem> items) {
+            transactionCount = count;
+            newestTransactionId = newestId;
+            chainHeight = height;
+            this.items = Collections.unmodifiableList(new ArrayList<>(items));
+        }
+    }
+
+    private final Map<Wallet, Map<String, HistoryCacheEntry>> historyCache = new WeakHashMap<>();
+    private final Object historyCacheLock = new Object();
 
     private boolean refreshInProgress;
 
@@ -1333,6 +1357,36 @@ public class MainActivityPresenter
         }, "bitcoinj-refresh").start();
     }
 
+    private List<TransactionItem> getCachedHistory(
+            Wallet wallet, String scope, Supplier<List<TransactionItem>> mapper) {
+        if (wallet == null) return Collections.emptyList();
+
+        // The mapper is only invoked on the refresh worker, never on Android's UI thread.
+        List<Transaction> orderedTransactions = wallet.getTransactionsByTime();
+        int count = orderedTransactions.size();
+        String newestId = count == 0 ? "" : orderedTransactions.get(0).getTxId().toString();
+        int height = wallet.getLastBlockSeenHeight();
+        synchronized (historyCacheLock) {
+            Map<String, HistoryCacheEntry> walletEntries = historyCache.get(wallet);
+            if (walletEntries != null) {
+                HistoryCacheEntry cached = walletEntries.get(scope);
+                if (cached != null && cached.transactionCount == count
+                        && cached.chainHeight == height
+                        && cached.newestTransactionId.equals(newestId)) {
+                    return cached.items;
+                }
+            } else {
+                walletEntries = new HashMap<>();
+                historyCache.put(wallet, walletEntries);
+            }
+
+            List<TransactionItem> mapped = mapper.get();
+            List<TransactionItem> snapshot = Collections.unmodifiableList(new ArrayList<>(mapped));
+            walletEntries.put(scope, new HistoryCacheEntry(count, newestId, height, snapshot));
+            return snapshot;
+        }
+    }
+
     private void renderSelectedWallet(Wallet wallet) {
         android.content.Context context = view.getActivityContext();
         Script selectedScript = WalletSelection.findSelectedScript(context, wallet);
@@ -1385,8 +1439,8 @@ public class MainActivityPresenter
                 walletType = text(R.string.wallet_type_imported) + " • "
                         + WalletAddressType.label(context, importedType);
             }
-            transactions = TransactionMapper.mapForWatchedScript(
-                    context, wallet, displayScript);
+            transactions = getCachedHistory(wallet, "script:" + displayScript.toString(),
+                    () -> TransactionMapper.mapForWatchedScript(context, wallet, displayScript));
         } else {
             // Keep request-owned Nested SegWit outputs in the main-wallet balance.
             balance = WalletSelection.mainEstimatedBalance(context, wallet);
@@ -1394,7 +1448,8 @@ public class MainActivityPresenter
             pending = balance.subtract(available);
             address = wallet.currentReceiveAddress().toString();
             walletType = text(R.string.wallet_type_main);
-            transactions = TransactionMapper.mapForMainWallet(context, wallet);
+            transactions = getCachedHistory(wallet, "main",
+                    () -> TransactionMapper.mapForMainWallet(context, wallet));
         }
 
         final String balanceText = balance.toFriendlyString();
