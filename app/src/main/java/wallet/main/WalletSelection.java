@@ -23,6 +23,28 @@ public final class WalletSelection {
     private static final String KEY_IMPORTED_ADDRESS = "selected_imported_address";
     private static final String REQUEST_NESTED_PUBKEY_PREFIX = "request_nested_pubkey_";
 
+    // Cache the expensive Request Nested-SegWit classification for each live wallet.
+    // The watched-script set is part of the cache key; registration changes also
+    // invalidate the cache. This preserves the baseline's Nested-SegWit-only rules.
+    private static final class RequestScriptCacheEntry {
+        final java.util.Set<Script> watchedScripts;
+        final java.util.Set<Script> requestScripts;
+
+        RequestScriptCacheEntry(java.util.Set<Script> watched, java.util.Set<Script> request) {
+            watchedScripts = new java.util.HashSet<>(watched);
+            requestScripts = java.util.Collections.unmodifiableSet(
+                    new java.util.LinkedHashSet<>(request));
+        }
+    }
+
+    private static final java.util.Map<Wallet, RequestScriptCacheEntry> REQUEST_SCRIPT_CACHE =
+            new java.util.WeakHashMap<>();
+
+    private static synchronized void invalidateRequestScriptCache(Wallet wallet) {
+        if (wallet == null) REQUEST_SCRIPT_CACHE.clear();
+        else REQUEST_SCRIPT_CACHE.remove(wallet);
+    }
+
     private WalletSelection() {
     }
 
@@ -64,6 +86,7 @@ public final class WalletSelection {
                 .putString(REQUEST_NESTED_PUBKEY_PREFIX + address.trim(),
                         android.util.Base64.encodeToString(publicKey, android.util.Base64.NO_WRAP))
                 .apply();
+        invalidateRequestScriptCache(null);
     }
 
     public static ECKey findRequestNestedKeyForScript(
@@ -516,24 +539,33 @@ public final class WalletSelection {
 
     /** Returns request-created Nested SegWit scripts backed by keys in the main wallet. */
     public static java.util.Set<Script> getRequestNestedScripts(Context context, Wallet wallet) {
-        java.util.LinkedHashSet<Script> scripts = new java.util.LinkedHashSet<>();
-        if (wallet == null) return scripts;
-        java.util.Set<Script> expected;
-        try {
-            expected = deriveRequestNestedScripts(wallet);
-        } catch (Exception ignored) {
-            return scripts;
-        }
-        for (Script script : wallet.getWatchedScripts()) {
-            // The exact script-set comparison is the fast path. The key lookup also
-            // recognizes issued receive keys retained separately by bitcoinj and keys
-            // whose public-key mapping was persisted when the Request was created.
-            if (expected.contains(script)
-                    || (context != null && findRequestNestedKeyForScript(context, wallet, script) != null)) {
-                scripts.add(script);
+        if (wallet == null) return java.util.Collections.emptySet();
+        synchronized (WalletSelection.class) {
+            java.util.Set<Script> watched = new java.util.HashSet<>(wallet.getWatchedScripts());
+            RequestScriptCacheEntry cached = REQUEST_SCRIPT_CACHE.get(wallet);
+            if (cached != null && cached.watchedScripts.equals(watched)) {
+                return new java.util.LinkedHashSet<>(cached.requestScripts);
             }
+
+            java.util.LinkedHashSet<Script> scripts = new java.util.LinkedHashSet<>();
+            java.util.Set<Script> expected;
+            try {
+                expected = deriveRequestNestedScripts(wallet);
+            } catch (Exception ignored) {
+                return scripts;
+            }
+            // Classify watched scripts once per wallet state instead of repeating
+            // deterministic-key derivation for balances, each history row and refresh.
+            for (Script script : wallet.getWatchedScripts()) {
+                if (expected.contains(script)
+                        || (context != null
+                        && findRequestNestedKeyForScript(context, wallet, script) != null)) {
+                    scripts.add(script);
+                }
+            }
+            REQUEST_SCRIPT_CACHE.put(wallet, new RequestScriptCacheEntry(watched, scripts));
+            return new java.util.LinkedHashSet<>(scripts);
         }
-        return scripts;
     }
 
     private static Coin requestNestedBalance(Context context, Wallet wallet, boolean confirmedOnly) {
