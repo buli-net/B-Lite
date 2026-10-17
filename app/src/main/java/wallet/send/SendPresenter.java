@@ -279,11 +279,33 @@ public final class SendPresenter {
                             view.getStringResource(R.string.max_amount_unavailable));
                 }
 
-                Coin maxAmount = request.tx.getOutput(0).getValue();
-                if (maxAmount == null || !maxAmount.isPositive()) {
+                Coin mainMaxAmount = request.tx.getOutput(0).getValue();
+                if (mainMaxAmount == null || !mainMaxAmount.isPositive()) {
                     throw new IllegalStateException(
                             view.getStringResource(R.string.max_amount_unavailable));
                 }
+
+                // Request Nested SegWit outputs are intentionally excluded from the
+                // normal bitcoinj CoinSelector. Therefore completeTx(emptyWallet)
+                // can succeed using ordinary wallet coins while silently omitting
+                // a larger, independently spendable Request Nested SegWit balance.
+                // Compare both supported spend paths even when the main-wallet path
+                // succeeds, and let MAX select the larger amount. If the nested
+                // amount wins, prepareTransaction() will use the same nested funding
+                // fallback because that amount exceeds the normal-wallet-only pool.
+                Coin maxAmount = mainMaxAmount;
+                if (selectedWatchScript == null
+                        && WalletSelection.getSelectedImportedAddress(
+                                view.getActivityContext()) == null) {
+                    NestedFunding nestedFunding = findRequestNestedFunding(
+                            view.getActivityContext(), wallet, destination, null,
+                            feeSatVb, WalletSecurity.getSessionKey());
+                    if (nestedFunding != null
+                            && nestedFunding.maxAmount.isGreaterThan(maxAmount)) {
+                        maxAmount = nestedFunding.maxAmount;
+                    }
+                }
+
                 if (!viewActive
                         || state != State.IDLE
                         || requestId != maxRequestId.get()) {
