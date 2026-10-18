@@ -262,7 +262,7 @@ public final class SendPresenter {
                 // outputs instead of calculating each class separately and taking
                 // the larger (which silently omits the other class).
                 if (selectedImportedAddress == null
-                        && WalletScopedSpend.hasEligibleNestedInputs(
+                        && WalletScopedSpend.requiresUnifiedSpendPath(
                                 view.getActivityContext(), wallet)) {
                     Coin maxAmount = WalletScopedSpend.calculateMaxAmount(
                             view.getActivityContext(), wallet, destination, feeSatVb,
@@ -484,14 +484,13 @@ public final class SendPresenter {
                 mainRequest.coinSelector = CoinControl.selector(
                         WalletSelection.mainCoinSelector(view.getActivityContext(), wallet));
                 SendRequest preparedRequest;
-                boolean explicitlySelectedNested = !CoinControl.getSelected().isEmpty()
-                        && selectedImportedAddress == null
-                        && WalletScopedSpend.hasEligibleNestedInputs(
+                boolean useUnifiedSpendPath = selectedImportedAddress == null
+                        && WalletScopedSpend.requiresUnifiedSpendPath(
                                 view.getActivityContext(), wallet);
-                if (explicitlySelectedNested) {
-                    // Coin Control means those selected outpoints are the intended
-                    // funding set. Sign Legacy, Native SegWit and Nested SegWit inputs
-                    // together rather than silently ignoring watched Nested inputs.
+                if (useUnifiedSpendPath) {
+                    // For mixed Nested-SegWit funding or more than three eligible inputs,
+                    // calculate and sign against the same exact outpoint set. This avoids
+                    // the ordinary selector choosing a different set after MAX was shown.
                     org.bitcoinj.core.Transaction transaction = WalletScopedSpend.buildTransaction(
                             view.getActivityContext(), wallet, destination, amount,
                             feeSatVb, WalletSecurity.getSessionKey());
@@ -503,7 +502,7 @@ public final class SendPresenter {
                         preparedRequest = mainRequest;
                     } catch (Exception mainFundsUnavailable) {
                         if (selectedImportedAddress != null
-                                || !WalletScopedSpend.hasEligibleNestedInputs(
+                                || !WalletScopedSpend.requiresUnifiedSpendPath(
                                         view.getActivityContext(), wallet)) {
                             throw mainFundsUnavailable;
                         }
