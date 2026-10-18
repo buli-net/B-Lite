@@ -3109,9 +3109,9 @@ public class MainActivityPresenter
 
         return new WidgetSnapshot(
                 true,
-                MoneyFormatter.format(applicationContext, balance),
-                MoneyFormatter.format(applicationContext, available),
-                MoneyFormatter.format(applicationContext, pending),
+                MoneyFormatter.format(context, balance),
+                MoneyFormatter.format(context, available),
+                MoneyFormatter.format(context, pending),
                 networkLabel,
                 address);
     }
