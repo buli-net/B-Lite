@@ -54,10 +54,12 @@ public final class WalletScopedSpend {
 
     private WalletScopedSpend() { }
 
-    public static boolean hasEligibleNestedInputs(Context context, Wallet wallet) {
+    public static boolean requiresUnifiedSpendPath(Context context, Wallet wallet) {
         if (context == null || wallet == null) return false;
         try {
-            for (FundingInput input : eligibleInputs(context, wallet)) {
+            List<FundingInput> inputs = eligibleInputs(context, wallet);
+            if (inputs.size() > 3) return true;
+            for (FundingInput input : inputs) {
                 if (input.type == SpendType.NESTED_SEGWIT) return true;
             }
         } catch (Exception ignored) {
