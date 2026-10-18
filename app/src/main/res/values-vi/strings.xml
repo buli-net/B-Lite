@@ -3,7 +3,7 @@
 <resources>
     <string name="app_name">Ví Bitcoin</string>
     <string name="menu_scan">Quét</string>
-    <string name="menu_send">Gửi</string>
+    <string name="menu_send">Gửi Bitcoin</string>
     <string name="menu_settings">Cài đặt</string>
     <string name="shortcut_scan">Quét</string>
     <string name="shortcut_send_coins">Gửi Bitcoin</string>
@@ -16,7 +16,7 @@
     <string name="wallet_status_switching">Đang chuyển ví…</string>
     <string name="wallet_status_load_failed">Không tải được dữ liệu ví. Vuốt xuống để thử lại.</string>
     <string name="wallet_status_tap_to_retry">Không tải được dữ liệu ví. Chạm vào đây để thử lại.</string>
-    <string name="wallet_title">Ví</string>
+    <string name="wallet_title">Ví Bitcoin</string>
     <string name="about_title">Giới thiệu</string>
     <string name="backup_title">Sao lưu ví</string>
     <string name="backup_unlock_title">Mở khóa để tạo bản sao lưu ví</string>
@@ -76,9 +76,9 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="sync_network_selector_storage_note">Mỗi mạng sử dụng ví và dữ liệu blockchain riêng.</string>
     <string name="sync_mode_title">Chế độ đồng bộ</string>
     <string name="sync_mode_lite">Rút gọn</string>
-    <string name="sync_mode_full">Toàn bộ</string>
+    <string name="sync_mode_full">Đầy đủ</string>
     <string name="sync_mode_lite_description">Rút gọn • Chỉ tải dữ liệu đã lọc để giảm dung lượng lưu trữ và xử lý.</string>
-    <string name="sync_mode_full_description">Toàn bộ • Tải đầy đủ giao dịch trong block để có nhiều dữ liệu blockchain hơn.</string>
+    <string name="sync_mode_full_description">Đầy đủ • Tải tất cả giao dịch trong block để có nhiều dữ liệu blockchain hơn.</string>
     <string name="sync_mode_switch_title">Đổi chế độ đồng bộ?</string>
     <string name="sync_mode_switch_message">Chế độ mới sẽ khởi động lại quá trình đồng bộ Bitcoin và giữ nguyên ví cùng dữ liệu blockchain hiện tại. Dùng RESCAN sau khi chuyển chế độ để xây dựng lại lịch sử cũ ở chế độ Toàn bộ block.</string>
     <string name="sync_mode_switching">Đang chuyển chế độ đồng bộ sang %1$s...</string>
