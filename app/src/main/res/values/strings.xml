@@ -3,11 +3,11 @@
 <resources>
     <string name="app_name">Bitcoin Wallet</string>
     <string name="menu_scan">Scan</string>
-    <string name="menu_send">Send</string>
+    <string name="menu_send">Send Bitcoin</string>
     <string name="menu_settings">Settings</string>
     <string name="shortcut_scan">Scan</string>
-    <string name="shortcut_send_coins">Send coins</string>
-    <string name="shortcut_request_coins">Request coins</string>
+    <string name="shortcut_send_coins">Send Bitcoin</string>
+    <string name="shortcut_request_coins">Request Bitcoin</string>
     <string name="menu_sync">Sync &amp; Network</string>
     <string name="menu_backup_recovery">Backup &amp; Recovery</string>
     <string name="menu_about">About</string>
@@ -16,7 +16,7 @@
     <string name="wallet_status_switching">Switching wallet…</string>
     <string name="wallet_status_load_failed">Wallet data could not be loaded. Pull down to retry.</string>
     <string name="wallet_status_tap_to_retry">Wallet data could not be loaded. Tap here to retry.</string>
-    <string name="wallet_title">Wallet</string>
+    <string name="wallet_title">Bitcoin Wallet</string>
     <string name="about_title">About</string>
     <string name="backup_title">Backup wallet</string>
     <string name="backup_unlock_title">Unlock to create wallet backup</string>
@@ -65,7 +65,7 @@ Use the application responsibly and keep independent backups of your wallet.</st
     <string name="copy_address">Copy Bitcoin address</string>
     <string name="address_copied">Address copied.</string>
     <string name="no_transactions_yet">No transactions yet.</string>
-    <string name="unknown_time">Unknown time</string>
+    <string name="unknown_time">Unknown time</string> 
     <string name="startup_tagline">Your Bitcoin. In your hands.</string>
     <string name="sync_title">Sync &amp; Network</string>
     <string name="sync_network_mainnet">Bitcoin Mainnet</string>
