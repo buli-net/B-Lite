@@ -16,26 +16,6 @@
         android:icon="@drawable/ic_menu_request_legacy_24dp"
         android:showAsAction="ifRoom|withText" />
     <item
-        android:id="@+id/menuSettings"
-        android:title="@string/menu_settings"
-        android:icon="@drawable/ic_menu_settings_24dp"
-        app:showAsAction="never">
-        <menu>
-            <item
-                android:id="@+id/menuSync"
-                android:title="@string/menu_sync"
-                android:icon="@drawable/ic_menu_sync_24dp" />
-            <item
-                android:id="@+id/menuBackupRecovery"
-                android:title="@string/menu_backup_recovery"
-                android:icon="@drawable/ic_menu_backup_24dp" />
-            <item
-                android:id="@+id/menuSecurity"
-                android:title="@string/menu_security"
-                android:icon="@drawable/ic_menu_security_24dp" />
-        </menu>
-    </item>
-    <item
         android:id="@+id/menuAddressBook"
         android:title="@string/menu_address_book"
         android:icon="@drawable/ic_menu_contacts_24dp"
@@ -88,6 +68,26 @@
                         android:icon="@drawable/ic_menu_security_24dp" />
                 </menu>
             </item>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/menuSettings"
+        android:title="@string/menu_settings"
+        android:icon="@drawable/ic_menu_settings_24dp"
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/menuSync"
+                android:title="@string/menu_sync"
+                android:icon="@drawable/ic_menu_sync_24dp" />
+            <item
+                android:id="@+id/menuBackupRecovery"
+                android:title="@string/menu_backup_recovery"
+                android:icon="@drawable/ic_menu_backup_24dp" />
+            <item
+                android:id="@+id/menuSecurity"
+                android:title="@string/menu_security"
+                android:icon="@drawable/ic_menu_security_24dp" />
         </menu>
     </item>
     <item
