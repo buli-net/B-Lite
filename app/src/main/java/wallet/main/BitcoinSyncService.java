@@ -308,7 +308,7 @@ public class BitcoinSyncService extends Service {
         }
         long total = 0L;
         for (TransactionOutput output : transaction.getOutputs()) {
-            if (!wallet.isMine(output)) {
+            if (!output.isMine(wallet)) {
                 total = Math.addExact(total, output.getValue().value);
             }
         }
