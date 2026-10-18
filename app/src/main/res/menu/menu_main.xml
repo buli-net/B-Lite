@@ -78,7 +78,8 @@
         <menu>
             <item
                 android:id="@+id/menuGeneral"
-                android:title="@string/menu_general" />
+                android:title="@string/menu_general"
+                android:icon="@drawable/ic_menu_general_24dp" />
             <item
                 android:id="@+id/menuSync"
                 android:title="@string/menu_sync"
