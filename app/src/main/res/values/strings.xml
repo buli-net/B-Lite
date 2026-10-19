@@ -13,7 +13,7 @@
     <string name="general_unit_option_ubtc">µBTC — Microbitcoin</string>
     <string name="general_unit_option_sat">sat — Satoshi</string>
     <string name="general_intro_title">Personalize your wallet</string>
-    <string name="general_intro_description">Choose how Bitcoin amounts are displayed throughout B-Lite. These preferences affect presentation only; balances, fees, and transaction values remain exact.</string>
+    <string name="general_intro_description">Choose how Bitcoin amounts are displayed throughout wallet. These preferences affect presentation only; balances, fees, and transaction values remain exact.</string>
     <string name="general_unit_title">Bitcoin display unit</string>
     <string name="general_unit_description">Select the unit that is easiest for you to read. The choice is used wherever an amount is displayed.</string>
     <string name="general_unit_btc_description">Bitcoin — 1 BTC equals 100,000,000 satoshis.</string>
@@ -30,8 +30,8 @@
     <string name="general_precision_value_zero">0 decimal places</string>
 
     <string name="shortcut_scan">Scan</string>
-    <string name="shortcut_send_coins">Send coins</string>
-    <string name="shortcut_request_coins">Request coins</string>
+    <string name="shortcut_send_coins">Send Bitcoin</string>
+    <string name="shortcut_request_coins">Request Bitcoin</string>
     <string name="menu_sync">Sync &amp; Network</string>
     <string name="menu_backup_recovery">Backup &amp; Recovery</string>
     <string name="menu_about">About</string>
@@ -40,7 +40,7 @@
     <string name="wallet_status_switching">Switching wallet…</string>
     <string name="wallet_status_load_failed">Wallet data could not be loaded. Pull down to retry.</string>
     <string name="wallet_status_tap_to_retry">Wallet data could not be loaded. Tap here to retry.</string>
-    <string name="wallet_title">Wallet</string>
+    <string name="wallet_title">Bitcoin Wallet</string>
     <string name="about_title">About</string>
     <string name="backup_title">Backup wallet</string>
     <string name="backup_unlock_title">Unlock to create wallet backup</string>
