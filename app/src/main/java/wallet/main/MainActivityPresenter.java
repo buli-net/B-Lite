@@ -1462,40 +1462,6 @@ public class MainActivityPresenter
         }
     }
 
-    /**
-     * Publish the balance as an independent live value, like WalletBalanceLiveData
-     * in the reference implementation. Transaction history is mapped afterwards,
-     * so a large saved transaction set cannot hold the balance behind it.
-     */
-    private void postBalanceSnapshot(Wallet wallet,
-                                     String renderedWatchSelection,
-                                     String renderedImportedSelection,
-                                     Coin balance, Coin available, Coin pending,
-                                     String address, String walletType) {
-        final String balanceText = MoneyFormatter.format(applicationContext, balance);
-        final String availableText = text(R.string.available_balance,
-                MoneyFormatter.format(applicationContext, available));
-        final String pendingText = text(R.string.pending_balance,
-                MoneyFormatter.format(applicationContext, pending));
-        final String selectedAddress = address;
-        final String selectedWalletType = walletType;
-        runOnUi(() -> {
-            if (wallet != getActiveWallet()
-                    || !java.util.Objects.equals(renderedWatchSelection,
-                    WalletSelection.getSelectedWatchAddress(applicationContext))
-                    || !java.util.Objects.equals(renderedImportedSelection,
-                    WalletSelection.getSelectedImportedAddress(applicationContext))) {
-                return;
-            }
-            view.displayWalletType(selectedWalletType);
-            view.displayMyBalance(balanceText);
-            view.displayBalanceState(availableText, pendingText);
-            if (!TextUtils.isEmpty(selectedAddress)) {
-                view.displayMyAddress(selectedAddress);
-            }
-        });
-    }
-
     private void renderSelectedWallet(Wallet wallet, long refreshRequestedAt,
                                       long refreshProcessingStartedAt) {
         android.content.Context context = applicationContext;
@@ -1553,10 +1519,8 @@ public class MainActivityPresenter
                 walletType = text(R.string.wallet_type_imported) + " • "
                         + WalletAddressType.label(context, importedType);
             }
-            // Match the reference wallet architecture: balance is an independent
-            // live value and must reach the UI before transaction-list mapping.
-            postBalanceSnapshot(wallet, renderedWatchSelection, renderedImportedSelection,
-                    balance, available, pending, address, walletType);
+            transactions = getCachedHistory(wallet, "script:" + displayScript.toString(),
+                    () -> TransactionMapper.mapForWatchedScript(context, wallet, displayScript));
         } else {
             // Keep request-owned Nested SegWit outputs in the main-wallet balance.
             balance = WalletSelection.mainEstimatedBalance(context, wallet);
@@ -1568,18 +1532,6 @@ public class MainActivityPresenter
             // when transaction count/latest tx/block height have not changed. Include
             // the current registered Request and imported-script sets in the history
             // cache key so corrected output ownership is rendered immediately.
-            postBalanceSnapshot(wallet, renderedWatchSelection, renderedImportedSelection,
-                    balance, available, pending, address, walletType);
-        }
-
-        // Build the transaction history only after the current balance snapshot has
-        // already been posted. Mapping can traverse the complete wallet transaction
-        // graph, but it must not delay the balance display.
-        if (selectedScript != null || importedScript != null) {
-            Script displayScript = selectedScript != null ? selectedScript : importedScript;
-            transactions = getCachedHistory(wallet, "script:" + displayScript.toString(),
-                    () -> TransactionMapper.mapForWatchedScript(context, wallet, displayScript));
-        } else {
             String historyOwnershipKey = "main:request="
                     + WalletSelection.getRequestNestedScripts(context, wallet).hashCode()
                     + ":imported=" + WalletSelection.getImportedScripts(context, wallet).hashCode();
