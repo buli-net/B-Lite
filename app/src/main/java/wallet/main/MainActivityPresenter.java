@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 import java.util.Collections;
-import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -122,7 +122,6 @@ public class MainActivityPresenter
     }
 
     private final Map<Wallet, Map<String, HistoryCacheEntry>> historyCache = new WeakHashMap<>();
-    private final Map<Wallet, Long> historyCacheGenerations = new WeakHashMap<>();
     private final Object historyCacheLock = new Object();
 
     private boolean refreshInProgress;
@@ -1434,17 +1433,14 @@ public class MainActivityPresenter
     }
 
     private List<TransactionItem> getCachedHistory(
-            Wallet wallet, String scope, Function<List<Transaction>, List<TransactionItem>> mapper) {
+            Wallet wallet, String scope, Supplier<List<TransactionItem>> mapper) {
         if (wallet == null) return Collections.emptyList();
 
-        // Use the same complete transaction set as TransactionMapper, matching
-        // the reference app's getTransactions(true) live history source.
-        List<Transaction> orderedTransactions =
-                TransactionMapper.getTransactionsInDisplayOrder(wallet);
+        // The mapper is only invoked on the refresh worker, never on Android's UI thread.
+        List<Transaction> orderedTransactions = wallet.getTransactionsByTime();
         int count = orderedTransactions.size();
         String newestId = count == 0 ? "" : orderedTransactions.get(0).getTxId().toString();
         int height = wallet.getLastBlockSeenHeight();
-        final long generation;
         synchronized (historyCacheLock) {
             Map<String, HistoryCacheEntry> walletEntries = historyCache.get(wallet);
             if (walletEntries != null) {
@@ -1454,61 +1450,16 @@ public class MainActivityPresenter
                         && cached.newestTransactionId.equals(newestId)) {
                     return cached.items;
                 }
+            } else {
+                walletEntries = new HashMap<>();
+                historyCache.put(wallet, walletEntries);
             }
-            generation = historyCacheGenerations.getOrDefault(wallet, 0L);
-        }
 
-        // Critical: never hold historyCacheLock while walking transactions and
-        // inputs/outputs. Wallet event callbacks invalidate this cache on bitcoinj's
-        // event thread; holding the lock during mapping can block block processing.
-        List<TransactionItem> mapped = mapper.apply(orderedTransactions);
-        List<TransactionItem> snapshot = Collections.unmodifiableList(new ArrayList<>(mapped));
-        synchronized (historyCacheLock) {
-            long currentGeneration = historyCacheGenerations.getOrDefault(wallet, 0L);
-            if (currentGeneration == generation) {
-                Map<String, HistoryCacheEntry> walletEntries = historyCache.get(wallet);
-                if (walletEntries == null) {
-                    walletEntries = new HashMap<>();
-                    historyCache.put(wallet, walletEntries);
-                }
-                walletEntries.put(scope, new HistoryCacheEntry(count, newestId, height, snapshot));
-            }
+            List<TransactionItem> mapped = mapper.get();
+            List<TransactionItem> snapshot = Collections.unmodifiableList(new ArrayList<>(mapped));
+            walletEntries.put(scope, new HistoryCacheEntry(count, newestId, height, snapshot));
+            return snapshot;
         }
-        return snapshot;
-    }
-
-    /**
-     * Publish the balance as an independent live value, like WalletBalanceLiveData
-     * in the reference implementation. Transaction history is mapped afterwards,
-     * so a large saved transaction set cannot hold the balance behind it.
-     */
-    private void postBalanceSnapshot(Wallet wallet,
-                                     String renderedWatchSelection,
-                                     String renderedImportedSelection,
-                                     Coin balance, Coin available, Coin pending,
-                                     String address, String walletType) {
-        final String balanceText = MoneyFormatter.format(applicationContext, balance);
-        final String availableText = text(R.string.available_balance,
-                MoneyFormatter.format(applicationContext, available));
-        final String pendingText = text(R.string.pending_balance,
-                MoneyFormatter.format(applicationContext, pending));
-        final String selectedAddress = address;
-        final String selectedWalletType = walletType;
-        runOnUi(() -> {
-            if (wallet != getActiveWallet()
-                    || !java.util.Objects.equals(renderedWatchSelection,
-                    WalletSelection.getSelectedWatchAddress(applicationContext))
-                    || !java.util.Objects.equals(renderedImportedSelection,
-                    WalletSelection.getSelectedImportedAddress(applicationContext))) {
-                return;
-            }
-            view.displayWalletType(selectedWalletType);
-            view.displayMyBalance(balanceText);
-            view.displayBalanceState(availableText, pendingText);
-            if (!TextUtils.isEmpty(selectedAddress)) {
-                view.displayMyAddress(selectedAddress);
-            }
-        });
     }
 
     private void renderSelectedWallet(Wallet wallet, long refreshRequestedAt,
@@ -1568,10 +1519,8 @@ public class MainActivityPresenter
                 walletType = text(R.string.wallet_type_imported) + " • "
                         + WalletAddressType.label(context, importedType);
             }
-            // Match the reference wallet architecture: balance is an independent
-            // live value and must reach the UI before transaction-list mapping.
-            postBalanceSnapshot(wallet, renderedWatchSelection, renderedImportedSelection,
-                    balance, available, pending, address, walletType);
+            transactions = getCachedHistory(wallet, "script:" + displayScript.toString(),
+                    () -> TransactionMapper.mapForWatchedScript(context, wallet, displayScript));
         } else {
             // Keep request-owned Nested SegWit outputs in the main-wallet balance.
             balance = WalletSelection.mainEstimatedBalance(context, wallet);
@@ -1583,25 +1532,11 @@ public class MainActivityPresenter
             // when transaction count/latest tx/block height have not changed. Include
             // the current registered Request and imported-script sets in the history
             // cache key so corrected output ownership is rendered immediately.
-            postBalanceSnapshot(wallet, renderedWatchSelection, renderedImportedSelection,
-                    balance, available, pending, address, walletType);
-        }
-
-        // Build the transaction history only after the current balance snapshot has
-        // already been posted. Mapping can traverse the complete wallet transaction
-        // graph, but it must not delay the balance display.
-        if (selectedScript != null || importedScript != null) {
-            Script displayScript = selectedScript != null ? selectedScript : importedScript;
-            transactions = getCachedHistory(wallet, "script:" + displayScript.toString(),
-                    orderedTransactions -> TransactionMapper.mapForWatchedScript(
-                            context, wallet, displayScript, orderedTransactions));
-        } else {
             String historyOwnershipKey = "main:request="
                     + WalletSelection.getRequestNestedScripts(context, wallet).hashCode()
                     + ":imported=" + WalletSelection.getImportedScripts(context, wallet).hashCode();
             transactions = getCachedHistory(wallet, historyOwnershipKey,
-                    orderedTransactions -> TransactionMapper.mapForMainWallet(
-                            context, wallet, orderedTransactions));
+                    () -> TransactionMapper.mapForMainWallet(context, wallet));
         }
 
         final String balanceText = MoneyFormatter.format(applicationContext, balance);
@@ -2268,8 +2203,6 @@ public class MainActivityPresenter
         }
         synchronized (historyCacheLock) {
             historyCache.remove(wallet);
-            historyCacheGenerations.put(wallet,
-                    historyCacheGenerations.getOrDefault(wallet, 0L) + 1L);
         }
     }
 
@@ -2341,20 +2274,6 @@ public class MainActivityPresenter
         );
 
         wallet.addChangeEventListener(
-                wallet1 -> {
-                    if (!isCurrentKit(ownerKit)) {
-                        return;
-                    }
-                    invalidateHistoryCache(wallet1);
-                    refresh();
-                    notifyWalletUpdated();
-                }
-        );
-
-        // The reference history live-data also reloads on wallet reorganization.
-        // Reorgs can change confirmations and transaction ownership without a new
-        // receive/send callback, so invalidate and republish the complete history.
-        wallet.addReorganizeEventListener(
                 wallet1 -> {
                     if (!isCurrentKit(ownerKit)) {
                         return;
