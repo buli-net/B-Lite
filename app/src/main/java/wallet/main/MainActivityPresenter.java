@@ -334,25 +334,6 @@ public class MainActivityPresenter
             WalletAppKit kit = null;
 
             try {
-                // Render the last persisted wallet snapshot before starting WalletAppKit.
-                // Wallet files already contain the previously known balance and transactions;
-                // showing that read-only snapshot avoids making the home screen wait for peer
-                // discovery / chain startup. The live WalletAppKit wallet will replace it via
-                // the normal refresh path once setup completes. Never write this snapshot back.
-                File savedWalletFile = walletFile;
-                if (savedWalletFile != null && savedWalletFile.isFile()) {
-                    try {
-                        Wallet savedWallet = Wallet.loadFromFile(savedWalletFile);
-                        if (savedWallet != null
-                                && startParameters.equals(savedWallet.getParams())
-                                && !shuttingDown) {
-                            long snapshotAt = System.currentTimeMillis();
-                            renderSelectedWallet(savedWallet, snapshotAt, snapshotAt);
-                        }
-                    } catch (Exception ignored) {
-                        // A missing, incompatible, or unreadable snapshot must not block startup.
-                    }
-                }
 
                 synchronized (kitLock) {
 
