@@ -384,25 +384,6 @@ public class MainActivityPresenter
                                         setupPeers = peerGroup();
                                     }
 
-                                    // The WalletAppKit has already loaded the wallet file and its
-                                    // previously synced transactions. Render that existing in-memory
-                                    // snapshot before doing startup reconciliation, so the home screen
-                                    // can show what is already known while startup continues. This is
-                                    // display-only: the normal reconciliation below still runs before
-                                    // onSetupCompleted returns and before SPV download proceeds.
-                                    File restoreBackup = pendingMnemonicBackupFile;
-                                    boolean initialSnapshotRendered = false;
-                                    if (restoreBackup == null) {
-                                        try {
-                                            renderSelectedWallet(setupWallet,
-                                                    System.currentTimeMillis(),
-                                                    System.currentTimeMillis());
-                                            initialSnapshotRendered = true;
-                                        } catch (Exception ignored) {
-                                            // Fall through to the normal refresh path below.
-                                        }
-                                    }
-
                                     // Reconcile Request-created scripts for every network through
                                     // one wallet-driven path before SPV synchronization starts.
                                     // This also migrates obsolete P2PKH/P2WPKH Request watch entries
@@ -421,6 +402,7 @@ public class MainActivityPresenter
                                     setupWalletListeners(this, setupWallet);
                                     setupPeerListeners(this, setupPeers);
 
+                                    File restoreBackup = pendingMnemonicBackupFile;
                                     synchronized (kitLock) {
                                         if (shuttingDown || walletAppKit != this) {
                                             return;
@@ -472,16 +454,10 @@ public class MainActivityPresenter
                                     // preserve the recovery backoff until download activity resumes.
                                     touchProgress();
 
-                                    final boolean hasInitialSnapshot = initialSnapshotRendered;
                                     runOnUi(() -> {
-                                        if (!hasInitialSnapshot) {
-                                            view.displayWalletLoading(
-                                                    text(R.string.wallet_status_loading_data), true);
-                                        }
+                                        view.displayWalletLoading(
+                                                text(R.string.wallet_status_loading_data), true);
                                         view.displayDownloadContent(true);
-                                        // This refresh runs against the reconciled live Wallet and
-                                        // supersedes the initial snapshot; wallet/peer listeners
-                                        // continue requesting refreshes as sync discovers changes.
                                         refresh();
                                     });
 
