@@ -10,14 +10,11 @@ import org.bitcoinj.wallet.Wallet;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Set;
-import java.time.Instant;
 
 import wallet.main.R;
 import wallet.main.MoneyFormatter;
@@ -37,13 +34,6 @@ public final class TransactionMapper {
      */
     public static List<TransactionItem> mapForWatchedScript(
             Context context, Wallet wallet, org.bitcoinj.script.Script watchedScript) {
-        return mapForWatchedScript(context, wallet, watchedScript,
-                getTransactionsInDisplayOrder(wallet));
-    }
-
-    public static List<TransactionItem> mapForWatchedScript(
-            Context context, Wallet wallet, org.bitcoinj.script.Script watchedScript,
-            List<Transaction> orderedTransactions) {
         List<TransactionItem> items = new ArrayList<>();
         if (wallet == null || watchedScript == null) {
             return items;
@@ -54,9 +44,7 @@ public final class TransactionMapper {
 
         Map<Sha256Hash, Transaction> walletTransactions = indexWalletTransactions(wallet);
 
-        // Use the current full wallet snapshot; the presenter reuses this exact
-        // snapshot for its cache key, avoiding another full sort during rendering.
-        for (Transaction transaction : orderedTransactions) {
+        for (Transaction transaction : wallet.getTransactionsByTime()) {
             Coin received = Coin.ZERO;
             for (org.bitcoinj.core.TransactionOutput output : transaction.getOutputs()) {
                 if (watchedScript.equals(output.getScriptPubKey())) {
@@ -84,11 +72,6 @@ public final class TransactionMapper {
      * are excluded so history, balance and Coin Control share one ownership rule.
      */
     public static List<TransactionItem> mapForMainWallet(Context context, Wallet wallet) {
-        return mapForMainWallet(context, wallet, getTransactionsInDisplayOrder(wallet));
-    }
-
-    public static List<TransactionItem> mapForMainWallet(
-            Context context, Wallet wallet, List<Transaction> orderedTransactions) {
         List<TransactionItem> items = new ArrayList<>();
         if (wallet == null) {
             return items;
@@ -99,22 +82,13 @@ public final class TransactionMapper {
 
         Map<Sha256Hash, Transaction> walletTransactions = indexWalletTransactions(wallet);
 
-        // Resolve ownership sets once per history snapshot. Doing this for every
-        // input/output repeatedly walks preferences and wallet watched scripts,
-        // which can stall history rendering while the wallet is catching up.
-        Set<org.bitcoinj.script.Script> importedScripts =
-                WalletSelection.getImportedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> requestScripts =
-                WalletSelection.getRequestNestedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> watchedScripts =
-                new java.util.HashSet<>(wallet.getWatchedScripts());
-
-        // Read every transaction currently held by the live wallet, just as the
-        // reference WalletTransactionsViewModel does. This includes transactions
-        // already learned from synced blocks before the next live event arrives.
-        for (Transaction transaction : orderedTransactions) {
-            Coin net = valueForMainWallet(context, wallet, transaction, walletTransactions,
-                    requestScripts, importedScripts, watchedScripts);
+        for (Transaction transaction : wallet.getTransactionsByTime()) {
+            // The Wallet object also contains imported and watched scopes.
+            // Use the bitcoinj aggregate value first, then remove every
+            // explicitly separated scope exactly once. This keeps the main
+            // wallet classification consistent with the same signed-value
+            // semantics while preserving Bitcoin Wallet wallet separation.
+            Coin net = valueForMainWallet(context, wallet, transaction, walletTransactions);
 
             if (net.isZero()) {
                 continue;
@@ -136,38 +110,21 @@ public final class TransactionMapper {
             Map<Sha256Hash, Transaction> walletTransactions) {
         if (wallet == null || transaction == null) return Coin.ZERO;
         if (context == null) return safeTransactionValue(transaction, wallet);
-        Set<org.bitcoinj.script.Script> importedScripts =
-                WalletSelection.getImportedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> requestScripts =
-                WalletSelection.getRequestNestedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> watchedScripts =
-                new java.util.HashSet<>(wallet.getWatchedScripts());
-        return valueForMainWallet(context, wallet, transaction, walletTransactions,
-                requestScripts, importedScripts, watchedScripts);
-    }
 
-    private static Coin valueForMainWallet(
-            Context context, Wallet wallet, Transaction transaction,
-            Map<Sha256Hash, Transaction> walletTransactions,
-            Set<org.bitcoinj.script.Script> requestScripts,
-            Set<org.bitcoinj.script.Script> importedScripts,
-            Set<org.bitcoinj.script.Script> watchedScripts) {
-        if (wallet == null || transaction == null) return Coin.ZERO;
-
-        // Keep the main wallet, Request Nested SegWit and separate imported
-        // scopes distinct while evaluating ownership against one stable snapshot.
+        // Do not use Transaction#getValue(wallet) for this scope: bitcoinj can
+        // aggregate a Request P2SH output into the wallet value while the same
+        // output is also represented as a watched output. Calculate the main
+        // scope from distinct outputs and their connected inputs instead.
         Coin received = Coin.ZERO;
         for (org.bitcoinj.core.TransactionOutput output : transaction.getOutputs()) {
-            if (belongsToMainWalletScope(context, wallet, output,
-                    requestScripts, importedScripts, watchedScripts)) {
+            if (belongsToMainWalletScope(context, wallet, output)) {
                 received = received.add(output.getValue());
             }
         }
         Coin sent = Coin.ZERO;
         for (org.bitcoinj.core.TransactionInput input : transaction.getInputs()) {
             org.bitcoinj.core.TransactionOutput connected = findConnectedOutput(walletTransactions, input);
-            if (connected != null && belongsToMainWalletScope(context, wallet, connected,
-                    requestScripts, importedScripts, watchedScripts)) {
+            if (connected != null && belongsToMainWalletScope(context, wallet, connected)) {
                 sent = sent.add(connected.getValue());
             }
         }
@@ -208,29 +165,13 @@ public final class TransactionMapper {
     public static boolean belongsToMainWalletScope(
             Context context, Wallet wallet, org.bitcoinj.core.TransactionOutput output) {
         if (output == null || wallet == null) return false;
-        Set<org.bitcoinj.script.Script> importedScripts =
-                WalletSelection.getImportedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> requestScripts =
-                WalletSelection.getRequestNestedScripts(context, wallet);
-        Set<org.bitcoinj.script.Script> watchedScripts =
-                new java.util.HashSet<>(wallet.getWatchedScripts());
-        return belongsToMainWalletScope(context, wallet, output,
-                requestScripts, importedScripts, watchedScripts);
-    }
-
-    private static boolean belongsToMainWalletScope(
-            Context context, Wallet wallet, org.bitcoinj.core.TransactionOutput output,
-            Set<org.bitcoinj.script.Script> requestScripts,
-            Set<org.bitcoinj.script.Script> importedScripts,
-            Set<org.bitcoinj.script.Script> watchedScripts) {
-        if (output == null || wallet == null) return false;
         org.bitcoinj.script.Script script = output.getScriptPubKey();
-        if (importedScripts.contains(script)) return false;
-        if (requestScripts.contains(script)) return true;
+        if (WalletSelection.getImportedScripts(context, wallet).contains(script)) return false;
+        if (WalletSelection.getRequestNestedScripts(context, wallet).contains(script)) return true;
         // Only explicitly registered Request Nested SegWit P2SH scripts belong to
         // the main wallet scope; do not count other P2SH outputs from HD lookahead.
         if (org.bitcoinj.script.ScriptPattern.isP2SH(script)) return false;
-        return output.isMine(wallet) && !watchedScripts.contains(script);
+        return output.isMine(wallet) && !WalletSelection.isWatchedOutput(wallet, output);
     }
 
     /**
@@ -362,31 +303,6 @@ public final class TransactionMapper {
         }
 
         return parent.getOutput((int) index);
-    }
-
-    /**
-     * Snapshot the complete transaction set known to bitcoinj in the same
-     * order used by the reference wallet: pending transactions first, then
-     * newest update time first. getTransactions(true) includes dead/replaced
-     * entries too, so a block-sync refresh doesn't silently omit known history.
-     */
-    public static List<Transaction> getTransactionsInDisplayOrder(Wallet wallet) {
-        if (wallet == null) return Collections.emptyList();
-        List<Transaction> transactions = new ArrayList<>(wallet.getTransactions(true));
-        transactions.sort((left, right) -> {
-            TransactionConfidence leftConfidence = left.getConfidence();
-            TransactionConfidence rightConfidence = right.getConfidence();
-            boolean leftPending = leftConfidence != null
-                    && leftConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING;
-            boolean rightPending = rightConfidence != null
-                    && rightConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING;
-            if (leftPending != rightPending) return leftPending ? -1 : 1;
-            Instant leftTime = left.updateTime().orElse(Instant.EPOCH);
-            Instant rightTime = right.updateTime().orElse(Instant.EPOCH);
-            int timeOrder = rightTime.compareTo(leftTime);
-            return timeOrder != 0 ? timeOrder : left.getTxId().compareTo(right.getTxId());
-        });
-        return transactions;
     }
 
     private static Map<Sha256Hash, Transaction> indexWalletTransactions(Wallet wallet) {
