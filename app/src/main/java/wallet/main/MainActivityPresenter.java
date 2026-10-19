@@ -334,6 +334,25 @@ public class MainActivityPresenter
             WalletAppKit kit = null;
 
             try {
+                // Render the last persisted wallet snapshot before starting WalletAppKit.
+                // Wallet files already contain the previously known balance and transactions;
+                // showing that read-only snapshot avoids making the home screen wait for peer
+                // discovery / chain startup. The live WalletAppKit wallet will replace it via
+                // the normal refresh path once setup completes. Never write this snapshot back.
+                File savedWalletFile = walletFile;
+                if (savedWalletFile != null && savedWalletFile.isFile()) {
+                    try {
+                        Wallet savedWallet = Wallet.loadFromFile(savedWalletFile);
+                        if (savedWallet != null
+                                && startParameters.equals(savedWallet.getParams())
+                                && !shuttingDown) {
+                            long snapshotAt = System.currentTimeMillis();
+                            renderSelectedWallet(savedWallet, snapshotAt, snapshotAt);
+                        }
+                    } catch (Exception ignored) {
+                        // A missing, incompatible, or unreadable snapshot must not block startup.
+                    }
+                }
 
                 synchronized (kitLock) {
 
@@ -2190,6 +2209,22 @@ public class MainActivityPresenter
         saveActiveWalletToFile(walletFile);
     }
 
+    /**
+     * Wallet event callbacks can fire while bitcoinj is updating an existing
+     * transaction (for example confidence/confirmation changes) without changing
+     * the history cache key's transaction count or newest transaction id.
+     * Invalidate cached history before scheduling the UI refresh so newly sent,
+     * received, and updated transactions are mapped from the live wallet state.
+     */
+    private void invalidateHistoryCache(Wallet wallet) {
+        if (wallet == null) {
+            return;
+        }
+        synchronized (historyCacheLock) {
+            historyCache.remove(wallet);
+        }
+    }
+
     private void setupWalletListeners(
             WalletAppKit ownerKit,
             Wallet wallet) {
@@ -2200,6 +2235,7 @@ public class MainActivityPresenter
                         return;
                     }
                     WalletSelection.observeRequestNestedTransaction(applicationContext, wallet1, tx);
+                    invalidateHistoryCache(wallet1);
                     refresh();
                     notifyWalletUpdated();
                     if (tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
@@ -2230,6 +2266,7 @@ public class MainActivityPresenter
                     if (!isCurrentKit(ownerKit)) {
                         return;
                     }
+                    invalidateHistoryCache(wallet1);
                     refresh();
                     notifyWalletUpdated();
                     try {
@@ -2249,6 +2286,7 @@ public class MainActivityPresenter
                     if (!isCurrentKit(ownerKit)) {
                         return;
                     }
+                    invalidateHistoryCache(wallet1);
                     refresh();
                     notifyWalletUpdated();
                 }
@@ -2259,6 +2297,7 @@ public class MainActivityPresenter
                     if (!isCurrentKit(ownerKit)) {
                         return;
                     }
+                    invalidateHistoryCache(wallet1);
                     refresh();
                     notifyWalletUpdated();
                 }
