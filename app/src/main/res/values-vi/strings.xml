@@ -3,7 +3,7 @@
 <resources>
     <string name="app_name">Ví Bitcoin</string>
     <string name="menu_scan">Quét</string>
-    <string name="menu_send">Gửi</string>
+    <string name="menu_send">Gửi Bitcoin</string>
     <string name="menu_settings">Cài đặt</string>
     <string name="menu_general">Chung</string>
     <string name="general_title">Cài đặt chung</string>
@@ -30,7 +30,7 @@
 
     <string name="shortcut_scan">Quét</string>
     <string name="shortcut_send_coins">Gửi Bitcoin</string>
-    <string name="shortcut_request_coins">Nhận Bitcoin</string>
+    <string name="shortcut_request_coins">Yêu cầu Bitcoin</string>
     <string name="menu_sync">Đồng bộ &amp; Mạng</string>
     <string name="menu_backup_recovery">Sao lưu &amp; Khôi phục</string>
     <string name="menu_about">Giới thiệu</string>
@@ -39,7 +39,7 @@
     <string name="wallet_status_switching">Đang chuyển ví…</string>
     <string name="wallet_status_load_failed">Không tải được dữ liệu ví. Vuốt xuống để thử lại.</string>
     <string name="wallet_status_tap_to_retry">Không tải được dữ liệu ví. Chạm vào đây để thử lại.</string>
-    <string name="wallet_title">Ví</string>
+    <string name="wallet_title">Ví Bitcoin</string>
     <string name="about_title">Giới thiệu</string>
     <string name="backup_title">Sao lưu ví</string>
     <string name="backup_unlock_title">Mở khóa để tạo bản sao lưu ví</string>
@@ -99,9 +99,9 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="sync_network_selector_storage_note">Mỗi mạng sử dụng ví và dữ liệu blockchain riêng.</string>
     <string name="sync_mode_title">Chế độ đồng bộ</string>
     <string name="sync_mode_lite">Rút gọn</string>
-    <string name="sync_mode_full">Toàn bộ</string>
+    <string name="sync_mode_full">Đầy đủ</string>
     <string name="sync_mode_lite_description">Rút gọn • Chỉ tải dữ liệu đã lọc để giảm dung lượng lưu trữ và xử lý.</string>
-    <string name="sync_mode_full_description">Toàn bộ • Tải đầy đủ giao dịch trong block để có nhiều dữ liệu blockchain hơn.</string>
+    <string name="sync_mode_full_description">Đầy đủ • Tải toàn bộ giao dịch trong block để có nhiều dữ liệu blockchain hơn.</string>
     <string name="sync_mode_switch_title">Đổi chế độ đồng bộ?</string>
     <string name="sync_mode_switch_message">Chế độ mới sẽ khởi động lại quá trình đồng bộ Bitcoin và giữ nguyên ví cùng dữ liệu blockchain hiện tại. Dùng RESCAN sau khi chuyển chế độ để xây dựng lại lịch sử cũ ở chế độ Toàn bộ block.</string>
     <string name="sync_mode_switching">Đang chuyển chế độ đồng bộ sang %1$s...</string>
@@ -983,7 +983,7 @@ Loại thẻ: %2$s</string>
     <string name="nfc_security_set_password_button">ĐẶT MẬT KHẨU PHẦN CỨNG THẺ</string>
     <string name="nfc_security_change_password_button">ĐỔI MẬT KHẨU THẺ</string>
     <string name="nfc_security_remove_password_button">GỠ MẬT KHẨU THẺ</string>
-<string name="nfc_security_action_set_title">Đặt mật khẩu phần cứng thẻ</string>
+    <string name="nfc_security_action_set_title">Đặt mật khẩu phần cứng thẻ</string>
     <string name="nfc_security_action_change_title">Đổi mật khẩu phần cứng thẻ</string>
     <string name="nfc_security_action_remove_title">Gỡ mật khẩu phần cứng thẻ</string>
     <string name="nfc_security_password_dialog_message">Mật khẩu này được áp dụng trực tiếp lên chip NFC, không phải mật khẩu ứng dụng và không được lưu trong cài đặt ứng dụng. Ứng dụng tự dùng định dạng phù hợp với chip được nhận diện. Quên mật khẩu có thể khiến bạn mất quyền truy cập. Một số thẻ chỉ có lớp bảo vệ mật khẩu cơ bản, không phải mã hóa mạnh. Hãy chạm lại đúng thẻ để áp dụng thay đổi.</string>
@@ -1057,7 +1057,7 @@ Loại thẻ: %2$s</string>
     <string name="nfc_chip_details_ndef_unknown">Có NDEF nhưng chưa xác định được model chip; chưa thể chọn giao thức mật khẩu phần cứng an toàn.</string>
     <string name="nfc_chip_details_unknown">Không xác định được công nghệ hoặc model chip. Không thay đổi thiết lập bảo mật.</string>
 
-<string name="nfc_common_operation_failed">Không thể hoàn tất thao tác với thẻ. Hãy kiểm tra khả năng tương thích và thông tin xác thực hiện tại rồi thử lại.</string>
+    <string name="nfc_common_operation_failed">Không thể hoàn tất thao tác với thẻ. Hãy kiểm tra khả năng tương thích và thông tin xác thực hiện tại rồi thử lại.</string>
     <string name="nfc_reader_connection_failed_generic">Không thể kết nối với thẻ bằng giao thức này.</string>
     <string name="nfc_reader_page_read_stopped_generic">Đã dừng đọc tại trang %1$d vì thẻ không cho phép đọc tiếp.</string>
     <string name="nfc_reader_page_data">Trang %1$02d: %2$s  | %3$s</string>
