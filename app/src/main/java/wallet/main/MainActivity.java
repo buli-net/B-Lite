@@ -829,7 +829,9 @@ public class MainActivity extends BaseActivity
                 writer.write("type,amount,time,confirmations,state,peers,txid\n");
                 for (TransactionItem item : allTransactions) {
                     writer.write(csv(item.type)); writer.write(",");
-                    writer.write(csv(item.amount)); writer.write(",");
+                    // Export from the exact Coin value using the currently selected display unit.
+                    // item.amount is a cached display string and may reflect an older unit choice.
+                    writer.write(csv(MoneyFormatter.format(this, item.rawAmount))); writer.write(",");
                     writer.write(csv(item.time)); writer.write(",");
                     writer.write(csv(item.confirmations)); writer.write(",");
                     writer.write(csv(item.state)); writer.write(",");
