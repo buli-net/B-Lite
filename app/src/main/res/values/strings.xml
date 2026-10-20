@@ -8,6 +8,7 @@
 
     <string name="menu_general">General</string>
     <string name="currency_unit_title">General</string>
+    <string name="menu_currency_unit">Bitcoin units</string>
     <string name="currency_unit_unit_option_btc">BTC — Bitcoin</string>
     <string name="currency_unit_unit_option_mbtc">mBTC — Millibitcoin</string>
     <string name="currency_unit_unit_option_ubtc">µBTC — Microbitcoin</string>
@@ -96,6 +97,7 @@ Use the application responsibly and keep independent backups of your wallet.</st
     <string name="network_badge_mainnet">BITCOIN MAINNET</string>
     <string name="network_badge_signet">BITCOIN SIGNET • TEST NETWORK</string>
     <string name="sync_network_selector_title">Network</string>
+    <string name="network_selector_title">Network</string>
     <string name="sync_network_selector_description">Select the Bitcoin blockchain used by the wallet and synchronization engine.</string>
     <string name="sync_network_selector_storage_note">Each network keeps its own wallet and blockchain data.</string>
     <string name="sync_mode_title">Sync mode</string>
