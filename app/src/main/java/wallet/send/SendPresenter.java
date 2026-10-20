@@ -34,7 +34,6 @@ import wallet.main.WalletSelection;
 import wallet.main.ImportedWalletStore;
 import wallet.main.WalletAddressType;
 import wallet.main.R;
-import LocalizedErrors;
 
 /** Owns send validation, transaction preparation, review state, and broadcast state. */
 public final class SendPresenter {
