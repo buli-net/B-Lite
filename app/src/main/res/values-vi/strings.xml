@@ -7,6 +7,7 @@
     <string name="menu_settings">Cài đặt</string>
     <string name="menu_general">Chung</string>
     <string name="currency_unit_title">Cài đặt chung</string>
+    <string name="menu_currency_unit">Đơn vị Bitcoin</string>
     <string name="currency_unit_intro_title">Tùy chỉnh ví của bạn</string>
     <string name="currency_unit_intro_description">Chọn cách hiển thị số tiền Bitcoin trong toàn bộ ví. Các tùy chọn này chỉ ảnh hưởng đến cách hiển thị; số dư, phí và giá trị giao dịch vẫn giữ nguyên độ chính xác.</string>
     <string name="currency_unit_unit_title">Đơn vị hiển thị Bitcoin</string>
@@ -95,6 +96,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="network_badge_mainnet">BITCOIN MAINNET</string>
     <string name="network_badge_signet">BITCOIN SIGNET • MẠNG THỬ NGHIỆM</string>
     <string name="sync_network_selector_title">Mạng</string>
+    <string name="network_selector_title">Mạng</string>
     <string name="sync_network_selector_description">Chọn blockchain Bitcoin mà ví và bộ đồng bộ sẽ sử dụng.</string>
     <string name="sync_network_selector_storage_note">Mỗi mạng sử dụng ví và dữ liệu blockchain riêng.</string>
     <string name="sync_mode_title">Chế độ đồng bộ</string>
