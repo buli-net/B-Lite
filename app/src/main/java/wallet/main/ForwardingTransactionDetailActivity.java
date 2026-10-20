@@ -138,7 +138,11 @@ public final class ForwardingTransactionDetailActivity extends BaseActivity {
         String stageCode = record.optString("stage", "");
         stage.setText(stageLabel(stageCode));
         String storedStatus = record.optString("status", "").trim();
-        statusMessage.setText(storedStatus.isEmpty() ? stageDetail(stageCode) : storedStatus);
+        if (storedStatus.isEmpty()) {
+            statusMessage.setText(stageDetail(stageCode));
+        } else {
+            statusMessage.setText(storedStatus);
+        }
 
         String networkValue = prefsName.substring("forwarding_service_".length()).trim();
         if (networkValue.isEmpty()) networkValue = record.optString("network", "").trim();
