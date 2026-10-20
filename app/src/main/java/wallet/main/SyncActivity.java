@@ -54,6 +54,7 @@ public class SyncActivity extends BaseActivity {
     private RadioGroup syncModeSelection;
     private RadioButton syncModeLiteOption;
     private RadioButton syncModeFullOption;
+    private boolean syncModeSelectionUpdating;
     private TextView syncModeDetails;
     private Button refresh;
     private Button reconnect;
