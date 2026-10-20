@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar_forwarding_service"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@string/forwarding_service_title"
+                    android:src="@drawable/ic_menu_forwarding_24dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/forwarding_intro_title"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="@string/forwarding_service_description"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/forwarding_configuration_title"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/forwarding_network_label"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/forwardingNetwork"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/forwarding_network_warning"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/forwarding_destination_label"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/forwardingDestination"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/forwarding_destination_hint"
+                    android:inputType="textUri"
+                    android:maxLines="2"
+                    android:minHeight="48dp"
+                    android:selectAllOnFocus="true"
+                    android:singleLine="false"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColorHint="?android:attr/textColorSecondary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/forwarding_confirmations_label"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/forwardingConfirmations"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/forwarding_confirmations_hint"
+                    android:inputType="number"
+                    android:maxLength="3"
+                    android:singleLine="true"
+                    android:text="1"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColorHint="?android:attr/textColorSecondary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/forwarding_mode_label"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/forwardingModeChoice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="4dp">
+
+                    <RadioButton
+                        android:id="@+id/forwardingModeSweep"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/forwarding_mode_sweep"
+                        android:textColor="?android:attr/textColorPrimary" />
+
+                    <RadioButton
+                        android:id="@+id/forwardingModeFixed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/forwarding_mode_fixed"
+                        android:textColor="?android:attr/textColorPrimary" />
+                </RadioGroup>
+
+                <LinearLayout
+                    android:id="@+id/forwardingFixedAmountContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/forwarding_fixed_amount_label"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/forwardingFixedAmount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/forwarding_fixed_amount_hint"
+                        android:inputType="numberDecimal"
+                        android:singleLine="true"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textColorHint="?android:attr/textColorSecondary" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/forwarding_fixed_amount_note"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/forwarding_fee_rate_label"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/forwardingFeeRateLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/fee_rate_initial"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="15sp" />
+
+                <SeekBar
+                    android:id="@+id/forwardingFeeRate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/fee_rate_min"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/fee_rate_max"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/forwarding_fee_policy_note"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/forwardingSaveButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/forwarding_save" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/forwarding_activity_card_title"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/forwardingActivityTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/forwarding_activity_idle_title"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/forwardingActivityDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/forwarding_activity_idle_detail"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="14sp"
+                    android:textIsSelectable="true" />
+
+                <LinearLayout
+                    android:id="@+id/forwardingConfirmationsRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/forwardingActivityConfirmations"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="13sp" />
+
+                    <ProgressBar
+                        android:id="@+id/forwardingConfirmationProgress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:max="1"
+                        android:progress="0" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="?android:attr/listDivider" />
+
+                <LinearLayout
+                    android:id="@+id/forwardingIncomingTxRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/forwarding_activity_incoming_tx"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/forwardingIncomingTxValue"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingTop="3dp"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textIsSelectable="true" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/forwardingCopyIncomingTx"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="8dp"
+                        android:text="@string/forwarding_copy"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/forwardingOutgoingTxRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/forwarding_activity_outgoing_tx"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/forwardingOutgoingTxValue"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingTop="3dp"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textIsSelectable="true" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/forwardingCopyOutgoingTx"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="8dp"
+                        android:text="@string/forwarding_copy"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/forwardingActivityAmountSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/forwarding_activity_amounts_empty"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/forwardingActivityFeeSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/forwarding_activity_fee_empty"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp"
+                    android:textIsSelectable="true" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="?android:attr/listDivider" />
+
+                <TextView
+                    android:id="@+id/forwardingStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/forwardingToggleButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/forwarding_enable" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/forwarding_safety_title"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/forwarding_safety_description"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
