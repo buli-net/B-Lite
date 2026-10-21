@@ -105,6 +105,8 @@ public class MainActivityPresenter
     private static final String FORWARDING_ENABLED_AT_HEIGHT = "enabled_at_height";
     private static final String FORWARDING_PRE_ENABLE_PENDING_TXIDS = "pre_enable_pending_txids_json";
     private static final String FORWARDING_RECOVERY_LAST_SCAN_MS = "recovery_last_scan_ms";
+    // After one activation-gap catch-up pass, ordinary recovery is ledger/event-driven.
+    private static final String FORWARDING_RECOVERY_INCREMENTAL_BOOTSTRAP_DONE = "recovery_incremental_bootstrap_done";
     private static final String FORWARDING_GENERATION = "forwarding_generation";
     private static final Object FORWARDING_COMMIT_LOCK = new Object();
     private static final Set<String> forwardingTransactions = ConcurrentHashMap.newKeySet();
@@ -3984,10 +3986,85 @@ public class MainActivityPresenter
         return total;
     }
 
+    /** Returns a snapshot of ledger rows that still need reconciliation or recovery. */
+    private List<org.json.JSONObject> getForwardingRecoveryRows(
+            android.content.SharedPreferences prefs) {
+        List<org.json.JSONObject> rows = new ArrayList<>();
+        if (prefs == null) return rows;
+        try {
+            org.json.JSONArray ledger = new org.json.JSONArray(
+                    prefs.getString(FORWARDING_ACTIVITY_LEDGER, "[]"));
+            for (int i = 0; i < ledger.length(); i++) {
+                org.json.JSONObject row = ledger.optJSONObject(i);
+                if (row == null) continue;
+                String stage = row.optString("stage", "").trim();
+                if ("waiting".equals(stage) || "failed".equals(stage)
+                        || "preparing".equals(stage) || "broadcasting".equals(stage)
+                        || "relayed".equals(stage)) {
+                    rows.add(new org.json.JSONObject(row.toString()));
+                }
+            }
+        } catch (org.json.JSONException ignored) { }
+        return rows;
+    }
+
+    private void addForwardingRecoveryTransaction(
+            java.util.Map<String, Transaction> byId, Transaction tx) {
+        if (byId == null || tx == null) return;
+        byId.put(tx.getTxId().toString(), tx);
+    }
+
     /**
-     * Reconciles the saved forwarding work ledger against this exact wallet/network. It catches
-     * receipts missed while the process was dead and resumes in-flight TXIDs without creating a
-     * replacement transaction when the original one has already been committed.
+     * Loads only transactions related to unfinished forwarding rows during normal recovery.
+     * The complete wallet transaction set is enumerated only once, when enabled forwarding
+     * first needs to catch up across the activation boundary. Newly synced receipts are handled
+     * by the wallet event listener installed before SPV synchronization starts.
+     */
+    private List<Transaction> loadForwardingRecoveryTransactions(
+            Wallet wallet, boolean bootstrapScan, List<org.json.JSONObject> recoveryRows) {
+        java.util.LinkedHashMap<String, Transaction> byId = new java.util.LinkedHashMap<>();
+        if (bootstrapScan) {
+            for (Transaction tx : wallet.getTransactions(true)) addForwardingRecoveryTransaction(byId, tx);
+        } else {
+            for (org.json.JSONObject row : recoveryRows) {
+                if (row == null) continue;
+                String incomingId = row.optString("incoming", "").trim();
+                String outgoingId = row.optString("outgoing", "").trim();
+                if (!incomingId.isEmpty()) {
+                    try {
+                        addForwardingRecoveryTransaction(byId,
+                                wallet.getTransaction(org.bitcoinj.base.Sha256Hash.wrap(incomingId)));
+                    } catch (RuntimeException ignored) { }
+                }
+                if (!outgoingId.isEmpty()) {
+                    try {
+                        addForwardingRecoveryTransaction(byId,
+                                wallet.getTransaction(org.bitcoinj.base.Sha256Hash.wrap(outgoingId)));
+                    } catch (RuntimeException ignored) { }
+                }
+            }
+            // Use bitcoinj's connected output->spent-input graph to discover an existing spend
+            // without walking every transaction in wallet history for each 15-second tick.
+            List<Transaction> receipts = new ArrayList<>(byId.values());
+            for (Transaction receipt : receipts) {
+                if (receipt == null) continue;
+                try {
+                    for (TransactionOutput output : receipt.getOutputs()) {
+                        org.bitcoinj.core.TransactionInput spentBy = output.getSpentBy();
+                        if (spentBy != null) addForwardingRecoveryTransaction(
+                                byId, spentBy.getParentTransaction());
+                    }
+                } catch (RuntimeException ignored) { }
+            }
+        }
+        return new ArrayList<>(byId.values());
+    }
+
+    /**
+     * Reconciles saved forwarding work without rescanning the entire wallet history on every
+     * recovery tick. A one-time activation-gap pass discovers older untracked receipts; thereafter
+     * wallet receipt/confidence listeners discover new work, while only unfinished ledger rows
+     * are checked here. Completed history remains durable and is not repeatedly traversed.
      */
     private void recoverForwardingWork(WalletAppKit ownerKit, Wallet wallet) {
         if (ownerKit == null || wallet == null || !isCurrentKit(ownerKit)
@@ -3997,46 +4074,73 @@ public class MainActivityPresenter
             android.content.SharedPreferences prefs = applicationContext.getSharedPreferences(
                     forwardingPreferencesName(applicationContext), android.content.Context.MODE_PRIVATE);
             if (!wallet.network().equals(NetworkConfig.get(applicationContext))) return;
-            List<Transaction> transactions = new ArrayList<>(wallet.getTransactions(true));
-            transactions.sort((left, right) -> {
-                Instant leftTime = left == null ? null : left.updateTime().orElse(null);
-                Instant rightTime = right == null ? null : right.updateTime().orElse(null);
-                if (leftTime == null && rightTime == null) return 0;
-                if (leftTime == null) return -1;
-                if (rightTime == null) return 1;
-                return leftTime.compareTo(rightTime);
-            });
-            // Repair legacy false-failure rows before the normal stage dispatcher skips terminal
-            // entries. This changes the existing row in place and never creates a second card.
+
+            boolean forwardingEnabled = prefs.getBoolean(FORWARDING_ENABLED, false);
+            boolean restoreMergePending = pendingMnemonicBackupFile != null
+                    && pendingMnemonicBackupFile.exists();
+            boolean bootstrapScan = forwardingEnabled && !restoreMergePending
+                    && !prefs.getBoolean(FORWARDING_RECOVERY_INCREMENTAL_BOOTSTRAP_DONE, false);
+            if (forwardingEnabled) ensureForwardingEnabledAt(prefs, wallet);
+
+            List<org.json.JSONObject> recoveryRows = getForwardingRecoveryRows(prefs);
+            List<Transaction> transactions = loadForwardingRecoveryTransactions(
+                    wallet, bootstrapScan, recoveryRows);
+            if (bootstrapScan) {
+                transactions.sort((left, right) -> {
+                    Instant leftTime = left == null ? null : left.updateTime().orElse(null);
+                    Instant rightTime = right == null ? null : right.updateTime().orElse(null);
+                    if (leftTime == null && rightTime == null) return 0;
+                    if (leftTime == null) return -1;
+                    if (rightTime == null) return 1;
+                    return leftTime.compareTo(rightTime);
+                });
+            }
+
+            // Repair legacy false-failure rows before the dispatcher skips terminal entries.
+            // For routine ticks, 'transactions' contains only transactions linked to unfinished
+            // rows, not the full wallet history.
             reconcileFailedForwardingLedgerEntries(ownerKit, wallet, prefs, transactions);
-            // Historical status repair is independent of the user's current opt-in setting.
-            // Only automatic creation/rebroadcast of forwarding work requires it to be enabled.
-            if (!prefs.getBoolean(FORWARDING_ENABLED, false)) return;
+            if (!forwardingEnabled) return;
+
             ensureForwardingEnabledAt(prefs, wallet);
+            List<String> incomingIds = new ArrayList<>();
+            if (bootstrapScan) {
+                for (Transaction tx : transactions) {
+                    if (tx != null) incomingIds.add(tx.getTxId().toString());
+                }
+            } else {
+                for (org.json.JSONObject row : recoveryRows) {
+                    String incomingId = row.optString("incoming", "").trim();
+                    if (!incomingId.isEmpty() && !incomingIds.contains(incomingId)) incomingIds.add(incomingId);
+                }
+            }
+
+            java.util.Map<String, Transaction> transactionById = new java.util.HashMap<>();
             for (Transaction tx : transactions) {
-                if (tx == null || !isCurrentKit(ownerKit) || getActiveWallet() != wallet) return;
-                String incomingTxId = tx.getTxId().toString();
+                if (tx != null) transactionById.put(tx.getTxId().toString(), tx);
+            }
+            for (String incomingTxId : incomingIds) {
+                if (!isCurrentKit(ownerKit) || getActiveWallet() != wallet) return;
+                Transaction tx = transactionById.get(incomingTxId);
+                if (tx == null) {
+                    try { tx = wallet.getTransaction(org.bitcoinj.base.Sha256Hash.wrap(incomingTxId)); }
+                    catch (RuntimeException ignored) { }
+                }
+                if (tx == null) continue;
                 String stage = findForwardingLedgerStage(prefs, incomingTxId);
                 if ("waiting".equals(stage) || "failed".equals(stage)) {
-                    // A failed ledger status is not proof that a transaction failed. Reconcile by
-                    // outgoing TXID first. If no matching outgoing transaction exists, restore the
-                    // saved job to waiting so the ordinary confirmation/spendability checks can
-                    // retry it instead of leaving a false failure forever.
                     if ("failed".equals(stage)) {
                         org.json.JSONObject saved = getForwardingLedgerEntry(prefs, incomingTxId);
                         String outgoingId = saved == null ? "" : saved.optString("outgoing", "").trim();
                         String raw = saved == null ? "" : saved.optString("raw", "").trim();
                         Transaction outgoing = null;
                         if (!outgoingId.isEmpty()) {
-                            try {
-                                outgoing = wallet.getTransaction(
-                                        org.bitcoinj.base.Sha256Hash.wrap(outgoingId));
-                            } catch (RuntimeException ignored) { }
+                            try { outgoing = wallet.getTransaction(
+                                    org.bitcoinj.base.Sha256Hash.wrap(outgoingId)); }
+                            catch (RuntimeException ignored) { }
                         }
-                        // Only requeue when no outgoing TXID was ever recorded. A non-empty
-                        // TXID that is temporarily absent from this wallet view is ambiguous:
-                        // it may already be on the network or the wallet may still be syncing.
-                        // Never erase that TXID and create a second spend from the same receipt.
+                        // A missing TXID in a partial wallet view is ambiguous. Only requeue a
+                        // stale failure if no outgoing TXID or signed bytes were ever persisted.
                         if (outgoing == null && outgoingId.isEmpty() && raw.isEmpty()) {
                             updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
                                     "stage", "waiting",
@@ -4070,7 +4174,7 @@ public class MainActivityPresenter
                     }
                     continue;
                 }
-                if (!stage.isEmpty()) continue;
+                if (!bootstrapScan || !stage.isEmpty()) continue;
                 if (tx.getPurpose() != Transaction.Purpose.UNKNOWN
                         || forwardingTransactions.contains(incomingTxId)
                         || isPreviouslyForwardedOutputFromThisWallet(wallet, prefs, tx)
@@ -4079,12 +4183,18 @@ public class MainActivityPresenter
                     Coin received = tx.getValueSentToMe(wallet);
                     if (received != null && received.isPositive()) maybeForwardIncoming(wallet, tx);
                 } catch (RuntimeException ignored) {
-                    // A temporarily incomplete wallet view is retried by the next scan.
+                    // An incomplete wallet view is retried through the receipt listener or ledger.
                 }
             }
-            prefs.edit().putLong(FORWARDING_RECOVERY_LAST_SCAN_MS, System.currentTimeMillis()).apply();
+
+            if (bootstrapScan) {
+                prefs.edit().putBoolean(FORWARDING_RECOVERY_INCREMENTAL_BOOTSTRAP_DONE, true)
+                        .putLong(FORWARDING_RECOVERY_LAST_SCAN_MS, System.currentTimeMillis()).apply();
+            } else {
+                prefs.edit().putLong(FORWARDING_RECOVERY_LAST_SCAN_MS, System.currentTimeMillis()).apply();
+            }
         } catch (RuntimeException ignored) {
-            // A wallet that is still loading is not a failed forwarding operation; retry next scan.
+            // An incomplete wallet view is not a failed forwarding operation; retry next tick.
         } finally {
             forwardingRecoveryScanInProgress.set(false);
         }
@@ -4437,19 +4547,20 @@ public class MainActivityPresenter
             throw new IllegalStateException("wallet_not_ready");
         }
         try {
-            for (Transaction candidate : wallet.getTransactions(true)) {
-                if (candidate == null || candidate.getTxId().equals(incomingTxId)) continue;
-                for (org.bitcoinj.core.TransactionInput input : candidate.getInputs()) {
-                    org.bitcoinj.core.TransactionOutPoint outpoint = input.getOutpoint();
-                    if (outpoint != null && incomingTxId.equals(outpoint.hash())) return true;
-                }
+            Transaction incoming = wallet.getTransaction(incomingTxId);
+            if (incoming == null) throw new IllegalStateException("wallet_not_ready");
+            for (TransactionOutput output : incoming.getOutputs()) {
+                org.bitcoinj.core.TransactionInput spentBy = output.getSpentBy();
+                if (spentBy == null) continue;
+                Transaction spender = spentBy.getParentTransaction();
+                if (spender != null && !spender.getTxId().equals(incomingTxId)) return true;
             }
+            return false;
         } catch (RuntimeException error) {
-            // Incomplete history cannot prove the incoming output is unspent; leave the job
-            // in-flight so the next recovery pass can make the decision with a complete view.
+            // If the wallet cannot resolve its connected outpoint graph, do not guess that an
+            // input is unspent; leave recovery blocked and retry when the wallet is ready.
             throw new IllegalStateException("wallet_not_ready", error);
         }
-        return false;
     }
 
     private void refreshForwardingConfirmation(Wallet wallet,
