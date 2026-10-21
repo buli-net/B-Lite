@@ -3544,10 +3544,16 @@ public class MainActivityPresenter
                         : Math.max(0, incomingConfidence.getDepthInBlocks());
                 changes.put("currentConfirmations", incomingDepth);
             } catch (Exception ignored) { }
-            if (paysSavedDestination) changes.put("amount", amountToDestination);
+            if (paysSavedDestination) {
+                try { changes.put("amount", amountToDestination); }
+                catch (org.json.JSONException ignored) { }
+            }
             try {
                 Coin fee = outgoing.getFee();
-                if (fee != null && fee.value >= 0L) changes.put("fee", fee.value);
+                if (fee != null && fee.value >= 0L) {
+                    try { changes.put("fee", fee.value); }
+                    catch (org.json.JSONException ignored) { }
+                }
             } catch (RuntimeException ignored) { }
             try {
                 int vsize = outgoing.getVsize();
