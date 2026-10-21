@@ -3460,8 +3460,16 @@ public class MainActivityPresenter
                         prefs.getString(FORWARDING_ACTIVITY_LEDGER, "[]"));
                 for (int i = 0; i < ledger.length(); i++) {
                     org.json.JSONObject row = ledger.optJSONObject(i);
-                    if (row != null && "failed".equals(row.optString("stage", ""))) {
-                        failedRows.add(new org.json.JSONObject(row.toString()));
+                    if (row != null) {
+                        String ledgerStage = row.optString("stage", "").trim();
+                        // A previous recovery pass may have changed a stale false-failure to
+                        // waiting. Keep reconciling waiting rows too, because their real outgoing
+                        // transaction may already exist in wallet/blockchain history.
+                        if ("failed".equals(ledgerStage) || "waiting".equals(ledgerStage)
+                                || "broadcasting".equals(ledgerStage)
+                                || "relayed".equals(ledgerStage)) {
+                            failedRows.add(new org.json.JSONObject(row.toString()));
+                        }
                     }
                 }
             } catch (org.json.JSONException ignored) {
@@ -3488,6 +3496,12 @@ public class MainActivityPresenter
 
             String savedOutgoingId = row.optString("outgoing", "").trim();
             String destination = row.optString("destination", "").trim();
+            if (destination.isEmpty()) {
+                // Older ledger rows may not have persisted the destination. Use the current
+                // configured destination only as a search hint; a candidate still must spend
+                // this exact receipt and pay that destination before it can be reconciled.
+                destination = prefs.getString(FORWARDING_ADDRESS, "").trim();
+            }
             Transaction outgoing = savedOutgoingId.isEmpty() ? null : byTxId.get(savedOutgoingId);
             if (outgoing == null && !savedOutgoingId.isEmpty()) {
                 try {
@@ -3631,7 +3645,8 @@ public class MainActivityPresenter
                     "outgoingConfirmations", outgoingDepth,
                     "reconciledLegacyFailure", true,
                     "reconciledAt", System.currentTimeMillis(),
-                    "previousFailureStatus", row.optString("status", ""));
+                    "previousFailureStatus", row.optString("status", ""),
+                    "destination", destination);
             try {
                 Coin received = incoming.getValueSentToMe(wallet);
                 if (received != null && received.isPositive()) changes.put("received", received.value);
