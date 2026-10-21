@@ -2,7 +2,7 @@
 
 ## Scope
 
-Baseline: source ZIP `8.0.31`. This revision reorganizes Java source files by responsibility. It does not intentionally change wallet, transaction, NFC, forwarding, signing, fee, backup, or synchronization behavior. No Java source file was deleted, and no dependency/framework was added.
+Baseline: source ZIP `8.0.31`. The original revision reorganized Java source files by responsibility. A later backup follow-up adds selectable backup/restore for app data categories while preserving wallet, transaction, NFC, forwarding, signing, fee, and synchronization behavior. No Java source file was deleted, and no dependency/framework was added.
 
 ## Relocations
 
@@ -37,6 +37,20 @@ Baseline: source ZIP `8.0.31`. This revision reorganizes Java source files by re
 | `wallet/main/WalletSelection.java` | `wallet/core/WalletSelection.java` | Shared wallet-selection and spend-selection logic. |
 | `wallet/main/BaseActivity.java` | `wallet/ui/BaseActivity.java` | Shared base UI activity. |
 | `wallet/main/LocalizedErrors.java` | `wallet/ui/LocalizedErrors.java` | Shared mapping from internal errors to localized UI messages. |
+
+## Selective backup/restore follow-up
+
+The wallet file remains mandatory and continues to contain bitcoinj wallet state, transaction history, watch-only addresses, and imported private keys. The backup chooser can additionally include or omit these preference-backed categories independently:
+
+- Forwarding configuration, history ledger, TXIDs, and recovery progress.
+- Address-book contacts (names and public addresses).
+- Imported-wallet registry metadata (labels, address types, and BIP38 source strings).
+- Request metadata (public-key/address mapping and selected watch/imported address).
+- Safe application settings (Bitcoin display unit/precision and the active network's sync mode).
+
+New bundle backups put selected categories in `appdata.json`. Restore applies only categories present in that manifest. Legacy raw `.wallet` backups and earlier ZIP bundles containing `forwarding.json` remain supported. Blockchain/cache data is intentionally excluded because it can be rebuilt.
+
+Files changed in this follow-up: `wallet/backup/BackupActivity.java`, `wallet/backup/ForwardingBackupBundle.java`, `wallet/main/MainActivityPresenter.java`, `res/values/strings.xml`, and `res/values-vi/strings.xml`.
 
 ## Package responsibilities after the audit
 
