@@ -173,3 +173,30 @@ Files changed in this follow-up: `wallet/backup/BackupActivity.java`, `wallet/ba
 ## Build status
 
 A Release Java compile could not be run in this environment: the Gradle wrapper had to download Gradle 9.6.0, but resolving `services.gradle.org` failed with `UnknownHostException`. This is an environment/network blocker, not evidence that the build passes or fails. Run GitHub Actions before treating this revision as build-verified.
+
+## Full source audit — latest v8.0.40 backup/restore baseline
+
+This section records the subsequent cleanup pass based on the ZIP that includes the `Sha256Hash` package correction. It supersedes earlier file-count notes for this revision where counts differ.
+
+### Cleanup and localization
+
+- Audited all 61 Java source files and all resources under `app/src/main`; no source Java files were deleted. Removed only private/public helper methods with no source call sites after checking their intended use, and retained the wallet-sweep implementation after wiring the existing “sweep current wallet balance” button to it.
+- The wallet-sweep button now saves and validates its current configuration, checks that forwarding is enabled and the active wallet is ready/unlocked, then asks for explicit confirmation before requesting the sweep. It displays localized success/failure messages.
+- Removed five stale forwarding UI strings from both English and Vietnamese resources: the former fee-preview title/empty/value strings and the former status title/disabled-by-user strings. Retained all strings required by the whole-wallet sweep action.
+- Added localized messages for malformed/unsupported backup archives, oversized app metadata, storage-directory errors, and app-data restore failures. Known backup exception messages are mapped in `LocalizedErrors` so they do not appear verbatim as English implementation messages.
+- Corrected backup and restore success copy so it does not claim forwarding history was included/restored when that optional category was not selected.
+- Updated workflow/artifact labels and removed personal account identifiers from workflow author metadata; replaced the project-specific name in code comments/thread labels with generic wallet wording.
+
+### Static checks
+
+- Parsed all XML files under `app/src/main` successfully.
+- English and Vietnamese resource keys are in parity; no duplicate named entries were found in either string resource file.
+- The resource reference scan found no unreferenced strings, drawables, layouts, menus, XML resources, or styles. The `light_system_bars` boolean appears unreferenced in the quick scan but is referenced through styles and was retained.
+- The Java literal scan found no directly hardcoded user-facing prose in the UI method patterns. The remaining English literals identified by the broad scan are implementation/error identifiers, archive field names, date formats, library exception text that is mapped where backup UI exposes it, or NFC vCard wire-format fields; these must not be translated into localized resources because doing so would alter data/protocol behavior.
+- No debug logging calls (`Log.*`, `System.out`, `System.err`, `printStackTrace`, or Timber) were found in app Java sources.
+- No APK/AAB/DEX/class files, build/cache folders, logs, temporary, backup, or editor artifact files were included in the ZIP.
+- No personal account name/email or project-specific branding token was found in the audited source/workflow text after cleanup.
+
+### Build status
+
+The ZIP and source/resource checks are static checks only. A Release Java compile could not be confirmed in this environment because Gradle attempted to download its configured distribution and the request failed with a network/DNS error. Run the repository's GitHub Actions build before treating this revision as build-verified.
