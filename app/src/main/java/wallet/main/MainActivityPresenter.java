@@ -3196,7 +3196,16 @@ public class MainActivityPresenter
                     if (!item.has("feeRate")) item.put("feeRate", prefs.getInt(FORWARDING_FEE_RATE_SAT_VB, 5));
                     if (!item.has("network")) item.put("network", NetworkConfig.storageName(NetworkConfig.get(applicationContext)));
                 } else if (previous != null) {
-                    item = previous;
+                    // Non-current history rows must still accept reconciliation updates.
+                    // Previously this branch reused the old object unchanged, silently dropping
+                    // stage/status/TXID/amount changes for every card except the global "latest"
+                    // transaction. That made old false failures appear unrepaired in the UI.
+                    item = new org.json.JSONObject(previous.toString());
+                    java.util.Iterator<String> changedKeys = changes.keys();
+                    while (changedKeys.hasNext()) {
+                        String changedKey = changedKeys.next();
+                        item.put(changedKey, changes.opt(changedKey));
+                    }
                 } else {
                     item = new org.json.JSONObject();
                     item.put("incoming", incomingTxId);
