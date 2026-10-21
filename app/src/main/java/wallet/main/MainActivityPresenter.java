@@ -2469,11 +2469,12 @@ public class MainActivityPresenter
         }
         // Keep a stable start time for this in-memory attempt. The ordinary "updated" timestamp
         // changes as confirmation metadata is refreshed and must not be used as a stale-lease clock.
-        org.json.JSONObject attemptRow = getForwardingLedgerEntry(prefs, incomingTxId);
-        if (attemptRow == null || !attemptRow.has("attemptStarted")) {
-            updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
-                    "attemptStarted", System.currentTimeMillis()));
-        }
+        // A new real attempt gets a fresh lease timestamp and consumes the stale-retry marker.
+        // Never retain the timestamp from an older failed attempt, or recovery can repeatedly
+        // release this new in-flight operation before it persists its signed transaction.
+        updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
+                "attemptStarted", System.currentTimeMillis(),
+                "requeuedStaleFailure", false));
         final BitcoinNetwork forwardingNetwork = NetworkConfig.get(applicationContext);
         if (!forwardingNetwork.equals(wallet.network())) {
             forwardingTransactions.remove(incomingTxId);
@@ -3522,17 +3523,37 @@ public class MainActivityPresenter
                 // the Bitcoin spend failed: no outgoing TX was committed. Requeue only this
                 // explicitly transient failure, only on its original network, and only when the
                 // feature is enabled and a usable destination/configuration is available.
-                String previousStatus = row.optString("status", "").trim();
-                String normalizedFailure = previousStatus.toLowerCase(java.util.Locale.ROOT);
-                boolean transientContextFailure =
-                        (normalizedFailure.contains("wallet or network")
-                                && normalizedFailure.contains("before broadcast"))
-                        || (normalizedFailure.contains("ví hoặc mạng")
-                                && normalizedFailure.contains("trước khi phát giao dịch"));
+                String currentStatus = row.optString("status", "").trim();
+                String previousFailureStatus = row.optString("previousFailureStatus", "").trim();
+                // Once a false failure was requeued, "status" becomes a waiting message.
+                // The original failure reason must remain the source for deciding whether
+                // it is safe to resume; otherwise the next scan forgets why it was requeued.
+                String previousStatus = previousFailureStatus.isEmpty()
+                        ? currentStatus : previousFailureStatus;
+                String normalizedCurrent = currentStatus.toLowerCase(java.util.Locale.ROOT);
+                String normalizedPrevious = previousStatus.toLowerCase(java.util.Locale.ROOT);
+                boolean currentIsTransient =
+                        (normalizedCurrent.contains("wallet or network")
+                                && normalizedCurrent.contains("before broadcast"))
+                        || (normalizedCurrent.contains("ví hoặc mạng")
+                                && normalizedCurrent.contains("trước khi phát giao dịch"));
+                boolean previousIsTransient =
+                        (normalizedPrevious.contains("wallet or network")
+                                && normalizedPrevious.contains("before broadcast"))
+                        || (normalizedPrevious.contains("ví hoặc mạng")
+                                && normalizedPrevious.contains("trước khi phát giao dịch"));
+                boolean transientContextFailure = currentIsTransient || previousIsTransient
+                        || row.optBoolean("requeuedStaleFailure", false);
                 if (!transientContextFailure
                         || !prefs.getBoolean(FORWARDING_ENABLED, false)
                         || !activeNetwork.equalsIgnoreCase(rowNetwork.isEmpty()
                                 ? activeNetwork : rowNetwork)) continue;
+
+                // A persisted signed TX or known outgoing TXID must always go through in-flight
+                // recovery; never create another transaction while those bytes/IDs are available.
+                if (!row.optString("raw", "").trim().isEmpty() || !savedOutgoingId.isEmpty()) {
+                    continue;
+                }
 
                 String retryDestination = destination.isEmpty()
                         ? prefs.getString(FORWARDING_ADDRESS, "").trim() : destination;
@@ -3592,9 +3613,16 @@ public class MainActivityPresenter
                         "previousFailureStatus", previousStatus,
                         "requeuedStaleFailure", true,
                         "updated", System.currentTimeMillis()));
-                // The main recovery loop reads the ledger stage after reconciliation and will
-                // call refreshAndRecoverWaitingForwardingEntry() for this same receipt. It then
-                // validates spendability, fee, lock state and network before any broadcast.
+
+                // The outgoing lookup above proved there is no committed transaction in this
+                // wallet and the row has no saved signed bytes/TXID. Release a stale in-memory
+                // lease left by the old failed attempt. If confirmations are already sufficient,
+                // immediately re-enter the guarded sender instead of leaving a cosmetic waiting
+                // card until another unrelated wallet event occurs.
+                forwardingTransactions.remove(incomingTxId);
+                if (depth >= required) {
+                    maybeForwardIncoming(wallet, incoming);
+                }
                 continue;
             }
 
@@ -3902,9 +3930,15 @@ public class MainActivityPresenter
         long attemptStartedAt = row == null ? 0L
                 : row.optLong("attemptStarted", row.optLong("created", 0L));
         long staleAfterMs = java.util.concurrent.TimeUnit.MINUTES.toMillis(2L);
+        boolean explicitlyRequeuedFailure = row != null
+                && row.optBoolean("requeuedStaleFailure", false)
+                && (row.optString("previousFailureStatus", "").toLowerCase(java.util.Locale.ROOT)
+                                .contains("before broadcast")
+                        || row.optString("previousFailureStatus", "").toLowerCase(java.util.Locale.ROOT)
+                                .contains("trước khi phát giao dịch"));
         if (forwardingTransactions.contains(incomingTxId)
-                && attemptStartedAt > 0L
-                && System.currentTimeMillis() - attemptStartedAt >= staleAfterMs) {
+                && (explicitlyRequeuedFailure || (attemptStartedAt > 0L
+                && System.currentTimeMillis() - attemptStartedAt >= staleAfterMs))) {
             // Only the in-memory lease is released here. The checks above already proved that
             // no signed raw TX or outgoing TXID was durably recorded and that the receipt has
             // enough confirmations. A committed transaction is therefore never replaced.
