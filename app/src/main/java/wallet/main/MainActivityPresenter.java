@@ -2426,6 +2426,15 @@ public class MainActivityPresenter
      * Spending is restricted to the triggering incoming transaction except in explicit wallet_sweep mode.
      */
     private void maybeForwardIncoming(Wallet wallet, Transaction incomingTx) {
+        maybeForwardIncoming(wallet, incomingTx, false);
+    }
+
+    /**
+     * Resumes a saved forwarding ledger item after a transient wallet/network context failure.
+     * This override is only used after the recovery loop has confirmed the same incoming TXID,
+     * network, confirmation threshold, and absence of a durable outgoing TX/raw transaction.
+     */
+    private void maybeForwardIncoming(Wallet wallet, Transaction incomingTx, boolean resumeSavedContextFailure) {
         android.content.SharedPreferences prefs = applicationContext.getSharedPreferences(
                 forwardingPreferencesName(applicationContext), android.content.Context.MODE_PRIVATE);
         if (!prefs.getBoolean(FORWARDING_ENABLED, false) || wallet == null || incomingTx == null) {
@@ -2435,13 +2444,22 @@ public class MainActivityPresenter
         String incomingTxId = incomingTx.getTxId().toString();
         String existingStage = findForwardingLedgerStage(prefs, incomingTxId);
         org.json.JSONObject savedOperation = getForwardingLedgerEntry(prefs, incomingTxId);
-        // A TXID can be the outgoing leg of an earlier forwarding step and the incoming
-        // transaction of the next wallet in the same chain. Don't suppress that legitimate
-        // receipt merely because the network-scoped ledger already knows the TXID. Suppress it
-        // only when this active wallet also spent funds in that transaction (e.g. its own change).
-        if (incomingTx.getPurpose() != Transaction.Purpose.UNKNOWN
+        // Only an explicitly saved context-failure row may bypass the generic "already handled"
+        // filters. It is called by recovery only after verifying that no signed bytes/outgoing TXID
+        // exist and the incoming transaction still has spendable outputs in this wallet.
+        boolean resumeRecordedFailure = resumeSavedContextFailure
+                && "waiting".equals(existingStage)
+                && savedOperation != null
+                && savedOperation.optString("raw", "").trim().isEmpty()
+                && savedOperation.optString("outgoing", "").trim().isEmpty()
+                && hasSpendableOutputFromIncoming(wallet, incomingTx)
+                && !hasPositiveValueSentFromWallet(wallet, incomingTx);
+        // A TXID may also be another step's outgoing TXID. Normal receive events must not loop
+        // over our own change, while a verified saved retry is allowed through these guards.
+        if ((!resumeRecordedFailure && incomingTx.getPurpose() != Transaction.Purpose.UNKNOWN)
                 || forwardingTransactions.contains(incomingTxId)
-                || isPreviouslyForwardedOutputFromThisWallet(wallet, prefs, incomingTx)) {
+                || (!resumeRecordedFailure
+                        && isPreviouslyForwardedOutputFromThisWallet(wallet, prefs, incomingTx))) {
             return;
         }
         // A retryable failure may leave an older row marked waiting even though a signed TX was
@@ -2473,8 +2491,7 @@ public class MainActivityPresenter
         // Never retain the timestamp from an older failed attempt, or recovery can repeatedly
         // release this new in-flight operation before it persists its signed transaction.
         updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
-                "attemptStarted", System.currentTimeMillis(),
-                "requeuedStaleFailure", false));
+                "attemptStarted", System.currentTimeMillis()));
         final BitcoinNetwork forwardingNetwork = NetworkConfig.get(applicationContext);
         if (!forwardingNetwork.equals(wallet.network())) {
             forwardingTransactions.remove(incomingTxId);
@@ -2724,6 +2741,7 @@ public class MainActivityPresenter
                                             "outgoing", transaction.getTxId().toString(),
                                             "raw", rawTransactionHex,
                                             "generation", forwardingGeneration,
+                                            "requeuedStaleFailure", false,
                                             "stage", "broadcasting",
                                             "status", applicationContext.getString(
                                                     R.string.forwarding_status_broadcasting, incomingTxId)));
@@ -2806,8 +2824,18 @@ public class MainActivityPresenter
                                             && !durableRow.optString("raw", "").isEmpty());
                             String pausedStatus = applicationContext.getString(
                                     R.string.forwarding_status_waiting_conditions, incomingTxId);
-                            updateForwardingLedgerStage(prefs, incomingTxId,
-                                    hasDurableSignedTx ? "broadcasting" : "waiting", pausedStatus);
+                            org.json.JSONObject deferredFields = forwardingFields(
+                                    "stage", hasDurableSignedTx ? "broadcasting" : "waiting",
+                                    "status", pausedStatus,
+                                    "lastRetryError", String.valueOf(cause.getMessage()),
+                                    "lastRetryAt", System.currentTimeMillis());
+                            if (!hasDurableSignedTx && "wallet_not_ready".equals(String.valueOf(cause.getMessage()))) {
+                                deferredFields = mergeForwardingFields(deferredFields, forwardingFields(
+                                        "previousFailureStatus",
+                                        applicationContext.getString(R.string.forwarding_error_wallet_not_ready),
+                                        "requeuedStaleFailure", true));
+                            }
+                            updateForwardingLedgerEntry(prefs, incomingTxId, deferredFields);
                             forwardingTransactions.remove(incomingTxId);
                             forwardingTransactions.remove(recordedOutgoingId);
                             scheduleForwardingRetry(prefs, incomingTxId, forwardingNetwork, 0);
@@ -3173,12 +3201,27 @@ public class MainActivityPresenter
                             ? previous.optLong("created", previous.optLong("updated", System.currentTimeMillis()))
                             : System.currentTimeMillis());
                     if (previous != null) {
-                        for (String key : new String[] {"destination", "mode", "fixedAmount", "network", "feeRate", "raw"}) {
+                        // The global LAST_* fields are the UI snapshot, not the complete
+                        // durable job record. Retain per-job recovery metadata when rebuilding
+                        // the current row; otherwise ordinary confirmation updates can erase
+                        // attemptStarted and stale-failure markers, making a live attempt look
+                        // abandoned and repeatedly releasing its sender lease.
+                        for (String key : new String[] {
+                                "destination", "mode", "fixedAmount", "network", "feeRate", "raw",
+                                "attemptStarted", "requiredConfirmations", "previousFailureStatus",
+                                "requeuedStaleFailure", "lastRetryError", "lastRetryAt", "generation",
+                                "lastRecoveryChecked", "reconciledLegacyFailure", "reconciledAt"
+                        }) {
                             if (previous.has(key)) item.put(key, previous.opt(key));
                         }
                     }
                     item.put("incoming", incomingTxId);
-                    item.put("outgoing", prefs.getString(FORWARDING_LAST_OUTGOING_TX, ""));
+                    String snapshotOutgoing = prefs.getString(FORWARDING_LAST_OUTGOING_TX, "");
+                    // A legacy/current row may carry a durable outgoing TXID even when the
+                    // summary preference was lost or stale. Keep the ledger's TXID unless the
+                    // caller explicitly overwrites it in `changes` below.
+                    item.put("outgoing", !snapshotOutgoing.isEmpty() ? snapshotOutgoing
+                            : (previous == null ? "" : previous.optString("outgoing", "")));
                     item.put("stage", prefs.getString(FORWARDING_LAST_STAGE, ""));
                     item.put("status", prefs.getString(FORWARDING_STATUS, ""));
                     item.put("received", prefs.getLong(FORWARDING_LAST_RECEIVED_SATS, 0L));
@@ -3188,8 +3231,12 @@ public class MainActivityPresenter
                     item.put("effectiveRate", prefs.getInt(FORWARDING_LAST_EFFECTIVE_RATE_SAT_VB, 0));
                     item.put("vsize", prefs.getInt(FORWARDING_LAST_VSIZE, 0));
                     item.put("currentConfirmations", prefs.getInt(FORWARDING_LAST_CURRENT_CONFIRMATIONS, -1));
-                    item.put("requiredConfirmations", prefs.getInt(FORWARDING_LAST_REQUIRED_CONFIRMATIONS,
-                            prefs.getInt(FORWARDING_CONFIRMATIONS, 1)));
+                    item.put("requiredConfirmations", previous != null
+                            ? previous.optInt("requiredConfirmations",
+                                    prefs.getInt(FORWARDING_LAST_REQUIRED_CONFIRMATIONS,
+                                            prefs.getInt(FORWARDING_CONFIRMATIONS, 1)))
+                            : prefs.getInt(FORWARDING_LAST_REQUIRED_CONFIRMATIONS,
+                                    prefs.getInt(FORWARDING_CONFIRMATIONS, 1)));
                     item.put("outgoingConfirmations", prefs.getInt(FORWARDING_LAST_OUTGOING_CONFIRMATIONS, -1));
                     if (!item.has("destination")) item.put("destination", prefs.getString(FORWARDING_ADDRESS, ""));
                     if (!item.has("mode")) item.put("mode", prefs.getString(FORWARDING_MODE, "sweep"));
@@ -3422,13 +3469,16 @@ public class MainActivityPresenter
                     new java.util.concurrent.atomic.AtomicReference<>();
             java.util.concurrent.ScheduledFuture<?> task = FORWARDING_STATUS_EXECUTOR.scheduleWithFixedDelay(() -> {
                 java.util.concurrent.ScheduledFuture<?> currentTask = reference.get();
-                if (shuttingDown || !isCurrentKit(ownerKit) || getActiveWallet() != wallet) {
+                if (shuttingDown || !isCurrentKit(ownerKit)) {
                     if (currentTask != null) currentTask.cancel(false);
                     synchronized (forwardingRecoveryLock) {
                         if (forwardingRecoveryTask == currentTask) forwardingRecoveryTask = null;
                     }
                     return;
                 }
+                // A short-lived wallet selection/lifecycle switch must not permanently cancel
+                // this recovery loop. Leave the durable ledger untouched and retry next tick.
+                if (getActiveWallet() != wallet) return;
                 recoverForwardingWork(ownerKit, wallet);
             }, 5L, 15L, TimeUnit.SECONDS);
             reference.set(task);
@@ -3491,18 +3541,73 @@ public class MainActivityPresenter
                     incoming = wallet.getTransaction(org.bitcoinj.base.Sha256Hash.wrap(incomingTxId));
                 } catch (RuntimeException ignored) { }
             }
-            // No incoming transaction in this wallet means this row cannot safely be repaired
-            // using the current wallet view. It may belong to another wallet or an incomplete sync.
-            if (incoming == null) continue;
-
             String savedOutgoingId = row.optString("outgoing", "").trim();
             String destination = row.optString("destination", "").trim();
+            if (incoming == null) {
+                // A wallet rescan/import can temporarily omit the incoming transaction while the
+                // already-recorded outgoing TX is still present. Reconcile that existing TXID
+                // directly by its input outpoints; do not require the receipt object just to
+                // repair the old card, and never create a replacement transaction here.
+                Transaction knownOutgoing = savedOutgoingId.isEmpty()
+                        ? null : byTxId.get(savedOutgoingId);
+                if (knownOutgoing == null && !savedOutgoingId.isEmpty()) {
+                    try {
+                        knownOutgoing = wallet.getTransaction(
+                                org.bitcoinj.base.Sha256Hash.wrap(savedOutgoingId));
+                    } catch (RuntimeException ignored) { }
+                }
+                if (knownOutgoing == null || !forwardingTransactionSpends(knownOutgoing, incomingTxId)) {
+                    continue;
+                }
+                if (!destination.isEmpty()
+                        && forwardingValuePaidToAddress(knownOutgoing, wallet, destination) <= 0L) {
+                    continue;
+                }
+                org.bitcoinj.core.TransactionConfidence knownConfidence;
+                try { knownConfidence = knownOutgoing.getConfidence(); }
+                catch (RuntimeException incompleteConfidence) { continue; }
+                if (knownConfidence != null && knownConfidence.getConfidenceType()
+                        == org.bitcoinj.core.TransactionConfidence.ConfidenceType.DEAD) continue;
+                int knownDepth = knownConfidence == null ? 0
+                        : Math.max(0, knownConfidence.getDepthInBlocks());
+                boolean knownRelayed = knownDepth == 0 && knownConfidence != null
+                        && knownConfidence.getConfidenceType()
+                                == org.bitcoinj.core.TransactionConfidence.ConfidenceType.PENDING
+                        && knownConfidence.numBroadcastPeers() > 0;
+                String knownStage = knownDepth > 0 ? "confirmed"
+                        : (knownRelayed ? "relayed" : "broadcasting");
+                String knownStatus = knownDepth > 0
+                        ? applicationContext.getString(R.string.forwarding_status_confirmed,
+                                knownOutgoing.getTxId().toString())
+                        : (knownRelayed
+                                ? applicationContext.getString(R.string.forwarding_status_forwarded,
+                                        incomingTxId, knownOutgoing.getTxId().toString())
+                                : applicationContext.getString(R.string.forwarding_status_broadcasting,
+                                        incomingTxId));
+                updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
+                        "outgoing", knownOutgoing.getTxId().toString(),
+                        "stage", knownStage,
+                        "status", knownStatus,
+                        "destination", destination,
+                        "outgoingConfirmations", knownDepth,
+                        "requeuedStaleFailure", false,
+                        "reconciledLegacyFailure", true,
+                        "reconciledAt", System.currentTimeMillis()));
+                continue;
+            }
+
+            boolean destinationWasPersisted = !destination.isEmpty();
             if (destination.isEmpty()) {
-                // Older ledger rows may not have persisted the destination. Use the current
-                // configured destination only as a search hint; a candidate still must spend
-                // this exact receipt and pay that destination before it can be reconciled.
+                // Older ledger rows may not have persisted the original destination. The current
+                // setting is the first search hint, but it may have changed since this row was made.
                 destination = prefs.getString(FORWARDING_ADDRESS, "").trim();
             }
+            String currentStoredStatus = row.optString("status", "").trim();
+            String priorFailureStatus = row.optString("previousFailureStatus", "").trim();
+            String historicalStatus = priorFailureStatus.isEmpty()
+                    ? currentStoredStatus : priorFailureStatus;
+            boolean knownContextFailure = isForwardingContextChangeFailure(historicalStatus)
+                    || row.optBoolean("requeuedStaleFailure", false);
             Transaction outgoing = savedOutgoingId.isEmpty() ? null : byTxId.get(savedOutgoingId);
             if (outgoing == null && !savedOutgoingId.isEmpty()) {
                 try {
@@ -3516,6 +3621,19 @@ public class MainActivityPresenter
             if (outgoing == null && savedOutgoingId.isEmpty() && !destination.isEmpty()) {
                 outgoing = findHistoricalForwardingSpend(wallet, walletTransactions,
                         incomingTxId, destination);
+            }
+            String inferredExternalDestination = "";
+            if (outgoing == null && savedOutgoingId.isEmpty()
+                    && !destinationWasPersisted && knownContextFailure) {
+                // Legacy false-failure rows can have lost the original destination. If a real
+                // wallet transaction already spends the exact incoming TX and pays an external
+                // address, recover that existing TX instead of creating another transaction.
+                outgoing = findHistoricalExternalSpend(wallet, walletTransactions, incomingTxId);
+                if (outgoing != null) {
+                    inferredExternalDestination = forwardingExternalDestination(outgoing, wallet);
+                    if (!inferredExternalDestination.isEmpty()) destination = inferredExternalDestination;
+                    else outgoing = null;
+                }
             }
             if (outgoing == null) {
                 // Some older versions incorrectly marked an operation failed when the active
@@ -3619,10 +3737,11 @@ public class MainActivityPresenter
                 // lease left by the old failed attempt. If confirmations are already sufficient,
                 // immediately re-enter the guarded sender instead of leaving a cosmetic waiting
                 // card until another unrelated wallet event occurs.
-                forwardingTransactions.remove(incomingTxId);
-                if (depth >= required) {
-                    maybeForwardIncoming(wallet, incoming);
-                }
+                // Keep the existing sender lease. The waiting-stage dispatcher below releases it
+                // only after the two-minute stale threshold; clearing it here could start duplicates.
+                // Do not start the sender here: the main recovery dispatcher handles this waiting
+                // row a few lines later in the same scan. Starting both paths races the lease and
+                // can leave a valid attempt pinned as waiting.
                 continue;
             }
 
@@ -3630,6 +3749,17 @@ public class MainActivityPresenter
             boolean spendsIncoming = forwardingTransactionSpends(outgoing, incomingTxId);
             long amountToDestination = forwardingValuePaidToAddress(outgoing, wallet, destination);
             boolean paysSavedDestination = amountToDestination > 0L;
+            if (!paysSavedDestination && !destinationWasPersisted && knownContextFailure) {
+                String inferred = forwardingExternalDestination(outgoing, wallet);
+                if (!inferred.isEmpty()) {
+                    long inferredAmount = forwardingValuePaidToAddress(outgoing, wallet, inferred);
+                    if (inferredAmount > 0L) {
+                        destination = inferred;
+                        amountToDestination = inferredAmount;
+                        paysSavedDestination = true;
+                    }
+                }
+            }
             if (!spendsIncoming && !paysSavedDestination) {
                 // A stale/global TXID can be attached to the wrong card by an old version. Do not
                 // promote it unless the live transaction graph or saved destination links it back.
@@ -3670,11 +3800,12 @@ public class MainActivityPresenter
                     "outgoing", actualOutgoingId,
                     "stage", repairedStage,
                     "status", repairedStatus,
+                    "destination", destination,
+                    "requeuedStaleFailure", false,
                     "outgoingConfirmations", outgoingDepth,
                     "reconciledLegacyFailure", true,
                     "reconciledAt", System.currentTimeMillis(),
-                    "previousFailureStatus", row.optString("status", ""),
-                    "destination", destination);
+                    "previousFailureStatus", row.optString("status", ""));
             try {
                 Coin received = incoming.getValueSentToMe(wallet);
                 if (received != null && received.isPositive()) changes.put("received", received.value);
@@ -3711,6 +3842,90 @@ public class MainActivityPresenter
             // the ordinary recovery loop may rebroadcast this exact TXID. It will never sign a
             // replacement merely because the old ledger said "failed".
         }
+    }
+
+    private static boolean isForwardingContextChangeFailure(String status) {
+        if (status == null || status.trim().isEmpty()) return false;
+        String normalized = status.toLowerCase(java.util.Locale.ROOT);
+        return (normalized.contains("wallet or network") && normalized.contains("before broadcast"))
+                || (normalized.contains("ví hoặc mạng")
+                        && normalized.contains("trước khi phát giao dịch"));
+    }
+
+    private boolean hasPositiveValueSentFromWallet(Wallet wallet, Transaction transaction) {
+        if (wallet == null || transaction == null) return true;
+        try {
+            Coin sent = transaction.getValueSentFromMe(wallet);
+            return sent != null && sent.isPositive();
+        } catch (RuntimeException incompleteWalletView) {
+            return true;
+        }
+    }
+
+    private boolean hasSpendableOutputFromIncoming(Wallet wallet, Transaction incoming) {
+        if (wallet == null || incoming == null) return false;
+        try {
+            for (TransactionOutput output : incoming.getOutputs()) {
+                if (output != null && output.isAvailableForSpending()
+                        && output.isMine(wallet)
+                        && output.getParentTransactionHash() != null
+                        && output.getParentTransactionHash().equals(incoming.getTxId())) {
+                    return true;
+                }
+            }
+        } catch (RuntimeException walletViewIncomplete) {
+            return false;
+        }
+        return false;
+    }
+
+    /** Finds a real spend of the exact receipt whose destination metadata was lost by old versions. */
+    private Transaction findHistoricalExternalSpend(
+            Wallet wallet, List<Transaction> transactions, String incomingTxId) {
+        if (wallet == null || transactions == null || incomingTxId == null || incomingTxId.isEmpty()) {
+            return null;
+        }
+        Transaction best = null;
+        int bestDepth = -1;
+        for (Transaction candidate : transactions) {
+            if (candidate == null || incomingTxId.equals(candidate.getTxId().toString())
+                    || !forwardingTransactionSpends(candidate, incomingTxId)) continue;
+            org.bitcoinj.core.TransactionConfidence confidence;
+            try { confidence = candidate.getConfidence(); }
+            catch (RuntimeException ignored) { continue; }
+            if (confidence != null && confidence.getConfidenceType()
+                    == org.bitcoinj.core.TransactionConfidence.ConfidenceType.DEAD) continue;
+            String externalDestination = forwardingExternalDestination(candidate, wallet);
+            if (externalDestination.isEmpty()) continue;
+            int depth = confidence == null ? 0 : Math.max(0, confidence.getDepthInBlocks());
+            if (best == null || depth > bestDepth) {
+                best = candidate;
+                bestDepth = depth;
+            }
+        }
+        return best;
+    }
+
+    /** Returns the largest positive output address not owned by this wallet. */
+    private String forwardingExternalDestination(Transaction transaction, Wallet wallet) {
+        if (transaction == null || wallet == null) return "";
+        long largestValue = 0L;
+        String largestAddress = "";
+        try {
+            for (TransactionOutput output : transaction.getOutputs()) {
+                if (output == null || output.getValue() == null
+                        || output.getValue().value <= 0L || output.getScriptPubKey() == null) continue;
+                try {
+                    Address address = output.getScriptPubKey().getToAddress(wallet.getParams());
+                    if (address == null || wallet.isAddressMine(address)) continue;
+                    if (output.getValue().value > largestValue) {
+                        largestValue = output.getValue().value;
+                        largestAddress = address.toString();
+                    }
+                } catch (Exception ignored) { }
+            }
+        } catch (RuntimeException ignored) { }
+        return largestAddress;
     }
 
     private Transaction findHistoricalForwardingSpend(Wallet wallet, List<Transaction> transactions,
@@ -3802,7 +4017,36 @@ public class MainActivityPresenter
                 if (tx == null || !isCurrentKit(ownerKit) || getActiveWallet() != wallet) return;
                 String incomingTxId = tx.getTxId().toString();
                 String stage = findForwardingLedgerStage(prefs, incomingTxId);
-                if ("waiting".equals(stage)) {
+                if ("waiting".equals(stage) || "failed".equals(stage)) {
+                    // A failed ledger status is not proof that a transaction failed. Reconcile by
+                    // outgoing TXID first. If no matching outgoing transaction exists, restore the
+                    // saved job to waiting so the ordinary confirmation/spendability checks can
+                    // retry it instead of leaving a false failure forever.
+                    if ("failed".equals(stage)) {
+                        org.json.JSONObject saved = getForwardingLedgerEntry(prefs, incomingTxId);
+                        String outgoingId = saved == null ? "" : saved.optString("outgoing", "").trim();
+                        String raw = saved == null ? "" : saved.optString("raw", "").trim();
+                        Transaction outgoing = null;
+                        if (!outgoingId.isEmpty()) {
+                            try {
+                                outgoing = wallet.getTransaction(
+                                        org.bitcoinj.base.Sha256Hash.wrap(outgoingId));
+                            } catch (RuntimeException ignored) { }
+                        }
+                        // Only requeue when no outgoing TXID was ever recorded. A non-empty
+                        // TXID that is temporarily absent from this wallet view is ambiguous:
+                        // it may already be on the network or the wallet may still be syncing.
+                        // Never erase that TXID and create a second spend from the same receipt.
+                        if (outgoing == null && outgoingId.isEmpty() && raw.isEmpty()) {
+                            updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
+                                    "stage", "waiting",
+                                    "previousFailureStatus", saved == null ? "" : saved.optString("status", ""),
+                                    "requeuedStaleFailure", true,
+                                    "status", applicationContext.getString(
+                                            R.string.forwarding_status_waiting_conditions, incomingTxId),
+                                    "lastRecoveryChecked", System.currentTimeMillis()));
+                        }
+                    }
                     refreshAndRecoverWaitingForwardingEntry(ownerKit, wallet, prefs, tx);
                     continue;
                 }
@@ -3923,32 +4167,43 @@ public class MainActivityPresenter
         // Do not retry early: a genuine confirmation deficit is a valid waiting condition.
         if (depth < required) return;
 
-        // If an in-memory attempt is still marked active long after this row stopped changing,
-        // release only that stale lease. No signed TX/raw exists (checked above), so the next
-        // attempt cannot duplicate a committed transaction. This prevents a lost async callback
-        // from pinning the row in "waiting" indefinitely.
+        // A saved row is eligible for a retry only when it came from the known transient
+        // "wallet/network changed before broadcast" failure. Other waiting jobs use the normal
+        // guards, so receive notifications or own-change transactions cannot become new sends.
+        boolean hasDurableOutgoing = row != null
+                && (!row.optString("raw", "").trim().isEmpty()
+                    || !row.optString("outgoing", "").trim().isEmpty());
+
+        // If a lease survived a lost callback, wait two minutes from the attempt start.
+        // Never release a recent lease: concurrent senders could select the same UTXO.
         long attemptStartedAt = row == null ? 0L
                 : row.optLong("attemptStarted", row.optLong("created", 0L));
         long staleAfterMs = java.util.concurrent.TimeUnit.MINUTES.toMillis(2L);
-        boolean explicitlyRequeuedFailure = row != null
-                && row.optBoolean("requeuedStaleFailure", false)
-                && (row.optString("previousFailureStatus", "").toLowerCase(java.util.Locale.ROOT)
-                                .contains("before broadcast")
-                        || row.optString("previousFailureStatus", "").toLowerCase(java.util.Locale.ROOT)
-                                .contains("trước khi phát giao dịch"));
-        if (forwardingTransactions.contains(incomingTxId)
-                && (explicitlyRequeuedFailure || (attemptStartedAt > 0L
-                && System.currentTimeMillis() - attemptStartedAt >= staleAfterMs))) {
-            // Only the in-memory lease is released here. The checks above already proved that
-            // no signed raw TX or outgoing TXID was durably recorded and that the receipt has
-            // enough confirmations. A committed transaction is therefore never replaced.
-            forwardingTransactions.remove(incomingTxId);
+        if (forwardingTransactions.contains(incomingTxId)) {
+            if (attemptStartedAt > 0L
+                    && System.currentTimeMillis() - attemptStartedAt >= staleAfterMs
+                    && !hasDurableOutgoing) {
+                forwardingTransactions.remove(incomingTxId);
+            } else {
+                return;
+            }
         }
 
-        // maybeForwardIncoming checks lock/session, network, destination, spendable UTXOs and
-        // fees. Retryable conditions stay waiting; actual invalid configuration or impossible
-        // spends become failed through the existing classified error path.
-        maybeForwardIncoming(wallet, incomingTx);
+        // This is an explicit saved waiting job, not a new receive notification. Once its
+        // confirmation gate is satisfied, retry it if the exact output remains spendable.
+        // If there is neither a recorded outgoing transaction nor a spendable input, it cannot
+        // ever progress and must not remain labelled as waiting forever.
+        if (!hasDurableOutgoing
+                && (!hasSpendableOutputFromIncoming(wallet, incomingTx)
+                    || hasPositiveValueSentFromWallet(wallet, incomingTx))) {
+            updateForwardingLedgerEntry(prefs, incomingTxId, forwardingFields(
+                    "stage", "failed",
+                    "status", applicationContext.getString(R.string.forwarding_error_output_unavailable),
+                    "requeuedStaleFailure", false,
+                    "lastRecoveryChecked", System.currentTimeMillis()));
+            return;
+        }
+        maybeForwardIncoming(wallet, incomingTx, true);
     }
 
     private static org.json.JSONObject mergeForwardingFields(
