@@ -5929,17 +5929,19 @@ public class MainActivityPresenter
         if (presenter == null || !presenter.walletReady) {
             throw new IllegalStateException("wallet_not_ready");
         }
+
+        final WalletAppKit expectedKit;
+        final Wallet currentWallet;
         synchronized (presenter.kitLock) {
-            WalletAppKit kit = presenter.walletAppKit;
-            if (presenter.shuttingDown || kit == null || !kit.isRunning()) {
+            expectedKit = presenter.walletAppKit;
+            if (presenter.shuttingDown || expectedKit == null || !expectedKit.isRunning()) {
                 throw new IllegalStateException("wallet_not_ready");
             }
             if (presenter.parameters != null) {
                 Context.propagate(Context.getOrCreate(presenter.parameters));
             }
-            Wallet currentWallet;
             try {
-                currentWallet = kit.wallet();
+                currentWallet = expectedKit.wallet();
             } catch (IllegalStateException error) {
                 throw new IllegalStateException("wallet_not_ready", error);
             }
@@ -5949,27 +5951,49 @@ public class MainActivityPresenter
             if (!presenter.isForwardingSyncReady(currentWallet)) {
                 throw new IllegalStateException("wallet_syncing");
             }
-            currentWallet.completeTx(request);
-            Transaction transaction = request.tx;
-            if (transaction == null || transaction.getFee() == null) {
-                throw new IllegalStateException("forwarding_fee_unavailable");
+        }
+
+        // Coin selection, fee calculation and signing may be expensive. Never hold kitLock
+        // during completeTx(): UI screens also use this lock to get the active wallet, which
+        // otherwise makes the app appear frozen while an automatic forward is being prepared.
+        currentWallet.completeTx(request);
+        Transaction transaction = request.tx;
+        if (transaction == null || transaction.getFee() == null) {
+            throw new IllegalStateException("forwarding_fee_unavailable");
+        }
+        if (preparedCallback != null) {
+            preparedCallback.accept(transaction);
+        }
+
+        android.content.SharedPreferences forwardingPrefs = presenter.applicationContext.getSharedPreferences(
+                forwardingPreferencesName(presenter.applicationContext), android.content.Context.MODE_PRIVATE);
+        synchronized (FORWARDING_COMMIT_LOCK) {
+            if (!forwardingPrefs.getBoolean(FORWARDING_ENABLED, false)
+                    || forwardingPrefs.getLong(FORWARDING_GENERATION, 0L) != expectedForwardingGeneration) {
+                throw new IllegalStateException("forwarding_disabled");
             }
-            if (preparedCallback != null) {
-                preparedCallback.accept(transaction);
-            }
-            android.content.SharedPreferences forwardingPrefs = presenter.applicationContext.getSharedPreferences(
-                    forwardingPreferencesName(presenter.applicationContext), android.content.Context.MODE_PRIVATE);
-            synchronized (FORWARDING_COMMIT_LOCK) {
-                if (!forwardingPrefs.getBoolean(FORWARDING_ENABLED, false)
-                        || forwardingPrefs.getLong(FORWARDING_GENERATION, 0L) != expectedForwardingGeneration) {
-                    throw new IllegalStateException("forwarding_disabled");
+            // Reacquire the lifecycle lock only for commit/broadcast and verify that the same
+            // kit and wallet are still active after signing outside the lock.
+            synchronized (presenter.kitLock) {
+                WalletAppKit currentKit = presenter.walletAppKit;
+                if (presenter.shuttingDown || currentKit == null || currentKit != expectedKit
+                        || !currentKit.isRunning()) {
+                    throw new IllegalStateException("wallet_not_ready");
                 }
-                // Recheck before commit/broadcast in case a sync transition began mid-signing.
-                if (!presenter.isForwardingSyncReady(currentWallet)) {
+                Wallet activeWallet;
+                try {
+                    activeWallet = currentKit.wallet();
+                } catch (IllegalStateException error) {
+                    throw new IllegalStateException("wallet_not_ready", error);
+                }
+                if (activeWallet != currentWallet || activeWallet != expectedWallet) {
+                    throw new IllegalStateException("wallet_not_ready");
+                }
+                if (!presenter.isForwardingSyncReady(activeWallet)) {
                     throw new IllegalStateException("wallet_syncing");
                 }
-                currentWallet.commitTx(transaction);
-                TransactionBroadcast broadcast = kit.peerGroup().broadcastTransaction(transaction);
+                activeWallet.commitTx(transaction);
+                TransactionBroadcast broadcast = currentKit.peerGroup().broadcastTransaction(transaction);
                 broadcast.broadcast();
                 return broadcast;
             }
