@@ -75,8 +75,8 @@ Bitcoin Signet
 
 Each network keeps separate wallet and blockchain storage. Sync mode can be selected independently per network:
 
-- Lite: filtered block synchronization with lower data and resource usage.
-- Full Block: complete block transaction download for richer blockchain data.
+- Lite: SPV synchronization using filtered block data with lower data and resource usage.
+- Full: `FullPrunedBlockChain` validates complete blocks and transaction scripts from genesis. Its on-device SQLite store durably records the verified chain head, UTXO set, block headers, and recent undo data (with a 2,880-block undo window). Full mode requires peers that can serve historical full blocks and may consume substantial bandwidth, storage, battery, and CPU. The Full store is separate from the Lite SPV store; switching to Full requires a full replay from genesis.
 
 ---
 
@@ -84,7 +84,7 @@ Each network keeps separate wallet and blockchain storage. Sync mode can be sele
 
 - Android
 - Java
-- BitcoinJ 0.17.1 (source compiled directly in the single Android app module)
+- BitcoinJ
 - Gradle
 
 ---
