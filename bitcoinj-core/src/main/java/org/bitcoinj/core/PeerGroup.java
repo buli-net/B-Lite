@@ -1649,7 +1649,13 @@ public class PeerGroup implements TransactionBroadcaster {
             // TODO: The peer should calculate the fast catchup time from the added wallets here.
             for (Wallet wallet : wallets)
                 peer.addWallet(wallet);
-            if (downloadPeer == null && newSize > maxConnections / 2) {
+            // Select a download peer as soon as a suitable peer is available. Waiting until
+            // more than half of maxConnections are connected can deadlock block download on
+            // smaller networks (notably Signet) or after peer rotation: the remaining peer can
+            // stay connected indefinitely while downloadPeer remains null. selectDownloadPeer()
+            // already checks chain-height agreement, protocol version, NODE_NETWORK and
+            // NODE_WITNESS, so selecting early does not bypass those safety requirements.
+            if (downloadPeer == null) {
                 Peer newDownloadPeer = selectDownloadPeer(peers);
                 if (newDownloadPeer != null) {
                     setDownloadPeer(newDownloadPeer);
@@ -1659,7 +1665,7 @@ public class PeerGroup implements TransactionBroadcaster {
                         startBlockChainDownloadFromPeer(downloadPeer);
                     }
                 } else {
-                    log.info("Not yet setting download peer because there is no clear candidate.");
+                    log.info("No eligible download peer yet ({} connected, {} configured max).", newSize, maxConnections);
                 }
             }
             // Make sure the peer knows how to upload transactions that are requested from us.
