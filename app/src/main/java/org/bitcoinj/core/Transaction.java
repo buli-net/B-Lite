@@ -1898,8 +1898,10 @@ public class Transaction extends BaseMessage {
     public static void verify(Network network, Transaction tx) throws VerificationException {
         if (tx.inputs.size() == 0 || tx.outputs.size() == 0)
             throw new VerificationException.EmptyInputsOrOutputs();
-        if (tx.messageSize() > Block.MAX_BLOCK_SIZE)
-            throw new VerificationException.LargerThanMaxBlockSize();
+        // Consensus limits transaction weight under BIP141. Do not reject a
+        // witness transaction solely because its serialized size exceeds 1 MB.
+        if (tx.getWeight() > Block.MAX_BLOCK_WEIGHT)
+            throw new VerificationException.LargerThanMaxBlockWeight();
 
         HashSet<TransactionOutPoint> outpoints = new HashSet<>();
         for (TransactionInput input : tx.inputs) {

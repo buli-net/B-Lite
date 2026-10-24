@@ -94,7 +94,11 @@ public class Block extends BaseMessage {
      * upgrade everyone to change this, so Bitcoin can continue to grow. For now it exists as an anti-DoS measure to
      * avoid somebody creating a titanically huge but valid block and forcing everyone to download/store it forever.
      */
+    /** Legacy serialized-size limit retained for parsing/anti-DoS bounds. */
     public static final int MAX_BLOCK_SIZE = 1_000_000;
+
+    /** Maximum block weight defined by BIP141 (4,000,000 weight units). */
+    public static final int MAX_BLOCK_WEIGHT = 4_000_000;
     /**
      * A "sigop" is a signature verification operation. Because they're expensive we also impose a separate limit on
      * the number in a block to prevent somebody mining a huge block that has way more sigops than normal, so is very
@@ -273,6 +277,24 @@ public class Block extends BaseMessage {
                 .op(ScriptOpCodes.OP_CHECKSIG)
                 .build()
                 .program();
+
+    /**
+     * Returns block weight as defined by BIP141: base size * 3 + total size.
+     * The 80-byte header and transaction-count varint have no witness encoding,
+     * so each contributes four weight units per serialized byte.
+     */
+    public int getWeight() {
+        List<Transaction> blockTransactions = getTransactions();
+        int count = blockTransactions == null ? 0 : blockTransactions.size();
+        int weight = (HEADER_SIZE + VarInt.sizeOf(count)) * 4;
+        if (blockTransactions != null) {
+            for (Transaction tx : blockTransactions) {
+                weight = Math.addExact(weight, tx.getWeight());
+                if (weight > MAX_BLOCK_WEIGHT) return weight;
+            }
+        }
+        return weight;
+    }
 
     @Override
     public int messageSize() {
@@ -1066,8 +1088,10 @@ public class Block extends BaseMessage {
         // transactions that reference spent or non-existent inputs.
         if (block.transactions.isEmpty())
             throw new VerificationException("Block had no transactions");
-        if (block.messageSize() > MAX_BLOCK_SIZE)
-            throw new VerificationException("Block larger than MAX_BLOCK_SIZE");
+        // BIP141 limits block weight, not total serialized bytes. A valid
+        // SegWit block can exceed 1 MB on the wire while remaining <= 4 MWU.
+        if (block.getWeight() > MAX_BLOCK_WEIGHT)
+            throw new VerificationException("Block weight exceeds MAX_BLOCK_WEIGHT (4,000,000 WU)");
         block.checkTransactions(height, flags);
         block.checkMerkleRoot();
         block.checkSigOps();

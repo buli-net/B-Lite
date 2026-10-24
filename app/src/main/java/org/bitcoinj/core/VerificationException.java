@@ -46,6 +46,12 @@ public class VerificationException extends RuntimeException {
         }
     }
 
+    public static class LargerThanMaxBlockWeight extends VerificationException {
+        public LargerThanMaxBlockWeight() {
+            super("Transaction weight exceeds MAX_BLOCK_WEIGHT (4,000,000 WU)");
+        }
+    }
+
     public static class DuplicatedOutPoint extends VerificationException {
         public DuplicatedOutPoint() {
             super("Duplicated outpoint");
