@@ -1054,6 +1054,20 @@ public class PeerGroup implements TransactionBroadcaster {
         }
     }
 
+    /**
+     * Sets service requirements for peer handshakes without replacing configured discovery sources.
+     * Full-validation clients use this when WalletAppKit owns peer discovery but must reject peers
+     * that cannot supply the full historical chain and witness data.
+     */
+    public void setRequiredServicesForPeerConnections(long requiredServices) {
+        lock.lock();
+        try {
+            this.requiredServices = requiredServices;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /** Convenience method for {@link #addAddress(PeerAddress)}. */
     public void addAddress(InetAddress address) {
         addAddress(PeerAddress.simple(address, params.getPort()));
@@ -1656,26 +1670,28 @@ public class PeerGroup implements TransactionBroadcaster {
             // Give the peer a filter that can be used to probabilistically drop transactions that
             // aren't relevant to our wallet. We may still receive some false positives, which is
             // OK because it helps improve wallet privacy. Old nodes will just ignore the message.
-            if (bloomFilterMerger.getLastFilter() != null) peer.setBloomFilter(bloomFilterMerger.getLastFilter());
+            if ((chain == null || !chain.shouldVerifyTransactions())
+                    && bloomFilterMerger.getLastFilter() != null) {
+                peer.setBloomFilter(bloomFilterMerger.getLastFilter());
+            }
             peer.setDownloadData(false);
             // TODO: The peer should calculate the fast catchup time from the added wallets here.
             for (Wallet wallet : wallets)
                 peer.addWallet(wallet);
-            // Do not wait for a strict majority of the configured peer pool. Some
-            // networks (notably Signet) may have only half the requested peers
-            // available; waiting for peer 7 of 12 leaves the chain at genesis even
-            // when six usable, synchronized peers are already connected.
-            if (downloadPeer == null && newSize >= Math.max(1, (maxConnections + 1) / 2)) {
+            // Select as soon as a suitable peer is available instead of waiting for a fraction
+            // of maxConnections. Small networks such as Signet may never reach that pool size.
+            // selectDownloadPeer still requires a non-tied height, NODE_NETWORK and NODE_WITNESS.
+            if (downloadPeer == null) {
                 Peer newDownloadPeer = selectDownloadPeer(peers);
                 if (newDownloadPeer != null) {
                     setDownloadPeer(newDownloadPeer);
-                    // Kick off chain download if we aren't already doing it.
                     boolean shouldDownloadChain = downloadListener != null && chain != null;
                     if (shouldDownloadChain) {
-                        startBlockChainDownloadFromPeer(downloadPeer);
+                        startBlockChainDownloadFromPeer(newDownloadPeer);
                     }
                 } else {
-                    log.info("Not yet setting download peer because there is no clear candidate.");
+                    log.info("No eligible full-history witness download peer yet ({} connected, {} configured max, common height {}).",
+                            newSize, maxConnections, getMostCommonChainHeight(peers));
                 }
             }
             // Make sure the peer knows how to upload transactions that are requested from us.
@@ -1757,8 +1773,11 @@ public class PeerGroup implements TransactionBroadcaster {
                     addDataEventListenerToPeer(Threading.SAME_THREAD, peer, downloadListener);
                 }
                 downloadPeer.setDownloadData(true);
-                if (chain != null)
-                    downloadPeer.setFastDownloadParameters(bloomFilterMerger.getLastFilter() != null, fastCatchupTime);
+                if (chain != null) {
+                    boolean useFilteredBlocks = !chain.shouldVerifyTransactions()
+                            && bloomFilterMerger.getLastFilter() != null;
+                    downloadPeer.setFastDownloadParameters(useFilteredBlocks, fastCatchupTime);
+                }
             }
         } finally {
             lock.unlock();
@@ -1783,7 +1802,9 @@ public class PeerGroup implements TransactionBroadcaster {
                     "fast catchup is incompatible with fully verifying");
             this.fastCatchupTime = fastCatchupTime;
             if (downloadPeer != null) {
-                downloadPeer.setFastDownloadParameters(bloomFilterMerger.getLastFilter() != null, fastCatchupTime);
+                boolean useFilteredBlocks = (chain == null || !chain.shouldVerifyTransactions())
+                        && bloomFilterMerger.getLastFilter() != null;
+                downloadPeer.setFastDownloadParameters(useFilteredBlocks, fastCatchupTime);
             }
         } finally {
             lock.unlock();
