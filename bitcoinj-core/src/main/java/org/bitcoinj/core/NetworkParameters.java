@@ -543,9 +543,15 @@ public abstract class NetworkParameters {
 
         // Start enforcing CHECKLOCKTIMEVERIFY, (BIP65) for block.nVersion=4
         // blocks, when 75% of the network has upgraded:
-        if (block.getVersion() >= Block.BLOCK_VERSION_BIP65 &&
-            tally.getCountAtOrAbove(Block.BLOCK_VERSION_BIP65) > this.getMajorityEnforceBlockUpgrade()) {
-            verifyFlags.add(Script.VerifyFlag.CHECKLOCKTIMEVERIFY);
+        if (block.getVersion() >= Block.BLOCK_VERSION_BIP65) {
+            // The version tally is intentionally incomplete during the first blocks after
+            // genesis (or when the store starts from a short chain). Until its moving
+            // window is full, getCountAtOrAbove() returns null. Treat that as
+            // insufficient evidence to activate BIP65 rather than auto-unboxing null.
+            final Integer count = tally.getCountAtOrAbove(Block.BLOCK_VERSION_BIP65);
+            if (count != null && count > this.getMajorityEnforceBlockUpgrade()) {
+                verifyFlags.add(Script.VerifyFlag.CHECKLOCKTIMEVERIFY);
+            }
         }
 
         return verifyFlags;
