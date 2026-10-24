@@ -33,19 +33,30 @@ public final class RecoverableFullPrunedBlockChain extends FullPrunedBlockChain 
         try {
             return super.add(block);
         } catch (VerificationException | PrunedException e) {
-            RejectionListener listener = rejectionListener;
-            if (listener != null) {
-                int height = getBestChainHeight();
-                String hash = block == null ? "unknown" : block.getHashAsString();
-                Throwable root = e;
-                while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-                String message = root.getMessage();
-                if (message == null || message.trim().isEmpty()) message = root.getClass().getSimpleName();
-                if (message.length() > 180) message = message.substring(0, 180);
-                try { listener.onBlockRejected(height, hash, message); } catch (RuntimeException ignored) { }
-            }
+            reportProcessingFailure(block, e);
+            throw e;
+        } catch (RuntimeException e) {
+            // AbstractBlockChain wraps BlockStoreException in RuntimeException. Without surfacing
+            // it, the Peer network loop can lose the connection while the UI only reports a stall.
+            reportProcessingFailure(block, e);
             throw e;
         }
+    }
+
+    private void reportProcessingFailure(Block block, Throwable failure) {
+        RejectionListener listener = rejectionListener;
+        if (listener == null) return;
+        int height = getBestChainHeight();
+        String hash = block == null ? "unknown" : block.getHashAsString();
+        Throwable root = failure;
+        while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+        String message = root.getMessage();
+        if (message == null || message.trim().isEmpty()) message = root.getClass().getSimpleName();
+        if (failure instanceof RuntimeException) {
+            message = "Block processing/storage failure: " + message;
+        }
+        if (message.length() > 180) message = message.substring(0, 180);
+        try { listener.onBlockRejected(height, hash, message); } catch (RuntimeException ignored) { }
     }
 
     public RecoverableFullPrunedBlockChain(NetworkParameters params, FullPrunedBlockStore store)
