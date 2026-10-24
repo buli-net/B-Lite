@@ -1,3 +1,9 @@
+## Current source layout (9.1.2)
+
+The current consolidated source layout is documented in `SOURCE_LAYOUT_9.1.2.md`. All bitcoinj 0.17.1 production source now lives under `app/src/main/java/org/bitcoinj`, and the project has only one Gradle module (`:app`). The remainder of this audit is historical context for earlier wallet-source organization passes.
+
+---
+
 # Source organization audit
 
 ## Scope

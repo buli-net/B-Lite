@@ -84,7 +84,7 @@ Each network keeps separate wallet and blockchain storage. Sync mode can be sele
 
 - Android
 - Java
-- BitcoinJ
+- BitcoinJ 0.17.1 (source compiled directly in the single Android app module)
 - Gradle
 
 ---
