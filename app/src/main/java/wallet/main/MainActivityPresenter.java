@@ -442,9 +442,10 @@ public class MainActivityPresenter
                                             peerGroup().setBloomFilteringEnabled(false);
                                             peerGroup().setRequiredServices(org.bitcoinj.core.Services.NODE_NETWORK | org.bitcoinj.core.Services.NODE_WITNESS);
                                             peerGroup().setDownloadTxDependencies(0);
-                                            // Do not use the wallet's key-creation date as a fast-catchup point:
-                                            // FullPruned must download complete block bodies from genesis.
-                                            peerGroup().setFastCatchupTime(params().getGenesisBlock().time());
+                                            // Full validation downloads and verifies complete block bodies from
+                                            // genesis. PeerGroup.setFastCatchupTime() explicitly rejects full-
+                                            // verification chains, so do not call it here: that would throw and
+                                            // skip the peer timeout/stall configuration below.
                                         } else {
                                             applySyncMode(peerGroup(), startNetwork,
                                                     NetworkConfig.getSyncMode(applicationContext, startNetwork));
