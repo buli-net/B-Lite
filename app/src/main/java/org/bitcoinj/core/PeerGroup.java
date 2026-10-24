@@ -1577,8 +1577,14 @@ public class PeerGroup implements TransactionBroadcaster {
      * @param listener a listener for chain download events, may not be null
      */
     public void startBlockChainDownload(BlockchainDownloadEventListener listener) {
+        Peer peerToStart = null;
         lock.lock();
         try {
+            // A download peer can be selected while peers are connecting, before this
+            // listener is installed (WalletAppKit starts PeerGroup asynchronously).
+            // In that race handleNewPeer() cannot start the download because the
+            // listener is still null. Start it now rather than leaving the chain idle.
+            boolean firstListener = this.downloadListener == null && listener != null;
             if (downloadPeer != null) {
                 if (this.downloadListener != null) {
                     removeDataEventListenerFromPeer(downloadPeer, this.downloadListener);
@@ -1586,10 +1592,16 @@ public class PeerGroup implements TransactionBroadcaster {
                 if (listener != null) {
                     addDataEventListenerToPeer(Threading.USER_THREAD, downloadPeer, listener);
                 }
+                if (firstListener && chain != null) {
+                    peerToStart = downloadPeer;
+                }
             }
             this.downloadListener = listener;
         } finally {
             lock.unlock();
+        }
+        if (peerToStart != null) {
+            startBlockChainDownloadFromPeer(peerToStart);
         }
     }
 
@@ -1649,7 +1661,11 @@ public class PeerGroup implements TransactionBroadcaster {
             // TODO: The peer should calculate the fast catchup time from the added wallets here.
             for (Wallet wallet : wallets)
                 peer.addWallet(wallet);
-            if (downloadPeer == null && newSize > maxConnections / 2) {
+            // Do not wait for a strict majority of the configured peer pool. Some
+            // networks (notably Signet) may have only half the requested peers
+            // available; waiting for peer 7 of 12 leaves the chain at genesis even
+            // when six usable, synchronized peers are already connected.
+            if (downloadPeer == null && newSize >= Math.max(1, (maxConnections + 1) / 2)) {
                 Peer newDownloadPeer = selectDownloadPeer(peers);
                 if (newDownloadPeer != null) {
                     setDownloadPeer(newDownloadPeer);
