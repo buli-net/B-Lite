@@ -203,11 +203,14 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     private static class Verifier implements Callable<VerificationException> {
         final Transaction tx;
         final List<Script> prevOutScripts;
+        final List<Coin> prevOutValues;
         final Set<VerifyFlag> verifyFlags;
 
-        public Verifier(final Transaction tx, final List<Script> prevOutScripts, final Set<VerifyFlag> verifyFlags) {
+        public Verifier(final Transaction tx, final List<Script> prevOutScripts,
+                        final List<Coin> prevOutValues, final Set<VerifyFlag> verifyFlags) {
             this.tx = tx;
             this.prevOutScripts = prevOutScripts;
+            this.prevOutValues = prevOutValues;
             this.verifyFlags = verifyFlags;
         }
 
@@ -216,9 +219,11 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
         public VerificationException call() throws Exception {
             try {
                 ListIterator<Script> prevOutIt = prevOutScripts.listIterator();
+                ListIterator<Coin> prevOutValueIt = prevOutValues.listIterator();
                 for (int index = 0; index < tx.getInputs().size(); index++) {
-                    tx.getInput(index).getScriptSig().correctlySpends(tx, index, null, null, prevOutIt.next(),
-                            verifyFlags);
+                    TransactionInput input = tx.getInput(index);
+                    input.getScriptSig().correctlySpends(tx, index, input.getWitness(),
+                            prevOutValueIt.next(), prevOutIt.next(), verifyFlags);
                 }
             } catch (VerificationException e) {
                 return e;
@@ -297,6 +302,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 Coin valueIn = Coin.ZERO;
                 Coin valueOut = Coin.ZERO;
                 final List<Script> prevOutScripts = new LinkedList<>();
+                final List<Coin> prevOutValues = new LinkedList<>();
                 final Set<VerifyFlag> verifyFlags = params.getTransactionVerificationFlags(block, tx, getVersionTally(), height);
                 if (!isCoinBase) {
                     // For each input of the transaction remove the corresponding output from the set of unspent
@@ -325,6 +331,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         }
 
                         prevOutScripts.add(prevOut.getScript());
+                        prevOutValues.add(prevOut.getValue());
                         blockStore.removeUnspentTransactionOutput(prevOut);
                         txOutsSpent.add(prevOut);
                     }
@@ -357,7 +364,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
 
                 if (!isCoinBase && runScripts) {
                     // Because correctlySpends modifies transactions, this must come after we are done with tx
-                    FutureTask<VerificationException> future = new FutureTask<>(new Verifier(tx, prevOutScripts, verifyFlags));
+                    FutureTask<VerificationException> future = new FutureTask<>(new Verifier(tx, prevOutScripts, prevOutValues, verifyFlags));
                     scriptVerificationExecutor.execute(future);
                     listScriptVerificationResults.add(future);
                 }
@@ -443,6 +450,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     Coin valueIn = Coin.ZERO;
                     Coin valueOut = Coin.ZERO;
                     final List<Script> prevOutScripts = new LinkedList<>();
+                    final List<Coin> prevOutValues = new LinkedList<>();
 
                     if (!isCoinBase) {
                         for (int index = 0; index < tx.getInputs().size(); index++) {
@@ -464,6 +472,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                             // TODO: Enforce DER signature format
 
                             prevOutScripts.add(prevOut.getScript());
+                            prevOutValues.add(prevOut.getValue());
 
                             blockStore.removeUnspentTransactionOutput(prevOut);
                             txOutsSpent.add(prevOut);
@@ -497,7 +506,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
 
                     if (!isCoinBase) {
                         // Because correctlySpends modifies transactions, this must come after we are done with tx
-                        FutureTask<VerificationException> future = new FutureTask<>(new Verifier(tx, prevOutScripts, verifyFlags));
+                        FutureTask<VerificationException> future = new FutureTask<>(new Verifier(tx, prevOutScripts, prevOutValues, verifyFlags));
                         scriptVerificationExecutor.execute(future);
                         listScriptVerificationResults.add(future);
                     }
