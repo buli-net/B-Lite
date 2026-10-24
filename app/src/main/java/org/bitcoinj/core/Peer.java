@@ -1161,9 +1161,14 @@ public class Peer extends PeerSocketHandler {
         for (InventoryItem item : items) {
             switch (item.type) {
                 case TRANSACTION:
+                case WITNESS_TRANSACTION:
                     transactions.add(item.hash);
                     break;
                 case BLOCK:
+                case WITNESS_BLOCK:
+                    // BIP144 permits peers to announce witness inventory types too. Treat them
+                    // as the same transaction/block identifiers for scheduling; the getdata
+                    // request below still determines whether witness data is returned.
                     blocks.add(item.hash);
                     break;
                 default:
@@ -1262,7 +1267,15 @@ public class Peer extends PeerSocketHandler {
                                 getDataItems.add(new InventoryItem(InventoryItem.Type.FILTERED_BLOCK, item));
                                 pingAfterGetData = true;
                             } else {
-                                getDataItems.add(new InventoryItem(InventoryItem.Type.BLOCK, item));
+                                // Full block bodies must include witness data. Requesting MSG_BLOCK
+                                // from a SegWit-capable peer makes Bitcoin Core strip the witness
+                                // serialization. The coinbase still contains its witness commitment,
+                                // but its reserved witness is missing, so valid post-SegWit blocks are
+                                // rejected by checkWitnessRoot() as "Coinbase witness reserved invalid".
+                                InventoryItem.Type blockType = vPeerVersionMessage.services().has(Services.NODE_WITNESS)
+                                        ? InventoryItem.Type.WITNESS_BLOCK
+                                        : InventoryItem.Type.BLOCK;
+                                getDataItems.add(new InventoryItem(blockType, item));
                             }
                             pendingBlockDownloads.add(item);
                         }
