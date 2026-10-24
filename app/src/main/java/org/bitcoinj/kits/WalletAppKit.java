@@ -23,7 +23,6 @@ import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.ScriptType;
 import org.bitcoinj.base.Sha256Hash;
 import org.bitcoinj.base.internal.PlatformUtils;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.FullPrunedBlockChain;
@@ -31,7 +30,9 @@ import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerAddress;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.Services;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -497,6 +498,13 @@ public class WalletAppKit extends AbstractIdleService implements Closeable {
         }
 
         vPeerGroup = createPeerGroup();
+        // Full validation from genesis requires archival block bodies including witness data.
+        // Supplying these service bits to the discovery call lets Signet DNS seeds return filtered
+        // x9 peers. Keep custom discovery sources intact; the requirements also apply at handshake.
+        if (fullPrunedValidation && network != BitcoinNetwork.REGTEST) {
+            vPeerGroup.setRequiredServicesForPeerConnections(
+                    Services.NODE_NETWORK | Services.NODE_WITNESS);
+        }
         if (this.userAgent != null)
             vPeerGroup.setUserAgent(userAgent, version);
 
