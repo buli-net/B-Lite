@@ -543,9 +543,16 @@ public abstract class NetworkParameters {
 
         // Start enforcing CHECKLOCKTIMEVERIFY, (BIP65) for block.nVersion=4
         // blocks, when 75% of the network has upgraded:
-        if (block.getVersion() >= Block.BLOCK_VERSION_BIP65 &&
-            tally.getCountAtOrAbove(Block.BLOCK_VERSION_BIP65) > this.getMajorityEnforceBlockUpgrade()) {
-            verifyFlags.add(Script.VerifyFlag.CHECKLOCKTIMEVERIFY);
+        if (block.getVersion() >= Block.BLOCK_VERSION_BIP65) {
+            // VersionTally returns null until its version window is full. This is
+            // expected near genesis (including Signet), so do not unbox null.
+            // The safe behavior with insufficient history is to leave CLTV
+            // activation unset; script validation remains enabled for all flags
+            // that can be determined from the available chain history.
+            final Integer count = tally.getCountAtOrAbove(Block.BLOCK_VERSION_BIP65);
+            if (count != null && count > this.getMajorityEnforceBlockUpgrade()) {
+                verifyFlags.add(Script.VerifyFlag.CHECKLOCKTIMEVERIFY);
+            }
         }
 
         return verifyFlags;
