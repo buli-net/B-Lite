@@ -83,7 +83,7 @@
             <item
                 android:id="@+id/menuBluetoothMerchant"
                 android:title="@string/bluetooth_merchant_settings_title"
-                android:icon="@drawable/ic_menu_utilities_24dp" />
+                android:icon="@drawable/ic_menu_bluetooth_24dp" />
             <item
                 android:id="@+id/menuNetwork"
                 android:title="@string/menu_network"
