@@ -81,10 +81,6 @@
         app:showAsAction="never">
         <menu>
             <item
-                android:id="@+id/menuBluetoothMerchant"
-                android:title="@string/bluetooth_merchant_settings_title"
-                android:icon="@drawable/ic_menu_bluetooth_24dp" />
-            <item
                 android:id="@+id/menuNetwork"
                 android:title="@string/menu_network"
                 android:icon="@drawable/ic_menu_network_24dp" />
@@ -104,6 +100,10 @@
                 android:id="@+id/menuSecurity"
                 android:title="@string/menu_security"
                 android:icon="@drawable/ic_menu_security_24dp" />
+            <item
+                android:id="@+id/menuBluetoothMerchant"
+                android:title="@string/bluetooth_merchant_settings_title"
+                android:icon="@drawable/ic_menu_bluetooth_24dp" />
         </menu>
     </item>
     <item
