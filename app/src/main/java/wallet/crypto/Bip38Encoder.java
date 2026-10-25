@@ -22,7 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public final class Bip38Encoder {
     private static final int N = 16384;
-    private static final int R = 8;
+    private static final int SCRYPT_R = 8;
     private static final int P = 8;
 
     private Bip38Encoder() { }
@@ -42,7 +42,7 @@ public final class Bip38Encoder {
             salt = Arrays.copyOf(Sha256Hash.hashTwice(addressBytes), 4);
             passwordBytes = Normalizer.normalize(passphrase, Normalizer.Form.NFC)
                     .getBytes(StandardCharsets.UTF_8);
-            derived = SCrypt.generate(passwordBytes, salt, N, R, P, 64);
+            derived = SCrypt.generate(passwordBytes, salt, N, SCRYPT_R, P, 64);
             secret = key.getPrivKeyBytes();
             mixed = Arrays.copyOf(secret, 32);
             for (int i = 0; i < 32; i++) mixed[i] ^= derived[i];
