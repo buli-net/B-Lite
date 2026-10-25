@@ -360,9 +360,12 @@ public final class RequestCoinsActivity extends BaseActivity {
                     BluetoothSupport.formatMac(activeRequestBluetoothMac)));
         } else {
             String configured = BluetoothSupport.formatMac(BluetoothSupport.getLocalAddress(this));
-            bluetoothStatus.setText(configured == null
-                    ? getString(R.string.request_bluetooth_status_not_configured)
-                    : getString(R.string.request_bluetooth_status_ready, configured));
+            if (configured == null) {
+                bluetoothStatus.setText(R.string.request_bluetooth_status_not_configured);
+            } else {
+                bluetoothStatus.setText(getString(
+                        R.string.request_bluetooth_status_ready, configured));
+            }
         }
     }
 
