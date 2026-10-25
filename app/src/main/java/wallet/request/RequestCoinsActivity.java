@@ -514,8 +514,7 @@ public final class RequestCoinsActivity extends BaseActivity {
             if (parameters == null) throw new IllegalStateException(getString(R.string.wallet_not_ready));
             String generatedUri = org.bitcoinj.uri.BitcoinURI.convertToBitcoinURI(address, amount, label, null);
             if (bluetoothMac != null) {
-                generatedUri = Uri.parse(generatedUri).buildUpon()
-                        .appendQueryParameter(BluetoothSupport.MAC_URI_PARAM, bluetoothMac).build().toString();
+                generatedUri = appendBluetoothEndpoint(generatedUri, bluetoothMac);
             }
             uri = generatedUri;
             // BIP70 embeds the active network and Bluetooth payment endpoint. Keep the
@@ -599,36 +598,25 @@ public final class RequestCoinsActivity extends BaseActivity {
 
     private void handleCopy() {
         final String uri = currentUri;
-        if (TextUtils.isEmpty(uri)) return;
+        if (TextUtils.isEmpty(uri) || !hasBitcoinDestination(uri)) {
+            Toast.makeText(this, R.string.request_generation_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
         final ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newRawUri(getString(R.string.request_clipboard_label), Uri.parse(uri)));
         Toast.makeText(this, R.string.request_uri_copied, Toast.LENGTH_SHORT).show();
     }
 
     private void handleShare() {
-        final Address address = currentAddress;
-        if (address == null) {
+        // Share the exact same URI that is displayed as QR and used by Copy/Local App.
+        // Rebuilding it here could cause the three request actions to diverge.
+        final String shareUri = currentUri;
+        if (currentAddress == null || TextUtils.isEmpty(shareUri)
+                || !hasBitcoinDestination(shareUri)) {
             Toast.makeText(this, R.string.request_generation_failed, Toast.LENGTH_LONG).show();
             return;
         }
-
-        // Rebuild the BIP21 URI from the active address instead of blindly sharing
-        // cached text. A URI like bitcoin:?bt=MAC is malformed: Bluetooth metadata
-        // must never replace the required Bitcoin destination address.
-        final Coin amount = parseAmountWithoutShowingToast();
-        final String typedLabel = labelInput.getText().toString().trim();
-        final String ownName = BluetoothSupport.getOwnName(this);
-        final String label = ownName != null && !typedLabel.isEmpty() && !ownName.equals(typedLabel)
-                ? ownName + " — " + typedLabel
-                : !typedLabel.isEmpty() ? typedLabel : ownName;
-        final String bluetoothMac = activeRequestBluetoothMac;
-        final String request;
         try {
-            request = org.bitcoinj.uri.BitcoinURI.convertToBitcoinURI(address, amount, label, null);
-            final String shareUri = bluetoothMac == null ? request
-                    : Uri.parse(request).buildUpon()
-                            .appendQueryParameter(BluetoothSupport.MAC_URI_PARAM, bluetoothMac)
-                            .build().toString();
             ShareCompat.IntentBuilder.from(this)
                     .setType("text/plain")
                     .setText(shareUri)
@@ -639,9 +627,61 @@ public final class RequestCoinsActivity extends BaseActivity {
         }
     }
 
+    /**
+     * Append merchant Bluetooth metadata without android.net.Uri.Builder. A BIP21 URI
+     * such as bitcoin:address?amount=... is an opaque URI on Android; using
+     * Uri.Builder.appendQueryParameter() can drop the opaque address and produce the
+     * invalid bitcoin:?bt=... seen when Share, Copy or Local App is used.
+     */
+    private static String appendBluetoothEndpoint(String requestUri, String mac) {
+        if (!hasBitcoinDestination(requestUri)) {
+            throw new IllegalArgumentException("Bitcoin request has no destination address");
+        }
+        final String normalizedMac = BluetoothSupport.normalizeMac(mac);
+        if (normalizedMac == null) {
+            throw new IllegalArgumentException("Invalid Bluetooth address");
+        }
+
+        final int colon = requestUri.indexOf(':');
+        final String schemeSpecificPart = requestUri.substring(colon + 1);
+        final int queryStart = schemeSpecificPart.indexOf('?');
+        final String addressPart = queryStart < 0
+                ? schemeSpecificPart : schemeSpecificPart.substring(0, queryStart);
+        String existingQuery = queryStart < 0 ? "" : schemeSpecificPart.substring(queryStart + 1);
+
+        // Remove a previous bt parameter so toggling Bluetooth cannot duplicate it.
+        if (!existingQuery.isEmpty()) {
+            final StringBuilder filtered = new StringBuilder();
+            for (String parameter : existingQuery.split("&")) {
+                if (parameter.isEmpty()) continue;
+                final int equals = parameter.indexOf('=');
+                final String key = equals < 0 ? parameter : parameter.substring(0, equals);
+                if (BluetoothSupport.MAC_URI_PARAM.equalsIgnoreCase(Uri.decode(key))) continue;
+                if (filtered.length() > 0) filtered.append('&');
+                filtered.append(parameter);
+            }
+            existingQuery = filtered.toString();
+        }
+        return "bitcoin:" + addressPart
+                + (existingQuery.isEmpty() ? "?" : "?" + existingQuery + "&")
+                + BluetoothSupport.MAC_URI_PARAM + "=" + normalizedMac;
+    }
+
+    private static boolean hasBitcoinDestination(String requestUri) {
+        if (requestUri == null || !requestUri.regionMatches(true, 0, "bitcoin:", 0, 8)) return false;
+        final String schemeSpecificPart = requestUri.substring(8);
+        final int queryStart = schemeSpecificPart.indexOf('?');
+        final String addressPart = queryStart < 0
+                ? schemeSpecificPart : schemeSpecificPart.substring(0, queryStart);
+        return !addressPart.trim().isEmpty();
+    }
+
     private void handleLocalApp() {
         final String uri = currentUri;
-        if (TextUtils.isEmpty(uri)) return;
+        if (TextUtils.isEmpty(uri) || !hasBitcoinDestination(uri)) {
+            Toast.makeText(this, R.string.request_generation_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
         final ComponentName component = new ComponentName(this, SendActivity.class);
         final PackageManager packageManager = getPackageManager();
         final Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
