@@ -1341,6 +1341,23 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
         }
     }
 
+    private static String getBitcoinUriParameter(final String rawUri, final String parameterName) {
+        if (TextUtils.isEmpty(rawUri) || parameterName == null
+                || !rawUri.regionMatches(true, 0, "bitcoin:", 0, 8)) return null;
+        final int queryStart = rawUri.indexOf('?', 8);
+        if (queryStart < 0 || queryStart == rawUri.length() - 1) return null;
+        final String query = rawUri.substring(queryStart + 1);
+        for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
+            final int equals = pair.indexOf('=');
+            final String rawName = equals < 0 ? pair : pair.substring(0, equals);
+            if (parameterName.equalsIgnoreCase(Uri.decode(rawName))) {
+                return equals < 0 ? "" : Uri.decode(pair.substring(equals + 1));
+            }
+        }
+        return null;
+    }
+
     private void handleBitcoinUriString(final String uri) {
         try {
             // build flavor. The app switches networks at runtime, so propagate the
@@ -1358,12 +1375,11 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
                 return;
             }
 
-            String requestedBluetoothMac = null;
-            try {
-                String suppliedMac = Uri.parse(uri).getQueryParameter(BluetoothSupport.MAC_URI_PARAM);
-                if (!TextUtils.isEmpty(suppliedMac)) requestedBluetoothMac = BluetoothSupport.normalizeMac(suppliedMac);
-            } catch (RuntimeException ignored) { }
-            pendingBluetoothMac = requestedBluetoothMac;
+            // BIP21 bitcoin: URIs are opaque URIs on Android. Uri.getQueryParameter()
+            // only works reliably for hierarchical URIs, and can therefore miss the
+            // bt endpoint even when the raw Request URI is valid.
+            String suppliedMac = getBitcoinUriParameter(uri, BluetoothSupport.MAC_URI_PARAM);
+            pendingBluetoothMac = BluetoothSupport.normalizeMac(suppliedMac);
             applyingIncomingPaymentData = true;
             recipient.setText(address.toString());
             recipient.selectAll();
