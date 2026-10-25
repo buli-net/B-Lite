@@ -226,14 +226,54 @@ public class SecurityActivity extends BaseActivity {
     }
 
     private void lockWallet() {
-        WalletSecurity.clearSessionKey();
-        passwordInput.setText("");
-        passwordConfirmationInput.setText("");
-        refreshStatus();
-        Toast.makeText(this, R.string.wallet_locked_success, Toast.LENGTH_SHORT).show();
+        String enteredPassword = password();
+        if (enteredPassword.isEmpty()) {
+            showMessage(R.string.password_required);
+            passwordInput.requestFocus();
+            return;
+        }
+
+        Wallet wallet = getWallet();
+        if (wallet == null) {
+            showMessage(R.string.wallet_not_ready);
+            return;
+        }
+
+        setBusy(true);
+        new Thread(() -> {
+            try {
+                boolean valid = WalletSecurity.unlock(wallet, enteredPassword);
+                if (valid) {
+                    WalletSecurity.clearSessionKey();
+                }
+                runOnUiThread(() -> {
+                    setBusy(false);
+                    passwordInput.setText("");
+                    passwordConfirmationInput.setText("");
+                    if (!valid) {
+                        showMessage(R.string.wrong_password);
+                        return;
+                    }
+                    refreshStatus();
+                    Toast.makeText(this, R.string.wallet_locked_success, Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    setBusy(false);
+                    showError(error);
+                });
+            }
+        }, "wallet-lock-verify").start();
     }
 
     private void removePassword() {
+        String enteredPassword = password();
+        if (enteredPassword.isEmpty()) {
+            showMessage(R.string.password_required);
+            passwordInput.requestFocus();
+            return;
+        }
+
         Wallet wallet = getWallet();
         if (wallet == null) {
             showMessage(R.string.wallet_not_ready);
@@ -248,6 +288,16 @@ public class SecurityActivity extends BaseActivity {
                     setBusy(true);
                     new Thread(() -> {
                         try {
+                            boolean valid = WalletSecurity.unlock(wallet, enteredPassword);
+                            if (!valid) {
+                                runOnUiThread(() -> {
+                                    setBusy(false);
+                                    passwordInput.setText("");
+                                    showMessage(R.string.wrong_password);
+                                });
+                                return;
+                            }
+
                             WalletSecurity.decrypt(wallet);
                             MainActivityPresenter presenter = MainActivityPresenter.getActivePresenter();
                             if (presenter != null) {
@@ -255,6 +305,8 @@ public class SecurityActivity extends BaseActivity {
                             }
                             runOnUiThread(() -> {
                                 setBusy(false);
+                                passwordInput.setText("");
+                                passwordConfirmationInput.setText("");
                                 refreshStatus();
                                 Toast.makeText(
                                         this,
