@@ -606,16 +606,32 @@ public final class RequestCoinsActivity extends BaseActivity {
     }
 
     private void handleShare() {
-        final String request = currentUri;
-        if (TextUtils.isEmpty(request)) return;
+        final Address address = currentAddress;
+        if (address == null) {
+            Toast.makeText(this, R.string.request_generation_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
 
-        // Match the reference wallet: share the BIP21 URI as plain text directly.
-        // Do not create or attach a .txt file; Android's Sharesheet chooses the
-        // target app/transport, including Bluetooth, and receives the URI as text.
+        // Rebuild the BIP21 URI from the active address instead of blindly sharing
+        // cached text. A URI like bitcoin:?bt=MAC is malformed: Bluetooth metadata
+        // must never replace the required Bitcoin destination address.
+        final Coin amount = parseAmountWithoutShowingToast();
+        final String typedLabel = labelInput.getText().toString().trim();
+        final String ownName = BluetoothSupport.getOwnName(this);
+        final String label = ownName != null && !typedLabel.isEmpty() && !ownName.equals(typedLabel)
+                ? ownName + " — " + typedLabel
+                : !typedLabel.isEmpty() ? typedLabel : ownName;
+        final String bluetoothMac = activeRequestBluetoothMac;
+        final String request;
         try {
+            request = org.bitcoinj.uri.BitcoinURI.convertToBitcoinURI(address, amount, label, null);
+            final String shareUri = bluetoothMac == null ? request
+                    : Uri.parse(request).buildUpon()
+                            .appendQueryParameter(BluetoothSupport.MAC_URI_PARAM, bluetoothMac)
+                            .build().toString();
             ShareCompat.IntentBuilder.from(this)
                     .setType("text/plain")
-                    .setText(request)
+                    .setText(shareUri)
                     .setChooserTitle(R.string.request_share_title)
                     .startChooser();
         } catch (ActivityNotFoundException | IllegalArgumentException exception) {
