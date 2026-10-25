@@ -24,6 +24,8 @@ import org.bitcoinj.core.UTXOProvider;
 import org.bitcoinj.core.UTXOProviderException;
 import org.bitcoinj.script.Script;
 
+import java.util.List;
+
 
 /**
  * <p>An implementor of FullPrunedBlockStore saves StoredBlock objects to some storage mechanism.</p>
