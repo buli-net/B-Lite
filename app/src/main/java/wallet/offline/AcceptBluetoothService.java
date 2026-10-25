@@ -205,7 +205,9 @@ public final class AcceptBluetoothService extends Service {
                     if (!MainActivityPresenter.receiveBluetoothTransaction(transaction)) accepted = false;
                 }
             }
-        } catch (RuntimeException invalidPayment) {
+        } catch (Exception invalidPayment) {
+            // Includes checked failures from receiving/validating the transaction.
+            // Report a NACK instead of terminating the Bluetooth protocol handler.
             accepted = false;
         }
         Protos.PaymentACK ack = PaymentProtocol.createPaymentAck(payment, accepted ? "ack" : "nack");
