@@ -62,15 +62,15 @@
             android:foregroundServiceType="mediaPlayback" />
         <activity
             android:name="wallet.browser.BrowserActivity"
-            android:screenOrientation="sensor"
+           
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
         <activity
             android:name="wallet.browser.BrowserDownloadsActivity"
-            android:screenOrientation="sensor"
+           
             android:exported="false" />
-        <activity android:name="wallet.browser.BrowserSettingsActivity" android:screenOrientation="sensor" android:exported="false" />
-        <activity android:name="wallet.browser.BrowserHistoryActivity" android:screenOrientation="sensor" android:exported="false" />
+        <activity android:name="wallet.browser.BrowserSettingsActivity" android:exported="false" />
+        <activity android:name="wallet.browser.BrowserHistoryActivity" android:exported="false" />
         <service
             android:name="wallet.sync.BitcoinSyncService"
             android:enabled="true"
