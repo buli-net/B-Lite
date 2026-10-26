@@ -63,6 +63,7 @@
         <activity
             android:name="wallet.browser.BrowserActivity"
             android:screenOrientation="sensor"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
         <activity
             android:name="wallet.browser.BrowserDownloadsActivity"
