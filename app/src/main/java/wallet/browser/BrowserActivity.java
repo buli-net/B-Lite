@@ -233,6 +233,15 @@ public final class BrowserActivity extends BaseActivity {
 
     private void createTab(String url, boolean activate) {
         WebView webView = new WebView(this);
+        // about:blank has no page stylesheet, so use the active app theme surface
+        // as the WebView canvas. Normal web pages continue to render their own backgrounds.
+        android.util.TypedValue blankSurface = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.colorBackground, blankSurface, true)) {
+            int blankColor = blankSurface.resourceId != 0
+                    ? androidx.core.content.ContextCompat.getColor(this, blankSurface.resourceId)
+                    : blankSurface.data;
+            webView.setBackgroundColor(blankColor);
+        }
         WebSettings settings = webView.getSettings();
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, !privateMode);
