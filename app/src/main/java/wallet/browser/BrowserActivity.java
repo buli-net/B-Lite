@@ -130,6 +130,15 @@ public final class BrowserActivity extends BaseActivity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_browser);
+        // Match the app-wide system bar surfaces; the browser toolbar alone uses colorPrimary.
+        android.util.TypedValue systemSurface = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.colorBackground, systemSurface, true)) {
+            int surfaceColor = systemSurface.resourceId != 0
+                    ? androidx.core.content.ContextCompat.getColor(this, systemSurface.resourceId)
+                    : systemSurface.data;
+            getWindow().setStatusBarColor(surfaceColor);
+            getWindow().setNavigationBarColor(surfaceColor);
+        }
         browserRoot = findViewById(R.id.browserRoot);
         setTitle(R.string.browser_title);
         address = findViewById(R.id.browserAddress);
