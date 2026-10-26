@@ -344,8 +344,8 @@ public final class BrowserActivity extends BaseActivity {
                 exitFullscreen();
             }
         });
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) ->
-                downloadFile(tab.webView, url, userAgent, contentDisposition, mimeType));
+        webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) ->
+                downloadFile(tab.webView, downloadUrl, userAgent, contentDisposition, mimeType));
         if (activate) switchToTab(tabs.size() - 1);
         if (url != null && isWebUrl(url)) webView.loadUrl(url);
     }
