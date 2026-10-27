@@ -102,6 +102,9 @@ public final class BrowserActivity extends BaseActivity {
     private int savedSystemUiVisibility;
     private final Handler mediaStateHandler = new Handler(Looper.getMainLooper());
     private boolean lastObservedMediaPlaying;
+    // Set only after the user explicitly enables background playback and leaves the browser.
+    private boolean activityInBackground;
+    private boolean backgroundPlaybackDesired;
     private final Runnable mediaStatePoll = new Runnable() {
         @Override public void run() {
             if (!backgroundSupport || isFinishing()) return;
@@ -112,12 +115,23 @@ public final class BrowserActivity extends BaseActivity {
                 return;
             }
             try {
-                web.evaluateJavascript("(function(){var m=Array.prototype.slice.call(document.querySelectorAll('video,audio'));return m.some(function(x){return !x.paused && !x.ended;})?'1':'0';})()",
+                web.evaluateJavascript(buildMediaStateProbe(),
                         value -> {
                             if (!backgroundSupport || isFinishing()) return;
+                            boolean ended = "\"E\"".equals(value) || "E".equals(value);
                             boolean playingNow = "1".equals(value) || "\"1\"".equals(value);
-                            publishMediaState(playingNow);
-                            mediaStateHandler.postDelayed(mediaStatePoll, 5000L);
+                            if (ended) {
+                                backgroundPlaybackDesired = false;
+                                publishMediaState(false);
+                            } else if (!playingNow && activityInBackground && backgroundPlaybackDesired) {
+                                // A few WebView media players pause on visibility change. The probe
+                                // re-applies the opted-in playback state; do not publish a false pause
+                                // while the page is being resumed by the next probe.
+                            } else {
+                                publishMediaState(playingNow);
+                            }
+                            mediaStateHandler.postDelayed(mediaStatePoll,
+                                    !playingNow && activityInBackground && backgroundPlaybackDesired ? 1500L : 5000L);
                         });
             } catch (RuntimeException ignored) {
                 mediaStateHandler.postDelayed(this, 5000L);
@@ -190,6 +204,55 @@ public final class BrowserActivity extends BaseActivity {
         updateBrowserControls();
     }
 
+    /**
+     * Probes HTML media and, only after the user opted into background playback and the
+     * Activity left the foreground, keeps common HTML5 players from treating the browser
+     * background transition as an instruction to pause.
+     */
+    private String buildMediaStateProbe() {
+        if (!activityInBackground || !backgroundPlaybackDesired) {
+            return "(function(){var m=Array.prototype.slice.call(document.querySelectorAll('video,audio'));"
+                    + "return m.some(function(x){return !x.paused && !x.ended;})?'1':"
+                    + "(m.length && m.every(function(x){return x.ended;})?'E':'0');})()";
+        }
+        return "(function(){try{" 
+                + "var d=document;"
+                + "try{Object.defineProperty(d,'hidden',{configurable:true,get:function(){return false;}});}catch(e){}"
+                + "try{Object.defineProperty(d,'visibilityState',{configurable:true,get:function(){return 'visible';}});}catch(e){}"
+                + "try{d.hasFocus=function(){return true;};}catch(e){}"
+                + "if(!window.__walletBgVisibilityHooks){window.__walletBgVisibilityHooks=true;"
+                + "var block=function(e){e.stopImmediatePropagation();};"
+                + "d.addEventListener('visibilitychange',block,true);"
+                + "d.addEventListener('webkitvisibilitychange',block,true);"
+                + "window.addEventListener('blur',block,true);"
+                + "window.addEventListener('pagehide',block,true);"
+                + "}"
+                + "}catch(e){}"
+                + "var m=Array.prototype.slice.call(document.querySelectorAll('video,audio'));"
+                + "m.forEach(function(x){try{x.setAttribute('playsinline','');x.setAttribute('webkit-playsinline','');"
+                + "if(x.paused&&!x.ended){var p=x.play();if(p&&p.catch)p.catch(function(){});}}catch(e){}});"
+                + "return m.some(function(x){return !x.paused&&!x.ended;})?'1':"
+                + "(m.length&&m.every(function(x){return x.ended;})?'E':'0');})()";
+    }
+
+    private void reinforceBackgroundPlayback() {
+        if (!backgroundSupport || !backgroundPlaybackDesired) return;
+        BrowserTab tab = mediaOwnerTab == null ? currentTab() : mediaOwnerTab;
+        if (tab == null) return;
+        try { tab.webView.evaluateJavascript(buildMediaStateProbe(), null); }
+        catch (RuntimeException ignored) { }
+    }
+
+    private void setBackgroundMediaPlaybackPolicy(boolean enabled) {
+        BrowserTab tab = mediaOwnerTab == null ? currentTab() : mediaOwnerTab;
+        if (tab == null) return;
+        try {
+            // Relax the gesture gate only while the user has explicitly enabled the
+            // browser's background-media mode; restore the normal WebView policy on stop.
+            tab.webView.getSettings().setMediaPlaybackRequiresUserGesture(!enabled);
+        } catch (RuntimeException ignored) { }
+    }
+
     private void registerMediaReceiver() {
         mediaCommandReceiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
@@ -208,14 +271,19 @@ public final class BrowserActivity extends BaseActivity {
                     try { target.webView.evaluateJavascript(script, null); } catch (RuntimeException ignored) { }
                 }
                 if (BrowserPlaybackService.ACTION_MEDIA_STOP.equals(action)) {
+                    setBackgroundMediaPlaybackPolicy(false);
                     backgroundSupport = false;
+                    backgroundPlaybackDesired = false;
                     lastObservedMediaPlaying = false;
                     mediaStateHandler.removeCallbacks(mediaStatePoll);
                     mediaOwnerTab = null;
                     updateBrowserControls();
                 } else if (BrowserPlaybackService.ACTION_MEDIA_PLAY.equals(action)) {
+                    backgroundPlaybackDesired = true;
                     lastObservedMediaPlaying = true;
+                    reinforceBackgroundPlayback();
                 } else if (BrowserPlaybackService.ACTION_MEDIA_PAUSE.equals(action)) {
+                    backgroundPlaybackDesired = false;
                     lastObservedMediaPlaying = false;
                 }
             }
@@ -807,8 +875,11 @@ public final class BrowserActivity extends BaseActivity {
             mediaStateHandler.removeCallbacks(mediaStatePoll);
             try { startService(new Intent(this, BrowserPlaybackService.class).setAction(BrowserPlaybackService.ACTION_STOP)); }
             catch (RuntimeException ignored) { }
+            setBackgroundMediaPlaybackPolicy(false);
             backgroundSupport = false;
+            backgroundPlaybackDesired = false;
             lastObservedMediaPlaying = false;
+            activityInBackground = false;
             updateBrowserControls();
             Toast.makeText(this, R.string.browser_background_stopped, Toast.LENGTH_SHORT).show();
             return;
@@ -838,6 +909,8 @@ public final class BrowserActivity extends BaseActivity {
         try {
             ContextCompat.startForegroundService(this, service);
             backgroundSupport = true;
+            backgroundPlaybackDesired = mediaPlaying;
+            setBackgroundMediaPlaybackPolicy(true);
             lastObservedMediaPlaying = mediaPlaying;
             updateBrowserControls();
             mediaStateHandler.removeCallbacks(mediaStatePoll);
@@ -851,6 +924,9 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     private void publishMediaState(boolean isPlaying) {
+        // While visible, follow the user's actual play/pause actions so leaving the app
+        // does not unexpectedly restart media that was deliberately paused.
+        if (!activityInBackground) backgroundPlaybackDesired = isPlaying;
         if (lastObservedMediaPlaying == isPlaying) return;
         lastObservedMediaPlaying = isPlaying;
         Intent state = new Intent(this, BrowserPlaybackService.class)
@@ -1045,6 +1121,30 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (backgroundSupport) {
+            activityInBackground = true;
+            reinforceBackgroundPlayback();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (backgroundSupport) {
+            activityInBackground = true;
+            reinforceBackgroundPlayback();
+        }
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        activityInBackground = false;
+    }
+
+    @Override
     protected void onDestroy() {
         mediaStateHandler.removeCallbacks(mediaStatePoll);
         if (mediaCommandReceiver != null) {
@@ -1060,6 +1160,8 @@ public final class BrowserActivity extends BaseActivity {
         }
         if (privateMode) clearWebStorage(false);
         if (isFinishing() && backgroundSupport) {
+            backgroundPlaybackDesired = false;
+            setBackgroundMediaPlaybackPolicy(false);
             try { startService(new Intent(this, BrowserPlaybackService.class).setAction(BrowserPlaybackService.ACTION_STOP)); }
             catch (RuntimeException ignored) { }
         }
