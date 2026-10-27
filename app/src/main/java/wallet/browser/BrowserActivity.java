@@ -102,6 +102,15 @@ public final class BrowserActivity extends BaseActivity {
     // Set only after the user explicitly enables background playback and leaves the browser.
     private boolean activityInBackground;
     private boolean backgroundPlaybackDesired;
+    private long mediaProbeGeneration;
+    private final Runnable mediaProbeWatchdog = new Runnable() {
+        @Override public void run() {
+            // Invalidate any late callback from a probe that timed out.
+            mediaProbeGeneration++;
+            // If WebView stops answering while backgrounded, do not leave a stale PLAYING state.
+            publishMediaState(false);
+        }
+    };
     private final Runnable mediaStatePoll = new Runnable() {
         @Override public void run() {
             if (!backgroundSupport || isFinishing()) return;
@@ -203,6 +212,21 @@ public final class BrowserActivity extends BaseActivity {
      * Activity left the foreground, keeps common HTML5 players from treating the browser
      * background transition as an instruction to pause.
      */
+    private void installMediaStateListeners(WebView view) {
+        if (view == null) return;
+        String script = "(function(){"
+                + "if(window.__browserMediaListenersInstalled)return;"
+                + "window.__browserMediaListenersInstalled=true;"
+                + "function report(){var a=Array.prototype.slice.call(document.querySelectorAll('video,audio'));"
+                + "var p=a.some(function(m){return !m.paused&&!m.ended;});"
+                + "try{if(window.BrowserMediaBridge)window.BrowserMediaBridge.onMediaStateChanged(p);}catch(e){}}"
+                + "['play','playing','pause','ended','emptied','waiting','stalled','error'].forEach(function(ev){"
+                + "document.addEventListener(ev,function(e){if(e.target&&(e.target.tagName==='VIDEO'||e.target.tagName==='AUDIO'))report();},true);});"
+                + "document.addEventListener('visibilitychange',report,true);"
+                + "report();})();";
+        try { view.evaluateJavascript(script, null); } catch (RuntimeException ignored) { }
+    }
+
     private String buildMediaStateProbe() {
         // Wait for play() promises to settle before reporting media state. Checking
         // immediately after play() often reports paused=true and leaves stale UI state.
@@ -304,6 +328,22 @@ public final class BrowserActivity extends BaseActivity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
+        // Push HTML media state changes immediately instead of relying only on polling.
+        // Events are emitted by the page's media elements and forwarded to the native service.
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void onMediaStateChanged(boolean playing) {
+                runOnUiThread(() -> {
+                    if (!backgroundSupport || isFinishing()) return;
+                    BrowserTab owner = mediaOwnerTab;
+                    if (owner != null && owner.webView == webView) {
+                        if (!playing) backgroundPlaybackDesired = false;
+                        publishMediaState(playing);
+                    }
+                });
+            }
+        }, "BrowserMediaBridge");
+
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setAllowFileAccessFromFileURLs(false);
@@ -336,6 +376,7 @@ public final class BrowserActivity extends BaseActivity {
                 }
             }
             @Override public void onPageFinished(WebView view, String url) {
+                installMediaStateListeners(view);
                 tab.url = url;
                 String title = view.getTitle();
                 tab.title = title == null || title.trim().isEmpty() ? url : title;
@@ -676,6 +717,8 @@ public final class BrowserActivity extends BaseActivity {
             try { removed.webView.evaluateJavascript("document.querySelectorAll('video,audio').forEach(function(m){try{m.pause();}catch(e){}});", null); }
             catch (RuntimeException ignored) { }
             mediaStateHandler.removeCallbacks(mediaStatePoll);
+            mediaStateHandler.removeCallbacks(mediaProbeWatchdog);
+            mediaProbeGeneration++;
             try {
                 startService(new Intent(this, BrowserPlaybackService.class)
                         .setAction(BrowserPlaybackService.ACTION_STOP));
@@ -908,7 +951,7 @@ public final class BrowserActivity extends BaseActivity {
             lastObservedMediaPlaying = mediaPlaying;
             updateBrowserControls();
             mediaStateHandler.removeCallbacks(mediaStatePoll);
-            mediaStateHandler.postDelayed(mediaStatePoll, 5000L);
+            mediaStateHandler.postDelayed(mediaStatePoll, 1000L)
             Toast.makeText(this, R.string.browser_background_started, Toast.LENGTH_LONG).show();
         } catch (RuntimeException ex) {
             backgroundSupport = false;
@@ -1141,6 +1184,8 @@ public final class BrowserActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         mediaStateHandler.removeCallbacks(mediaStatePoll);
+        mediaStateHandler.removeCallbacks(mediaProbeWatchdog);
+        mediaProbeGeneration++;
         if (mediaCommandReceiver != null) {
             try { unregisterReceiver(mediaCommandReceiver); } catch (RuntimeException ignored) { }
         }
