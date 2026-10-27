@@ -951,7 +951,7 @@ public final class BrowserActivity extends BaseActivity {
             lastObservedMediaPlaying = mediaPlaying;
             updateBrowserControls();
             mediaStateHandler.removeCallbacks(mediaStatePoll);
-            mediaStateHandler.postDelayed(mediaStatePoll, 1000L)
+            mediaStateHandler.postDelayed(mediaStatePoll, 1000L);
             Toast.makeText(this, R.string.browser_background_started, Toast.LENGTH_LONG).show();
         } catch (RuntimeException ex) {
             backgroundSupport = false;
