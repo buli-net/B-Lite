@@ -73,6 +73,7 @@ public final class BrowserActivity extends BaseActivity {
     static final String KEY_HISTORY = "history";
     static final String KEY_BOOKMARKS = "bookmarks";
     static final String KEY_HOME_PAGE = "home_page";
+    private static final String STATE_ACTIVE_URL = "browser_active_url";
 
     private EditText address;
     private View backButton;
@@ -150,6 +151,16 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     @Override
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        BrowserTab tab = currentTab();
+        if (tab != null) {
+            String activeUrl = tab.webView.getUrl();
+            if (isWebUrl(activeUrl)) outState.putString(STATE_ACTIVE_URL, activeUrl);
+        }
+        super.onSaveInstanceState(outState);
+    }
+
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -198,8 +209,11 @@ public final class BrowserActivity extends BaseActivity {
 
         registerMediaReceiver();
         createTab(null, true);
+        String restoredUrl = state == null ? null : state.getString(STATE_ACTIVE_URL);
         String initialUrl = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_URL);
-        if (initialUrl != null && !initialUrl.trim().isEmpty()) {
+        if (restoredUrl != null && isWebUrl(restoredUrl)) {
+            navigate(restoredUrl);
+        } else if (initialUrl != null && !initialUrl.trim().isEmpty()) {
             navigate(initialUrl);
         } else {
             loadHome();
@@ -215,15 +229,18 @@ public final class BrowserActivity extends BaseActivity {
     private void installMediaStateListeners(WebView view) {
         if (view == null) return;
         String script = "(function(){"
-                + "if(window.__browserMediaListenersInstalled)return;"
-                + "window.__browserMediaListenersInstalled=true;"
-                + "function report(){var a=Array.prototype.slice.call(document.querySelectorAll('video,audio'));"
+                + "if(window.__browserListenersInstalled)return;"
+                + "window.__browserListenersInstalled=true;"
+                + "function reportMedia(){var a=Array.prototype.slice.call(document.querySelectorAll('video,audio'));"
                 + "var p=a.some(function(m){return !m.paused&&!m.ended;});"
                 + "try{if(window.BrowserMediaBridge)window.BrowserMediaBridge.onMediaStateChanged(p);}catch(e){}}"
+                + "function reportPage(){try{if(window.BrowserMediaBridge)window.BrowserMediaBridge.onPageChanged(document.title||location.href,location.href);}catch(e){}}"
                 + "['play','playing','pause','ended','emptied','waiting','stalled','error'].forEach(function(ev){"
-                + "document.addEventListener(ev,function(e){if(e.target&&(e.target.tagName==='VIDEO'||e.target.tagName==='AUDIO'))report();},true);});"
-                + "document.addEventListener('visibilitychange',report,true);"
-                + "report();})();";
+                + "document.addEventListener(ev,function(e){if(e.target&&(e.target.tagName==='VIDEO'||e.target.tagName==='AUDIO'))reportMedia();},true);});"
+                + "['pushState','replaceState'].forEach(function(k){var original=history[k];history[k]=function(){var r=original.apply(this,arguments);setTimeout(reportPage,0);return r;};});"
+                + "window.addEventListener('popstate',reportPage,true);window.addEventListener('hashchange',reportPage,true);"
+                + "try{new MutationObserver(reportPage).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}catch(e){}"
+                + "document.addEventListener('visibilitychange',reportMedia,true);reportPage();reportMedia();})();";
         try { view.evaluateJavascript(script, null); } catch (RuntimeException ignored) { }
     }
 
@@ -339,6 +356,24 @@ public final class BrowserActivity extends BaseActivity {
                     if (owner != null && owner.webView == webView) {
                         if (!playing) backgroundPlaybackDesired = false;
                         publishMediaState(playing);
+                    }
+                });
+            }
+            @android.webkit.JavascriptInterface
+            public void onPageChanged(String pageTitle, String pageUrl) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || privateMode || !isWebUrl(pageUrl)) return;
+                    BrowserTab owner = null;
+                    for (BrowserTab candidate : tabs) {
+                        if (candidate.webView == webView) { owner = candidate; break; }
+                    }
+                    if (owner == null) return;
+                    owner.url = pageUrl;
+                    owner.title = pageTitle == null || pageTitle.trim().isEmpty() ? pageUrl : pageTitle;
+                    saveHistory(owner.title, pageUrl);
+                    if (owner == currentTab()) {
+                        address.setText(pageUrl);
+                        status.setText(owner.title);
                     }
                 });
             }
