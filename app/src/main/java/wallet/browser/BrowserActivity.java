@@ -151,7 +151,6 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     @Override
-    @Override
     protected void onSaveInstanceState(Bundle outState) {
         BrowserTab tab = currentTab();
         if (tab != null) {
@@ -161,6 +160,7 @@ public final class BrowserActivity extends BaseActivity {
         super.onSaveInstanceState(outState);
     }
 
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
