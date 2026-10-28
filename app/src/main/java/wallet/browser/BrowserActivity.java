@@ -739,29 +739,45 @@ public final class BrowserActivity extends BaseActivity {
                 backgroundSupport ? R.string.browser_background_stop : R.string.browser_background_play);
 
         menu.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case R.id.browser_menu_back:
-                    if (currentWebView() != null) currentWebView().goBack();
-                    return true;
-                case R.id.browser_menu_forward:
-                    if (currentWebView() != null) currentWebView().goForward();
-                    return true;
-                case R.id.browser_menu_refresh:
-                    if (currentWebView() != null) currentWebView().reload();
-                    return true;
-                case R.id.browser_menu_bookmark: toggleBookmark(); return true;
-                case R.id.browser_menu_history: showStoredList(false); return true;
-                case R.id.browser_menu_find: showFindDialog(); return true;
-                case R.id.browser_menu_private: togglePrivateMode(); return true;
-                case R.id.browser_menu_background: toggleBackgroundSupport(); return true;
-                case R.id.browser_menu_downloads: showDownloads(); return true;
-                case R.id.browser_menu_clear_data: confirmClearData(); return true;
-                case R.id.browser_menu_bookmarks: showStoredList(true); return true;
-                case R.id.browser_menu_settings:
-                    startActivity(new Intent(this, BrowserSettingsActivity.class));
-                    return true;
-                default: return false;
+            int itemId = item.getItemId();
+            if (itemId == R.id.browser_menu_back) {
+                if (currentWebView() != null) currentWebView().goBack();
+                return true;
+            } else if (itemId == R.id.browser_menu_forward) {
+                if (currentWebView() != null) currentWebView().goForward();
+                return true;
+            } else if (itemId == R.id.browser_menu_refresh) {
+                if (currentWebView() != null) currentWebView().reload();
+                return true;
+            } else if (itemId == R.id.browser_menu_bookmark) {
+                toggleBookmark();
+                return true;
+            } else if (itemId == R.id.browser_menu_history) {
+                showStoredList(false);
+                return true;
+            } else if (itemId == R.id.browser_menu_find) {
+                showFindDialog();
+                return true;
+            } else if (itemId == R.id.browser_menu_private) {
+                togglePrivateMode();
+                return true;
+            } else if (itemId == R.id.browser_menu_background) {
+                toggleBackgroundSupport();
+                return true;
+            } else if (itemId == R.id.browser_menu_downloads) {
+                showDownloads();
+                return true;
+            } else if (itemId == R.id.browser_menu_clear_data) {
+                confirmClearData();
+                return true;
+            } else if (itemId == R.id.browser_menu_bookmarks) {
+                showStoredList(true);
+                return true;
+            } else if (itemId == R.id.browser_menu_settings) {
+                startActivity(new Intent(this, BrowserSettingsActivity.class));
+                return true;
             }
+            return false;
         });
         try {
             java.lang.reflect.Field field = menu.getClass().getDeclaredField("mPopup");
