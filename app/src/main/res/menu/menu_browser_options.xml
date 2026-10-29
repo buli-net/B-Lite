@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/browser_menu_back"
+        android:icon="@drawable/ic_browser_back_24dp"
+        android:title="@string/browser_back" />
+    <item
+        android:id="@+id/browser_menu_forward"
+        android:icon="@drawable/ic_browser_forward_24dp"
+        android:title="@string/browser_forward" />
+    <item
+        android:id="@+id/browser_menu_refresh"
+        android:icon="@drawable/ic_browser_refresh_24dp"
+        android:title="@string/browser_refresh" />
+    <item
+        android:id="@+id/browser_menu_bookmark"
+        android:icon="@drawable/ic_browser_star_24dp"
+        android:title="@string/browser_bookmark" />
+    <item
+        android:id="@+id/browser_menu_history"
+        android:icon="@drawable/ic_browser_history_24dp"
+        android:title="@string/browser_history" />
+    <item
+        android:id="@+id/browser_menu_find"
+        android:icon="@drawable/ic_browser_find_24dp"
+        android:title="@string/browser_find" />
+    <item
+        android:id="@+id/browser_menu_private"
+        android:icon="@drawable/ic_browser_private_24dp"
+        android:title="@string/browser_private" />
+    <item
+        android:id="@+id/browser_menu_background"
+        android:icon="@drawable/ic_browser_play_24dp"
+        android:title="@string/browser_background_play" />
+    <item
+        android:id="@+id/browser_menu_downloads"
+        android:icon="@drawable/ic_browser_download_24dp"
+        android:title="@string/browser_downloads" />
+    <item
+        android:id="@+id/browser_menu_clear_data"
+        android:icon="@drawable/ic_browser_clear_24dp"
+        android:title="@string/browser_clear_data" />
+    <item
+        android:id="@+id/browser_menu_bookmarks"
+        android:icon="@drawable/ic_browser_bookmark_24dp"
+        android:title="@string/browser_bookmarks_title" />
+    <item
+        android:id="@+id/browser_menu_settings"
+        android:icon="@drawable/ic_browser_settings_24dp"
+        android:title="@string/browser_settings" />
+</menu>
