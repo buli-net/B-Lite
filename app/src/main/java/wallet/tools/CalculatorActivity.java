@@ -29,6 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.appcompat.app.AlertDialog;
 
 import wallet.main.R;
@@ -138,7 +139,10 @@ public class CalculatorActivity extends BaseActivity {
         toolbar.setBackgroundColor(resolveColor(androidx.appcompat.R.attr.colorPrimary));
         toolbar.setTitleTextColor(resolveColor(android.R.attr.textColorPrimaryInverse));
         toolbar.setNavigationIcon(R.drawable.ic_browser_back_24dp);
-        toolbar.setNavigationIconTint(resolveColor(android.R.attr.textColorPrimaryInverse));
+        if (toolbar.getNavigationIcon() != null) {
+            DrawableCompat.setTint(toolbar.getNavigationIcon().mutate(),
+                    resolveColor(android.R.attr.textColorPrimaryInverse));
+        }
         toolbar.setNavigationOnClickListener(v -> finish());
         root.addView(toolbar, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(56)));
