@@ -1082,6 +1082,8 @@ public class CalculatorActivity extends BaseActivity {
             item.put("currency", config.currencyCode);
             item.put("start", config.start.toString());
             item.put("end", config.end.toString());
+            item.put("maturityYears", maturityYearsInput == null
+                    ? "" : maturityYearsInput.getText().toString().trim());
             item.put("tableMode", Math.max(0, tableModeSpinner.getSelectedItemPosition() - 1));
             scenarios.add(0, item);
             persistScenarios();
@@ -1117,19 +1119,47 @@ public class CalculatorActivity extends BaseActivity {
     private void applyScenario(JSONObject scenario) {
         try {
             CalculatorConfig config = configFromJson(scenario);
+            // Clear the previous duration before restoring dates. The duration
+            // TextWatcher clears endDate when its field becomes empty.
+            if (maturityYearsInput != null) maturityYearsInput.setText("");
+
             principalInput.setText(formatInputNumber(config.principal));
             rateInput.setText(formatInputNumber(config.rate));
             contributionInput.setText(formatInputNumber(config.contribution));
+
             startDate = config.start;
             endDate = config.end;
-            if (maturityYearsInput != null) maturityYearsInput.setText("");
             startDateExplicitlySelected = true;
             endDateExplicitlySelected = true;
+
+            String savedMaturityYears = scenario.optString("maturityYears", "").trim();
+            if (savedMaturityYears.isEmpty()) {
+                // Older saved scenarios did not store the duration field. Reconstruct
+                // it only for an exact whole-year interval; arbitrary dates stay blank.
+                long wholeYears = java.time.temporal.ChronoUnit.YEARS.between(config.start, config.end);
+                if (wholeYears > 0 && wholeYears <= 1000
+                        && config.start.plusYears(wholeYears).equals(config.end)) {
+                    savedMaturityYears = String.valueOf(wholeYears);
+                }
+            }
+            if (!savedMaturityYears.isEmpty() && maturityYearsInput != null) {
+                maturityYearsInput.setText(savedMaturityYears);
+                // Preserve the saved end date if a legacy or malformed duration cannot
+                // be used to reconstruct it.
+                if (endDate == null) {
+                    endDate = config.end;
+                    endDateExplicitlySelected = true;
+                }
+            }
+
             compoundMode = config.compound;
             selectedCurrencyCode = config.currencyCode;
             setCurrencySelectionSilently(selectedCurrencyCode);
-            frequencySpinner.setSelection(config.frequency == 1 ? 1 : config.frequency == 4 ? 2 : config.frequency == 365 ? 4 : 3);
-            tableModeSpinner.setSelection(Math.max(0, Math.min(2, scenario.optInt("tableMode", 0) + 1)));
+            frequencySpinner.setSelection(config.frequency == 1 ? 1
+                    : config.frequency == 4 ? 2 : config.frequency == 365 ? 4 : 3);
+            tableModeSpinner.setSelection(Math.max(0,
+                    Math.min(tableModeSpinner.getAdapter().getCount() - 1,
+                            scenario.optInt("tableMode", 0) + 1)));
             updateDateLabels();
             styleMethodButtons();
             updateInterestView();
