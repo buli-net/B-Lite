@@ -763,7 +763,7 @@ public class CalculatorActivity extends BaseActivity {
                 clean.append(c);
                 decimalSeen = true;
             } else if (c == grouping || Character.isWhitespace(c)
-                    || c == '\\u00a0' || c == '\\u202f') {
+                    || c == 160 || c == 8239) {
                 // Existing grouping separators are removed before regrouping.
             } else if (c == '-' && clean.length() == 0) {
                 clean.append(c);
