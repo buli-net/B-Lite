@@ -651,9 +651,12 @@ public class CalculatorActivity extends BaseActivity {
                     Toast.makeText(this, R.string.calculator_maturity_before_start, Toast.LENGTH_SHORT).show();
                     return;
                 }
+                // Clear the year-based duration first. Its TextWatcher clears endDate
+                // when the field becomes empty, so assign the manually selected date
+                // only after that callback has completed.
+                if (maturityYearsInput != null) maturityYearsInput.setText("");
                 endDate = chosen;
                 endDateExplicitlySelected = true;
-                if (maturityYearsInput != null) maturityYearsInput.setText("");
             }
             updateDateLabels();
             updateInterestView();
