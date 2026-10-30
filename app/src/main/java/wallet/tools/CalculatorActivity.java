@@ -205,13 +205,20 @@ public class CalculatorActivity extends BaseActivity {
         rateInput.setText(state.getString("calculator_rate", ""));
         contributionInput.setText(state.getString("calculator_contribution", ""));
         compoundMode = state.getBoolean("calculator_compound_mode", true);
-        String savedLocaleTag = state.getString("calculator_locale_tag", "");
-        boolean localeUnchanged = locale != null && locale.toLanguageTag().equals(savedLocaleTag);
-        if (localeUnchanged) {
+        // A locale change should update the default currency only while the form is empty.
+        // Once the user has entered calculation data (including data loaded from a saved
+        // scenario), keep the currency that belongs to that calculation.
+        boolean hasCalculationData =
+                !state.getString("calculator_principal", "").trim().isEmpty()
+                || !state.getString("calculator_rate", "").trim().isEmpty()
+                || !state.getString("calculator_contribution", "").trim().isEmpty();
+        if (hasCalculationData) {
             String restoredCurrencyCode = state.getString("calculator_currency_code", selectedCurrencyCode);
             if (isSupportedCurrency(restoredCurrencyCode)) {
                 selectedCurrencyCode = restoredCurrencyCode;
             }
+        } else {
+            selectedCurrencyCode = defaultCurrencyCode(locale);
         }
         setCurrencySelectionSilently(selectedCurrencyCode);
         setSpinnerSelection(frequencySpinner, state.getInt("calculator_frequency_position", 2));
