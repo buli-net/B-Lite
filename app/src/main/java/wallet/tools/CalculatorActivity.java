@@ -108,6 +108,7 @@ public class CalculatorActivity extends BaseActivity {
     private LocalDate endDate;
     private boolean startDateExplicitlySelected;
     private boolean endDateExplicitlySelected;
+    private boolean formattingAmountInput;
     private boolean compoundMode = true;
     private int lastCurrencySelection = -1;
     private String selectedCurrencyCode = "USD";
@@ -439,6 +440,9 @@ public class CalculatorActivity extends BaseActivity {
         scenariosRecyclerView.setNestedScrollingEnabled(true);
         renderScenarios();
 
+        addAmountFormattingWatcher(principalInput);
+        addAmountFormattingWatcher(contributionInput);
+
         TextWatcher watcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence value, int start, int before, int count) {
@@ -722,6 +726,87 @@ public class CalculatorActivity extends BaseActivity {
         if (rate.compareTo(new BigDecimal("1000")) > 0) throw new IllegalArgumentException("rate too high");
         return new CalculatorConfig(principal, rate, contribution, frequencyValue(), compoundMode,
                 selectedCurrencyCode, startDate, endDate);
+    }
+
+    private void addAmountFormattingWatcher(EditText field) {
+        field.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence value, int start, int before, int count) { }
+            @Override public void afterTextChanged(Editable value) {
+                if (!formattingAmountInput) formatAmountInput(field);
+            }
+        });
+    }
+
+    private void formatAmountInput(EditText field) {
+        Editable editable = field.getText();
+        String original = editable.toString();
+        int cursor = field.getSelectionStart();
+        if (cursor < 0) cursor = original.length();
+
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
+        char grouping = symbols.getGroupingSeparator();
+        char decimal = symbols.getDecimalSeparator();
+
+        StringBuilder clean = new StringBuilder(original.length());
+        int digitsBeforeCursor = 0;
+        boolean decimalSeen = false;
+        for (int i = 0; i < original.length(); i++) {
+            char c = original.charAt(i);
+            if (Character.isDigit(c)) {
+                clean.append(c);
+                if (i < cursor) digitsBeforeCursor++;
+            } else if (c == decimal && !decimalSeen) {
+                clean.append(c);
+                decimalSeen = true;
+            } else if (c == '.' && decimal == '.' && !decimalSeen) {
+                clean.append(c);
+                decimalSeen = true;
+            } else if (c == grouping || Character.isWhitespace(c)
+                    || c == '\\u00a0' || c == '\\u202f') {
+                // Existing grouping separators are removed before regrouping.
+            } else if (c == '-' && clean.length() == 0) {
+                clean.append(c);
+            }
+        }
+
+        int decimalIndex = clean.indexOf(String.valueOf(decimal));
+        String integerPart = decimalIndex >= 0 ? clean.substring(0, decimalIndex) : clean.toString();
+        String fractionPart = decimalIndex >= 0 ? clean.substring(decimalIndex) : "";
+        StringBuilder formatted = new StringBuilder(clean.length() + 8);
+        int digitCount = 0;
+        for (int i = 0; i < integerPart.length(); i++) {
+            char c = integerPart.charAt(i);
+            if (Character.isDigit(c)) {
+                if (digitCount > 0 && (integerPart.length() - i) % 3 == 0) {
+                    formatted.append(grouping);
+                }
+                formatted.append(c);
+                digitCount++;
+            } else {
+                formatted.append(c);
+            }
+        }
+        formatted.append(fractionPart);
+
+        String result = formatted.toString();
+        if (!result.equals(original)) {
+            formattingAmountInput = true;
+            field.setText(result);
+            int newCursor = 0;
+            int seenDigits = 0;
+            while (newCursor < result.length() && seenDigits < digitsBeforeCursor) {
+                if (Character.isDigit(result.charAt(newCursor))) seenDigits++;
+                newCursor++;
+            }
+            if (cursor > 0 && cursor <= original.length()
+                    && original.substring(0, cursor).indexOf(decimal) >= 0
+                    && newCursor < result.length() && result.charAt(newCursor) == decimal) {
+                newCursor++;
+            }
+            field.setSelection(Math.min(newCursor, result.length()));
+            formattingAmountInput = false;
+        }
     }
 
     private BigDecimal parseDecimal(String value) {
