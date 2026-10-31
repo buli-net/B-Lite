@@ -184,7 +184,7 @@ public class ExpenseManagerActivity extends BaseActivity {
             }
         }));
 
-        ArrayAdapter<String> typeAdapter = ArrayAdapter.createFromResource(this, R.array.expense_type_options, android.R.layout.simple_spinner_item);
+        ArrayAdapter<CharSequence> typeAdapter = ArrayAdapter.createFromResource(this, R.array.expense_type_options, android.R.layout.simple_spinner_item);
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         typeSpinner.setAdapter(typeAdapter);
         typeSpinner.setSelection(0, false);
@@ -195,7 +195,7 @@ public class ExpenseManagerActivity extends BaseActivity {
             }
         }));
 
-        ArrayAdapter<String> filterAdapter = ArrayAdapter.createFromResource(this, R.array.expense_filter_options, android.R.layout.simple_spinner_item);
+        ArrayAdapter<CharSequence> filterAdapter = ArrayAdapter.createFromResource(this, R.array.expense_filter_options, android.R.layout.simple_spinner_item);
         filterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         filterSpinner.setAdapter(filterAdapter);
         filterSpinner.setSelection(0, false);
