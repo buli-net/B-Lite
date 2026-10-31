@@ -204,31 +204,27 @@ public class ExpenseManagerActivity extends BaseActivity {
             int oldCursor = selection < 0 ? original.length() : Math.max(0, Math.min(selection, original.length()));
             java.text.DecimalFormatSymbols symbols = java.text.DecimalFormatSymbols.getInstance(locale);
             char decimal = symbols.getDecimalSeparator();
-            char grouping = symbols.getGroupingSeparator();
+            int maxFraction = currencyFractionDigits();
+            int decimalIndex = findDecimalSeparator(original, decimal, symbols.getGroupingSeparator(), maxFraction);
+
             StringBuilder integer = new StringBuilder();
             StringBuilder fraction = new StringBuilder();
-            boolean afterDecimal = false;
             int cursorDigits = 0;
             int cursorFractionDigits = 0;
-            boolean cursorAfterDecimal = false;
-            int maxFraction = currencyFractionDigits();
+            boolean cursorAfterDecimal = decimalIndex >= 0 && oldCursor > decimalIndex;
             for (int i = 0; i < original.length(); i++) {
                 char c = original.charAt(i);
-                if (Character.isDigit(c)) {
-                    if (!afterDecimal) integer.append(c);
-                    else if (fraction.length() < maxFraction) fraction.append(c);
-                    if (i < oldCursor) {
-                        if (afterDecimal) cursorFractionDigits++;
-                        else cursorDigits++;
-                    }
-                } else if (c == decimal && !afterDecimal) {
-                    afterDecimal = true;
-                    if (i < oldCursor) { cursorAfterDecimal = true; }
-                } else if (c == grouping || Character.isWhitespace(c) || c == '\u00a0' || c == '\u202f') {
-                    // Group separators are recreated below using the active locale.
+                if (!Character.isDigit(c)) continue;
+                if (decimalIndex < 0 || i < decimalIndex) {
+                    integer.append(c);
+                    if (i < oldCursor) cursorDigits++;
+                } else if (fraction.length() < maxFraction) {
+                    fraction.append(c);
+                    if (i < oldCursor) cursorFractionDigits++;
                 }
             }
-            if (integer.length() == 0 && fraction.length() == 0 && !afterDecimal) {
+
+            if (integer.length() == 0 && fraction.length() == 0 && decimalIndex < 0) {
                 if (!original.isEmpty()) {
                     changing = true;
                     field.setText("");
@@ -237,41 +233,57 @@ public class ExpenseManagerActivity extends BaseActivity {
                 }
                 return;
             }
+
             String integerDigits = integer.length() == 0 ? "0" : integer.toString();
             NumberFormat integerFormat = NumberFormat.getIntegerInstance(locale);
             integerFormat.setGroupingUsed(true);
             String groupedInteger;
             try { groupedInteger = integerFormat.format(new BigDecimal(integerDigits)); }
             catch (RuntimeException ex) { groupedInteger = integerDigits; }
+
             StringBuilder formatted = new StringBuilder(groupedInteger);
-            if (afterDecimal && maxFraction > 0) formatted.append(decimal).append(fraction);
+            if (decimalIndex >= 0 && maxFraction > 0) formatted.append(decimal).append(fraction);
             String next = formatted.toString();
             if (!next.equals(original)) {
                 changing = true;
                 field.setText(next);
-                int target = 0;
-                int seenDigits = 0;
-                boolean seenDecimal = false;
-                while (target < next.length()) {
-                    char c = next.charAt(target);
-                    if (Character.isDigit(c)) {
-                        if (seenDigits >= cursorDigits && !cursorAfterDecimal) break;
-                        seenDigits++;
-                    } else if (c == decimal) {
-                        if (cursorAfterDecimal) { target++; seenDecimal = true; break; }
+                int target;
+                if (cursorAfterDecimal && maxFraction > 0) {
+                    target = next.indexOf(decimal);
+                    if (target < 0) target = next.length();
+                    else target = Math.min(next.length(), target + 1 + cursorFractionDigits);
+                } else {
+                    target = 0;
+                    int seenDigits = 0;
+                    while (target < next.length()) {
+                        if (Character.isDigit(next.charAt(target))) {
+                            if (seenDigits >= cursorDigits) break;
+                            seenDigits++;
+                        }
+                        target++;
                     }
-                    target++;
-                }
-                if (cursorAfterDecimal && !seenDecimal) {
-                    while (target < next.length() && next.charAt(target) != decimal) target++;
-                    if (target < next.length()) target++;
-                    int remainingFractionDigits = cursorFractionDigits;
-                    while (target < next.length() && remainingFractionDigits-- > 0) target++;
                 }
                 field.setSelection(Math.max(0, Math.min(target, next.length())));
                 changing = false;
             }
         }
+    }
+
+    /** Accept locale decimal and alternate keyboard separators without mistaking 3-digit groups. */
+    private int findDecimalSeparator(String raw, char localeDecimal, char grouping, int maxFraction) {
+        if (maxFraction <= 0 || raw == null) return -1;
+        int localeIndex = raw.lastIndexOf(localeDecimal);
+        if (localeIndex >= 0) return localeIndex;
+        char alternate = localeDecimal == '.' ? ',' : '.';
+        int candidate = raw.lastIndexOf(alternate);
+        if (candidate < 0) return -1;
+        int digitsBefore = 0;
+        int digitsAfter = 0;
+        for (int i = 0; i < candidate; i++) if (Character.isDigit(raw.charAt(i))) digitsBefore++;
+        for (int i = candidate + 1; i < raw.length(); i++) if (Character.isDigit(raw.charAt(i))) digitsAfter++;
+        if (digitsAfter == 0) return candidate;
+        if (alternate == grouping && digitsAfter == 3 && digitsBefore > 0) return -1;
+        return digitsAfter <= maxFraction ? candidate : -1;
     }
 
     private void setupBudgetWatcher() {
@@ -509,19 +521,20 @@ public class ExpenseManagerActivity extends BaseActivity {
     }
 
     private BigDecimal parseAmount(String raw) {
-        String value = raw == null ? "" : raw.trim().replace(" ", "").replace("\u00a0", "").replace("\u202f", "");
+        String value = raw == null ? "" : raw.trim();
+        value = value.replace(" ", "").replace("\u00a0", "").replace("\u202f", "");
         if (value.isEmpty()) return BigDecimal.ZERO;
         java.text.DecimalFormatSymbols symbols = java.text.DecimalFormatSymbols.getInstance(locale);
-        char decimal = symbols.getDecimalSeparator();
-        char grouping = symbols.getGroupingSeparator();
-        if (decimal != '.' && value.indexOf(decimal) >= 0) {
-            int index = value.lastIndexOf(decimal);
-            value = value.substring(0,index).replace(String.valueOf(grouping),"").replace(".","") + "." + value.substring(index+1).replace(String.valueOf(grouping),"").replace(".","");
-        } else {
-            if (grouping != decimal) value = value.replace(String.valueOf(grouping), "");
-            if (decimal != '.') value = value.replace(decimal, '.');
+        int decimalIndex = findDecimalSeparator(value, symbols.getDecimalSeparator(),
+                symbols.getGroupingSeparator(), currencyFractionDigits());
+        StringBuilder normalized = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isDigit(c)) normalized.append(c);
+            else if (i == decimalIndex) normalized.append('.');
         }
-        return new BigDecimal(value);
+        if (normalized.length() == 0 || ".".contentEquals(normalized)) return BigDecimal.ZERO;
+        return new BigDecimal(normalized.toString());
     }
 
     private void clearForm() {
