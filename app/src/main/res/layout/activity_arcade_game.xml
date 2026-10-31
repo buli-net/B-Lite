@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/arcadeGameToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/arcadeScoreValue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/arcade_score_initial"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/arcadeBestValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/arcade_best_initial"
+            android:textColor="?android:attr/textColorSecondary" />
+    </LinearLayout>
+
+    <wallet.games.ArcadeGameView
+        android:id="@+id/arcadeGameView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:contentDescription="@string/arcade_game_area"
+        android:padding="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="12dp">
+        <Button
+            android:id="@+id/arcadePauseButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:text="@string/arcade_pause"
+            android:textAllCaps="false" />
+        <Button
+            android:id="@+id/arcadeRestartButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/arcade_restart"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp">
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <Button
+            android:id="@+id/arcadeUpButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="68dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/arcade_up"
+            android:text="▲"
+            android:textSize="18sp" />
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="8dp">
+        <Button
+            android:id="@+id/arcadeLeftButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="68dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/arcade_left"
+            android:text="◀"
+            android:textSize="18sp" />
+        <Button
+            android:id="@+id/arcadeActionButton"
+            style="@style/WalletPrimaryButton"
+            android:layout_width="110dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/arcade_action"
+            android:textAllCaps="false" />
+        <Button
+            android:id="@+id/arcadeRightButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="68dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/arcade_right"
+            android:text="▶"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp">
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <Button
+            android:id="@+id/arcadeDownButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="68dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/arcade_down"
+            android:text="▼"
+            android:textSize="18sp" />
+        <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+    </LinearLayout>
+</LinearLayout>
