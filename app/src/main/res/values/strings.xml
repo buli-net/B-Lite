@@ -1046,7 +1046,7 @@ Tag type: %2$s</string>
     <string name="nfc_security_set_password_button">SET HARDWARE PASSWORD</string>
     <string name="nfc_security_change_password_button">CHANGE HARDWARE PASSWORD</string>
     <string name="nfc_security_remove_password_button">REMOVE HARDWARE PASSWORD</string>
-<string name="nfc_security_action_set_title">Set tag hardware password</string>
+    <string name="nfc_security_action_set_title">Set tag hardware password</string>
     <string name="nfc_security_action_change_title">Change tag hardware password</string>
     <string name="nfc_security_action_remove_title">Remove tag hardware password</string>
     <string name="nfc_security_password_dialog_message">This password is applied directly to the NFC chip, not an app password. It is not stored in app settings. The app uses the format required by the detected chip automatically. If you forget the password, access may be lost. Some tags provide only basic hardware password protection, not strong encryption. Tap the same tag again to apply the change.</string>
@@ -1120,7 +1120,7 @@ Tag type: %2$s</string>
     <string name="nfc_chip_details_ndef_unknown">NDEF is available, but the chip model is unknown, so a safe hardware-password protocol cannot be selected.</string>
     <string name="nfc_chip_details_unknown">The chip technology or model could not be identified. No security settings were changed.</string>
 
-<string name="nfc_common_operation_failed">The tag operation could not be completed. Check the tag compatibility and current credential, then try again.</string>
+    <string name="nfc_common_operation_failed">The tag operation could not be completed. Check the tag compatibility and current credential, then try again.</string>
     <string name="nfc_reader_connection_failed_generic">Could not connect to the tag through this protocol.</string>
     <string name="nfc_reader_page_read_stopped_generic">Reading stopped at page %1$d because the tag did not allow further reading.</string>
     <string name="nfc_reader_page_data">Page %1$02d: %2$s  | %3$s</string>
@@ -1258,7 +1258,7 @@ Tag type: %2$s</string>
     <string name="forwarding_history_confirmations">%1$d confirmations</string>
     <string name="forwarding_activity_history_empty">No forwarding history yet.</string>
     <string name="forwarding_history_filter_empty">No forwarding entries match this filter.</string>
-<string name="bitcoin_transaction_id_clip_label">Bitcoin transaction ID</string><string name="transaction_id_clip_label">Transaction ID</string>
+    <string name="bitcoin_transaction_id_clip_label">Bitcoin transaction ID</string><string name="transaction_id_clip_label">Transaction ID</string>
     <string name="error_unknown">The operation could not be completed.</string>
     <string name="error_amount_empty">Amount is empty.</string>
     <string name="error_taproot_invalid_tweak">Invalid Taproot tweak.</string>
@@ -1467,7 +1467,7 @@ Tag type: %2$s</string>
     <string name="bluetooth_payment_sent_ack">The receiving wallet acknowledged the payment over Bluetooth.</string>
     <string name="bluetooth_payment_sent_nack">The receiving wallet did not acknowledge the payment over Bluetooth. The on-chain broadcast was handled separately.</string>
     <string name="bluetooth_payment_send_failed">Could not send the payment notification over Bluetooth: %1$s. The on-chain broadcast was handled separately.</string>
-<string name="request_bluetooth_status_listening">Bluetooth receiver active at %1$s. Requests now include this payment endpoint.</string>
+    <string name="request_bluetooth_status_listening">Bluetooth receiver active at %1$s. Requests now include this payment endpoint.</string>
     <string name="request_bluetooth_status_ready">Bluetooth address available: %1$s. Enable reception when ready to accept a payment.</string>
     <string name="request_bluetooth_status_not_configured">Bluetooth address is not available. Configure it manually to accept offline payments.</string>
     <string name="wallet_type_label_format">%1$s • %2$s</string>
@@ -1499,7 +1499,7 @@ Tag type: %2$s</string>
     <string name="backup_contact_avatar_missing_or_invalid">A contact photo is missing or invalid; the backup was not created.</string>
     <string name="backup_archive_package_size_limit">The backup package exceeds the allowed size.</string>
     <string name="backup_contact_avatar_metadata_invalid">The backup contains invalid contact photo metadata.</string>
-<string name="backup_contact_avatar_files_missing">The backup is missing contact photo files.</string>
+    <string name="backup_contact_avatar_files_missing">The backup is missing contact photo files.</string>
     <string name="backup_contact_avatar_directory_failed">Could not create the contact photo directory.</string>
     <string name="backup_contact_avatar_restore_file_invalid">The backup contains a missing or invalid contact photo.</string>
     <string name="backup_contact_avatar_previous_replace_failed">Could not replace the previous contact photo backup file.</string>
@@ -1543,7 +1543,7 @@ Tag type: %2$s</string>
     <string name="menu_browser">Browser</string>
     <string name="browser_title">Browser</string>
     <string name="browser_address_hint">Enter website or search</string>
-<string name="browser_home">Home</string>
+    <string name="browser_home">Home</string>
     <string name="browser_return_wallet">Return to wallet</string>
     <string name="browser_back">Back</string>
     <string name="browser_forward">Forward</string>
@@ -1572,7 +1572,7 @@ Tag type: %2$s</string>
     <string name="browser_blank_page_label">Blank page</string>
     <string name="browser_history_title">History</string>
     <string name="browser_bookmarks_title">Saved bookmarks</string>
-<string name="browser_find_hint">Find in page</string>
+    <string name="browser_find_hint">Find in page</string>
     <string name="browser_find_next">Next</string>
     <string name="browser_find_previous">Previous</string>
     <string name="browser_no_match">No matching text.</string>
@@ -1596,12 +1596,12 @@ Tag type: %2$s</string>
     <string name="browser_background_stopped">Background playback support stopped.</string>
     <string name="browser_background_note">Keep this notification active for background audio. Some websites restrict background playback themselves.</string>
     <string name="browser_security_warning">The secure connection could not be verified. The page was blocked.</string>
-<string name="browser_clear_history">Clear history</string>
+    <string name="browser_clear_history">Clear history</string>
     <string name="browser_downloads">Downloads</string>
     <string name="browser_menu">Menu</string>
     <string name="browser_downloads_title">Downloads</string>
     <string name="browser_downloads_empty">No downloads yet.</string>
-<string name="browser_downloads_remove">Remove download</string>
+    <string name="browser_downloads_remove">Remove download</string>
     <string name="browser_downloads_completed">Completed</string>
     <string name="browser_downloads_running">Downloading</string>
     <string name="browser_downloads_pending">Waiting to download</string>
@@ -1616,7 +1616,7 @@ Tag type: %2$s</string>
     <string name="browser_downloads_open_failed">This file cannot be opened.</string>
     <string name="browser_downloads_delete_confirm_title">Remove download?</string>
     <string name="browser_downloads_delete_confirm_message">Remove this download from the download list?</string>
-<plurals name="browser_downloads_count"><item quantity="one">%1$d download</item><item quantity="other">%1$d downloads</item></plurals>
+    <plurals name="browser_downloads_count"><item quantity="one">%1$d download</item><item quantity="other">%1$d downloads</item></plurals>
 
     <string name="browser_settings">Browser settings</string>
     <string name="browser_home_page_setting">Home page</string>
@@ -1630,7 +1630,7 @@ Tag type: %2$s</string>
     <string name="browser_clear_bookmarks_message">Remove all saved bookmarks?</string>
     <string name="browser_clear_history_message">Remove all browsing history?</string>
     <string name="browser_clear">Clear</string>
-<string name="browser_history_site_icon">Website icon</string>
+    <string name="browser_history_site_icon">Website icon</string>
     <string name="browser_home_page_hint">Enter home page URL</string>
     <string name="browser_date_today">Today - %1$s</string>
     <string name="browser_date_yesterday">Yesterday - %1$s</string>
