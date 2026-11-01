@@ -157,9 +157,35 @@ public final class BrowserActivity extends BaseActivity {
         super.onSaveInstanceState(outState);
     }
 
+    private void updateBrowserThemeSurfaces() {
+        android.util.TypedValue background = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.colorBackground, background, true)) {
+            int color = background.resourceId != 0
+                    ? androidx.core.content.ContextCompat.getColor(this, background.resourceId)
+                    : background.data;
+            if (browserRoot != null) browserRoot.setBackgroundColor(color);
+            getWindow().setStatusBarColor(color);
+            getWindow().setNavigationBarColor(color);
+        }
+
+        android.util.TypedValue primary = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(wallet.main.R.attr.colorPrimary, primary, true)
+                && browserRoot != null && browserRoot.getChildCount() > 0) {
+            int color = primary.resourceId != 0
+                    ? androidx.core.content.ContextCompat.getColor(this, primary.resourceId)
+                    : primary.data;
+            browserRoot.getChildAt(0).setBackgroundColor(color);
+        }
+        if (browserRoot != null) browserRoot.requestLayout();
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+
+        // Refresh theme-dependent surfaces without recreating the Activity or WebView.
+        // uiMode changes (system light/dark theme) must not restart active media.
+        updateBrowserThemeSurfaces();
 
         // Keep the existing WebView and its active media pipeline alive across rotation.
         // Do not reload the page or recreate the WebView: doing so restarts video playback.
