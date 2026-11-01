@@ -654,7 +654,7 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="notification_syncing_no_target">Đang đồng bộ %1$d%% • Block %2$d</string>
     <string name="notification_waiting_peers">Đang chờ peer Bitcoin • Block %1$d</string>
     <string name="notification_sync_complete">Đồng bộ hoàn tất • Block %1$d</string>
-    <string name="notification_bitcoin_received">Đã nhận Bitcoin</string>
+    <string name="notification_bitcoin_received">Đã nhận</string>
     <string name="notification_sent_title">Đã gửi</string>
     <string name="notification_sent_total">Tổng gửi: %1$s</string>
     <string name="notification_sent_fee">Phí: %1$s</string>
@@ -663,7 +663,7 @@ Không bao giờ gửi WIF cho bất kỳ ai, đưa WIF vào ảnh chụp màn h
     <string name="notification_sent_change">Tiền thừa trả về ví: %1$s</string>
     <string name="notification_transaction_id">TX: %1$s</string>
     <string name="notification_bitcoin_sent">Đã gửi Bitcoin</string>
-    <string name="notification_received_total">Tổng nhận vào ví: %1$s</string>
+    <string name="notification_received_total">Tổng nhận: %1$s</string>
     <string name="notification_received_input_total">Tổng input: %1$s từ %2$d đầu vào</string>
     <string name="notification_received_input_partial">Giá trị input xác định: %1$s (%2$d/%3$d đầu vào)</string>
     <string name="notification_received_input_unknown">Chưa xác định giá trị của %1$d đầu vào</string>
