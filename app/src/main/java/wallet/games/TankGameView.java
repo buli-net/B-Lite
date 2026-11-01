@@ -62,8 +62,8 @@ public final class TankGameView extends ArcadeGameView {
         if (ticks % 4 == 0) addScore(1);
     }
 
-    @Override protected long getTickDelay() { return Math.max(190, 600 - (level - 1L) * 24L); }
-    @Override protected int getPointsPerLevel() { return 500; }
+    @Override protected long getTickDelay() { return Math.max(190, 600 - (level - 1L) * 24L); }  // game speed
+    @Override protected int getPointsPerLevel() { return 5000; } // point level up
 
     @Override protected void onMoveLeft() { playerX = Math.max(1, playerX - 1); }
     @Override protected void onMoveRight() { playerX = Math.min(columns - 2, playerX + 1); }
