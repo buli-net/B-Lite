@@ -510,7 +510,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="nfc_reader_ndef_formatable">Android nhận diện thẻ có thể định dạng NDEF.</string>
     <string name="nfc_reader_security_note">Chỉ hiển thị dữ liệu không cần xác thực bảo vệ. Với thẻ EMV, ứng dụng chỉ kiểm tra danh mục ứng dụng công khai; không yêu cầu số thẻ, dữ liệu chủ thẻ, xác minh PIN hoặc ủy quyền thanh toán. Căn cước có thể yêu cầu giao thức và xác thực được cấp phép.</string>
     <string name="wallet_import_wif_title">Nhập WIF</string>
-    <string name="wallet_tool_import_wif">Nhập / Quét Ví Giấy</string>
+    <string name="wallet_tool_import_wif">Nhập WIF</string>
     <string name="wallet_tool_watch_only">Ví chỉ theo dõi</string>
     <string name="wallet_tool_paper_wallet">Ví Giấy</string>
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
