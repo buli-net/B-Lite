@@ -67,6 +67,7 @@ public final class BrowserActivity extends BaseActivity {
     private static final int REQUEST_POST_NOTIFICATIONS = 8404;
     private static final int REQUEST_STORED_PAGE = 8405;
     private static final int MAX_HISTORY = 100;
+    private static final String PREFS_SITE_PERMISSIONS = "browser_site_permissions";
     static final String PREFS = "browser_storage";
     static final String KEY_HISTORY = "history";
     static final String KEY_BOOKMARKS = "bookmarks";
@@ -86,6 +87,8 @@ public final class BrowserActivity extends BaseActivity {
     private ValueCallback<Uri[]> fileChooserCallback;
     private PermissionRequest pendingPermissionRequest;
     private String[] pendingWebResources;
+    private String pendingWebPermissionOrigin;
+    private AlertDialog pendingWebPermissionDialog;
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
     private BroadcastReceiver mediaCommandReceiver;
@@ -413,6 +416,7 @@ public final class BrowserActivity extends BaseActivity {
             }
             @Override public void onPageFinished(WebView view, String url) {
                 installMediaStateListeners(view);
+                installWebPermissionStatusCompatibility(view);
                 tab.url = url;
                 String title = view.getTitle();
                 tab.title = title == null || title.trim().isEmpty() ? url : title;
@@ -507,6 +511,9 @@ public final class BrowserActivity extends BaseActivity {
             }
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> requestWebPermission(request));
+            }
+            @Override public void onPermissionRequestCanceled(PermissionRequest request) {
+                runOnUiThread(() -> cancelPendingWebPermission(request));
             }
             @Override public void onGeolocationPermissionsShowPrompt(String origin,
                     GeolocationPermissions.Callback callback) {
@@ -1060,7 +1067,11 @@ public final class BrowserActivity extends BaseActivity {
             tab.webView.clearFormData();
             if (clearHistory) tab.webView.clearHistory();
         }
-        if (clearHistory) writeArray(KEY_HISTORY, new JSONArray());
+        if (clearHistory) {
+            writeArray(KEY_HISTORY, new JSONArray());
+            getSharedPreferences(PREFS_SITE_PERMISSIONS, MODE_PRIVATE).edit().clear().apply();
+            GeolocationPermissions.getInstance().clearAll();
+        }
         try { android.webkit.WebStorage.getInstance().deleteAllData(); }
         catch (RuntimeException ignored) { }
     }
@@ -1177,30 +1188,181 @@ public final class BrowserActivity extends BaseActivity {
         }
     }
 
+    private void installWebPermissionStatusCompatibility(WebView webView) {
+        String currentUrl = webView.getUrl();
+        if (currentUrl == null || !"https".equalsIgnoreCase(Uri.parse(currentUrl).getScheme())) return;
+
+        boolean microphoneGranted = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        boolean cameraGranted = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean locationGranted = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        String script = "(function(){try{"
+                + "var states={microphone:" + (microphoneGranted ? "'granted'" : "'prompt'")
+                + ",camera:" + (cameraGranted ? "'granted'" : "'prompt'")
+                + ",geolocation:" + (locationGranted ? "'granted'" : "'prompt'") + "};"
+                + "var nav=window.navigator;if(!nav)return;"
+                + "var permissions=nav.permissions;"
+                + "if(!permissions){permissions={};try{Object.defineProperty(nav,'permissions',{configurable:true,value:permissions});}catch(e){return;}}"
+                + "var original=typeof permissions.query==='function'?permissions.query.bind(permissions):null;"
+                + "permissions.query=function(descriptor){var name=descriptor&&descriptor.name;"
+                + "if(Object.prototype.hasOwnProperty.call(states,name)){var status={state:states[name],onchange:null,addEventListener:function(){},removeEventListener:function(){},dispatchEvent:function(){return true;}};return Promise.resolve(status);}"
+                + "if(original)return original(descriptor);return Promise.reject(new TypeError('Unsupported permission'));};"
+                + "}catch(e){}})();";
+        try { webView.evaluateJavascript(script, null); } catch (RuntimeException ignored) { }
+    }
+
     private void requestWebPermission(PermissionRequest request) {
-        String[] resources = request.getResources();
-        ArrayList<String> permissions = new ArrayList<>();
-        for (String resource : resources) {
-            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) permissions.add(Manifest.permission.CAMERA);
-            else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) permissions.add(Manifest.permission.RECORD_AUDIO);
-            else { request.deny(); return; }
-        }
-        boolean allGranted = true;
-        for (String permission : permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) allGranted = false;
-        }
-        if (allGranted) {
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.browser_permission_title)
-                    .setMessage(R.string.browser_permission_message)
-                    .setNegativeButton(android.R.string.cancel, (d, w) -> request.deny())
-                    .setPositiveButton(android.R.string.ok, (d, w) -> request.grant(resources))
-                    .show();
+        if (request == null || isFinishing() || isDestroyed()) {
+            if (request != null) request.deny();
             return;
         }
+
+        Uri requestOrigin = request.getOrigin();
+        if (requestOrigin == null || !"https".equalsIgnoreCase(requestOrigin.getScheme())
+                || requestOrigin.getHost() == null || requestOrigin.getHost().trim().isEmpty()) {
+            request.deny();
+            return;
+        }
+
+        String[] requestedResources = request.getResources();
+        if (requestedResources == null || requestedResources.length == 0) {
+            request.deny();
+            return;
+        }
+        ArrayList<String> grantableResources = new ArrayList<>();
+        ArrayList<String> androidPermissions = new ArrayList<>();
+        boolean unsupportedResourceRequested = false;
+        for (String resource : requestedResources) {
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                grantableResources.add(resource);
+                if (!androidPermissions.contains(Manifest.permission.RECORD_AUDIO)) {
+                    androidPermissions.add(Manifest.permission.RECORD_AUDIO);
+                }
+            } else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                grantableResources.add(resource);
+                if (!androidPermissions.contains(Manifest.permission.CAMERA)) {
+                    androidPermissions.add(Manifest.permission.CAMERA);
+                }
+            } else {
+                // Never grant an unknown resource, even when it accompanies a known one.
+                unsupportedResourceRequested = true;
+            }
+        }
+        if (unsupportedResourceRequested || grantableResources.isEmpty()) {
+            request.deny();
+            return;
+        }
+        if (pendingPermissionRequest != null) {
+            request.deny();
+            return;
+        }
+
+        String origin = requestOrigin.toString();
+        String[] resources = grantableResources.toArray(new String[0]);
+        boolean allAndroidPermissionsGranted = true;
+        for (String permission : androidPermissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                allAndroidPermissionsGranted = false;
+                break;
+            }
+        }
+
+        if (allAndroidPermissionsGranted && areWebsitePermissionsAllowed(origin, resources)) {
+            request.grant(resources);
+            return;
+        }
+
         pendingPermissionRequest = request;
         pendingWebResources = resources;
-        requestPermissions(permissions.toArray(new String[0]), REQUEST_WEB_PERMISSION);
+        pendingWebPermissionOrigin = origin;
+        if (!allAndroidPermissionsGranted) {
+            requestPermissions(androidPermissions.toArray(new String[0]), REQUEST_WEB_PERMISSION);
+        } else {
+            showWebsitePermissionConfirmation();
+        }
+    }
+
+    private boolean areWebsitePermissionsAllowed(String origin, String[] resources) {
+        if (privateMode) return false;
+        android.content.SharedPreferences preferences = getSharedPreferences(
+                PREFS_SITE_PERMISSIONS, MODE_PRIVATE);
+        for (String resource : resources) {
+            if (!preferences.getBoolean(websitePermissionKey(origin, resource), false)) return false;
+        }
+        return true;
+    }
+
+    private String websitePermissionKey(String origin, String resource) {
+        return "allow_" + Uri.encode(origin + "|" + resource);
+    }
+
+    private void showWebsitePermissionConfirmation() {
+        if (pendingPermissionRequest == null || pendingWebResources == null
+                || pendingWebPermissionOrigin == null || isFinishing() || isDestroyed()) {
+            denyPendingWebPermission();
+            return;
+        }
+
+        StringBuilder requestedFeatures = new StringBuilder();
+        for (String resource : pendingWebResources) {
+            if (requestedFeatures.length() > 0) requestedFeatures.append(", ");
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                requestedFeatures.append(getString(R.string.browser_permission_microphone));
+            } else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                requestedFeatures.append(getString(R.string.browser_permission_camera));
+            }
+        }
+        final String origin = pendingWebPermissionOrigin;
+        final PermissionRequest request = pendingPermissionRequest;
+        final String[] resources = pendingWebResources.clone();
+
+        pendingWebPermissionDialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.browser_permission_title)
+                .setMessage(getString(R.string.browser_permission_site_message, origin, requestedFeatures.toString()))
+                .setNegativeButton(android.R.string.cancel, (dialog, which) -> denyPendingWebPermission())
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    if (pendingPermissionRequest != request) return;
+                    if (!privateMode) {
+                        android.content.SharedPreferences.Editor editor = getSharedPreferences(
+                                PREFS_SITE_PERMISSIONS, MODE_PRIVATE).edit();
+                        for (String resource : resources) {
+                            editor.putBoolean(websitePermissionKey(origin, resource), true);
+                        }
+                        editor.apply();
+                    }
+                    clearPendingWebPermission(false);
+                    try { request.grant(resources); } catch (RuntimeException ignored) { }
+                })
+                .create();
+        pendingWebPermissionDialog.setOnCancelListener(dialog -> denyPendingWebPermission());
+        pendingWebPermissionDialog.show();
+    }
+
+    private void denyPendingWebPermission() {
+        PermissionRequest request = pendingPermissionRequest;
+        clearPendingWebPermission(true);
+        if (request != null) {
+            try { request.deny(); } catch (RuntimeException ignored) { }
+        }
+    }
+
+    private void clearPendingWebPermission(boolean dismissDialog) {
+        if (pendingWebPermissionDialog != null) {
+            AlertDialog dialog = pendingWebPermissionDialog;
+            pendingWebPermissionDialog = null;
+            if (dismissDialog && dialog.isShowing()) dialog.dismiss();
+        }
+        pendingPermissionRequest = null;
+        pendingWebResources = null;
+        pendingWebPermissionOrigin = null;
+    }
+
+    private void cancelPendingWebPermission(PermissionRequest request) {
+        if (pendingPermissionRequest == request) clearPendingWebPermission(true);
     }
 
     private void requestGeolocation(String origin, GeolocationPermissions.Callback callback) {
@@ -1214,7 +1376,7 @@ public final class BrowserActivity extends BaseActivity {
                     boolean coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED;
                     if (fine || coarse) {
-                        callback.invoke(origin, true, false);
+                        callback.invoke(origin, true, true);
                     } else {
                         pendingGeoCallback = callback;
                         pendingGeoOrigin = origin;
@@ -1231,15 +1393,23 @@ public final class BrowserActivity extends BaseActivity {
             boolean granted = grantResults.length > 0;
             for (int result : grantResults) granted &= result == PackageManager.PERMISSION_GRANTED;
             if (pendingPermissionRequest != null) {
-                if (granted) pendingPermissionRequest.grant(pendingWebResources);
-                else pendingPermissionRequest.deny();
+                if (granted) {
+                    if (areWebsitePermissionsAllowed(pendingWebPermissionOrigin, pendingWebResources)) {
+                        PermissionRequest request = pendingPermissionRequest;
+                        String[] resources = pendingWebResources.clone();
+                        clearPendingWebPermission(false);
+                        try { request.grant(resources); } catch (RuntimeException ignored) { }
+                    } else {
+                        showWebsitePermissionConfirmation();
+                    }
+                } else {
+                    denyPendingWebPermission();
+                }
             }
-            pendingPermissionRequest = null;
-            pendingWebResources = null;
         } else if (requestCode == REQUEST_GEO_PERMISSION) {
             boolean granted = false;
             for (int result : grantResults) granted |= result == PackageManager.PERMISSION_GRANTED;
-            if (pendingGeoCallback != null) pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
+            if (pendingGeoCallback != null) pendingGeoCallback.invoke(pendingGeoOrigin, granted, granted);
             pendingGeoCallback = null;
             pendingGeoOrigin = null;
         } else if (requestCode == REQUEST_POST_NOTIFICATIONS) {
@@ -1359,9 +1529,12 @@ public final class BrowserActivity extends BaseActivity {
             fileChooserCallback.onReceiveValue(null);
             fileChooserCallback = null;
         }
+        if (pendingWebPermissionDialog != null && pendingWebPermissionDialog.isShowing()) {
+            pendingWebPermissionDialog.dismiss();
+        }
         if (pendingPermissionRequest != null) {
             try { pendingPermissionRequest.deny(); } catch (RuntimeException ignored) { }
-            pendingPermissionRequest = null;
+            clearPendingWebPermission(false);
         }
         if (privateMode) clearWebStorage(false);
         if (isFinishing() && backgroundSupport) {
