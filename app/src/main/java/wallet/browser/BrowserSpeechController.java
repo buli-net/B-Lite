@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -41,6 +42,9 @@ final class BrowserSpeechController {
     private static final String BRIDGE_NAME = "NativeSpeechBridge";
     private static final Set<String> ORIGIN_RULES = Collections.singleton("*");
     private static final long CONTINUOUS_RESTART_DELAY_MS = 250L;
+    private static final long SINGLE_SHOT_LISTEN_WINDOW_MS = 15000L;
+    private static final long POSSIBLE_SILENCE_MS = 3000L;
+    private static final long COMPLETE_SILENCE_MS = 5000L;
 
     private final BrowserActivity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -65,6 +69,7 @@ final class BrowserSpeechController {
     private boolean audioStarted;
     private int maxAlternatives;
     private int emptySessionRetries;
+    private long singleShotDeadlineAt;
 
     private PendingStart pendingStart;
 
@@ -245,6 +250,8 @@ final class BrowserSpeechController {
         startedEventSent = false;
         audioStarted = false;
         emptySessionRetries = 0;
+        singleShotDeadlineAt = SystemClock.elapsedRealtime()
+                + SINGLE_SHOT_LISTEN_WINDOW_MS;
 
         try {
             recognizer = SpeechRecognizer.createSpeechRecognizer(activity);
@@ -275,10 +282,14 @@ final class BrowserSpeechController {
 
                 @Override public void onError(int error) {
                     if (!isCurrentRecognizer()) return;
-                    if (continuous && !stopRequested
-                            && (error == SpeechRecognizer.ERROR_NO_MATCH
-                            || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
-                            && emptySessionRetries < 2) {
+                    boolean emptyRecognition = error == SpeechRecognizer.ERROR_NO_MATCH
+                            || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT;
+                    boolean retryContinuous = continuous && emptyRecognition
+                            && emptySessionRetries < 2;
+                    boolean retrySingleShot = !continuous && !stopRequested
+                            && emptyRecognition
+                            && SystemClock.elapsedRealtime() < singleShotDeadlineAt;
+                    if (!stopRequested && (retryContinuous || retrySingleShot)) {
                         emptySessionRetries++;
                         endAudioSegment();
                         scheduleContinuousRestart();
@@ -291,7 +302,11 @@ final class BrowserSpeechController {
                     if (!isCurrentRecognizer()) return;
                     JSONArray alternatives = extractAlternatives(results);
                     if (alternatives.length() == 0) {
-                        if (continuous && !stopRequested && emptySessionRetries < 2) {
+                        boolean retryContinuous = continuous && !stopRequested
+                                && emptySessionRetries < 2;
+                        boolean retrySingleShot = !continuous && !stopRequested
+                                && SystemClock.elapsedRealtime() < singleShotDeadlineAt;
+                        if (retryContinuous || retrySingleShot) {
                             emptySessionRetries++;
                             sendEvent("nomatch", new JSONObject());
                             endAudioSegment();
@@ -352,6 +367,12 @@ final class BrowserSpeechController {
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, interimResults);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxAlternatives);
+        // Keep short pauses from ending a voice-search session too early.
+        // Recognition services may ignore these optional timing hints.
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+                POSSIBLE_SILENCE_MS);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+                COMPLETE_SILENCE_MS);
         return intent;
     }
 
@@ -378,6 +399,11 @@ final class BrowserSpeechController {
     private void scheduleContinuousRestart() {
         handler.postDelayed(() -> {
             if (recognizer == null || ownerWebView == null || stopRequested) return;
+            if (!continuous && SystemClock.elapsedRealtime() >= singleShotDeadlineAt) {
+                sendEvent("nomatch", new JSONObject());
+                finishNormally();
+                return;
+            }
             if (ownerWebView.getParent() == null || activity.isFinishing()
                     || activity.isDestroyed()) {
                 abortRecognition(ownerWebView, recognitionId, true);
