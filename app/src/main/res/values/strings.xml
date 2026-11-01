@@ -655,7 +655,7 @@ Never send a WIF to anyone, put it in screenshots, chat messages, cloud notes, o
     <string name="notification_syncing_no_target">Syncing %1$d%% • Block %2$d</string>
     <string name="notification_waiting_peers">Waiting for Bitcoin peers • Block %1$d</string>
     <string name="notification_sync_complete">Sync complete • Block %1$d</string>
-    <string name="notification_bitcoin_received">Bitcoin received</string>
+    <string name="notification_bitcoin_received">Received</string>
     <string name="notification_sent_title">Sent</string>
     <string name="notification_sent_total">Total sent: %1$s</string>
     <string name="notification_sent_fee">Fee: %1$s</string>
@@ -664,7 +664,7 @@ Never send a WIF to anyone, put it in screenshots, chat messages, cloud notes, o
     <string name="notification_sent_change">Change returned to wallet: %1$s</string>
     <string name="notification_transaction_id">TX: %1$s</string>
     <string name="notification_bitcoin_sent">Bitcoin sent</string>
-    <string name="notification_received_total">Total received by this wallet: %1$s</string>
+    <string name="notification_received_total">Total received: %1$s</string>
     <string name="notification_received_input_total">Total inputs: %1$s from %2$d input(s)</string>
     <string name="notification_received_input_partial">Known input value: %1$s (%2$d of %3$d inputs)</string>
     <string name="notification_received_input_unknown">Input values unavailable (%1$d input(s))</string>
