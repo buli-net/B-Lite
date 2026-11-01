@@ -60,7 +60,7 @@
     <string name="backup_item_request">Dữ liệu Request và ví theo dõi/import đang chọn</string>
     <string name="backup_item_expense_manager">Quản lý chi tiêu: giao dịch thu/chi, ngân sách và thiết lập</string>
     <string name="backup_item_calculator">Máy tính: kịch bản lãi suất đã lưu và thiết lập</string>
-    <string name="backup_item_games">Trò chơi: tất cả game, ván đang lưu và điểm cao nhất</string>
+    <string name="backup_item_games">Trò chơi: cả bốn game, ván đang lưu và điểm cao nhất</string>
     <string name="backup_item_browser">Trình duyệt: dấu trang, lịch sử, tab đã lưu, trang chủ và thiết lập (không gồm cookie hoặc bộ nhớ đệm)</string>
     <string name="backup_item_app_settings">Đơn vị BTC, độ chính xác thập phân và chế độ đồng bộ</string>
     <string name="backup_item_data_note">Địa chỉ theo dõi và khóa riêng đã import nằm trong file ví bắt buộc nên luôn được sao lưu. Dữ liệu blockchain và cache tạm không được sao lưu vì có thể tạo lại. Bản sao lưu chứa dữ liệu ví nhạy cảm; hãy giữ riêng tư.</string>
@@ -505,7 +505,7 @@ Hãy sử dụng ứng dụng có trách nhiệm và luôn duy trì các bản s
     <string name="nfc_reader_ndef_formatable">Android nhận diện thẻ có thể định dạng NDEF.</string>
     <string name="nfc_reader_security_note">Chỉ hiển thị dữ liệu không cần xác thực bảo vệ. Với thẻ EMV, ứng dụng chỉ kiểm tra danh mục ứng dụng công khai; không yêu cầu số thẻ, dữ liệu chủ thẻ, xác minh PIN hoặc ủy quyền thanh toán. Căn cước có thể yêu cầu giao thức và xác thực được cấp phép.</string>
     <string name="wallet_import_wif_title">Nhập WIF</string>
-    <string name="wallet_tool_import_wif">Nhập WIF</string>
+    <string name="wallet_tool_import_wif">Nhập / Quét Ví Giấy</string>
     <string name="wallet_tool_watch_only">Ví chỉ theo dõi</string>
     <string name="wallet_tool_paper_wallet">Ví Giấy</string>
     <string name="watch_only_tools_subtitle">Theo dõi địa chỉ Bitcoin mà không cần khóa riêng.</string>
@@ -1578,11 +1578,13 @@ Loại thẻ: %2$s</string>
     <string name="browser_download_started">Đã bắt đầu tải xuống.</string>
     <string name="browser_download_failed">Không thể bắt đầu tải xuống.</string>
     <string name="browser_permission_title">Quyền truy cập trang web</string>
-    <string name="browser_permission_message">Cho phép trang web sử dụng tính năng thiết bị được yêu cầu?</string>
+    <string name="browser_permission_microphone">micrô</string>
+    <string name="browser_permission_camera">camera</string>
+    <string name="browser_permission_site_message">%1$s muốn sử dụng %2$s của bạn. Cho phép trang web này?</string>
     <string name="browser_geolocation_permission_message">Cho phép %1$s truy cập vị trí của bạn?</string>
     <string name="browser_download_service_unavailable">Dịch vụ tải xuống không khả dụng</string>
     <string name="browser_clear_data_title">Xóa dữ liệu trình duyệt?</string>
-    <string name="browser_clear_data_message">Thao tác này xóa lịch sử, cookie, trang đã lưu trong bộ nhớ đệm và dữ liệu biểu mẫu. Dấu trang đã lưu và tệp đã tải vẫn được giữ lại.</string>
+    <string name="browser_clear_data_message">Thao tác này xóa lịch sử, cookie, trang đã lưu trong bộ nhớ đệm, dữ liệu biểu mẫu và quyền của các trang web. Dấu trang đã lưu và tệp đã tải vẫn được giữ lại.</string>
     <string name="browser_cleared">Đã xóa dữ liệu trình duyệt.</string>
     <string name="browser_external_open_failed">Không có ứng dụng nào mở được liên kết này.</string>
     <string name="browser_invalid_url">Nhập địa chỉ website hợp lệ hoặc từ khóa tìm kiếm.</string>
