@@ -1400,6 +1400,13 @@ public final class BrowserActivity extends BaseActivity {
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, Math.max(1, Math.min(maxAlternatives, 5)));
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+
+        // Keep the recognizer open long enough for the user to begin speaking.
+        // Some Android recognition services otherwise return ERROR_SPEECH_TIMEOUT
+        // almost immediately after the listening UI appears.
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L);
         if (Build.VERSION.SDK_INT >= 23) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
         try {
             recognizer.startListening(intent);
