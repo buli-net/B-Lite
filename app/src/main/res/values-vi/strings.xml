@@ -60,7 +60,7 @@
     <string name="backup_item_request">Dữ liệu Request và ví theo dõi/import đang chọn</string>
     <string name="backup_item_expense_manager">Quản lý chi tiêu: giao dịch thu/chi, ngân sách và thiết lập</string>
     <string name="backup_item_calculator">Máy tính: kịch bản lãi suất đã lưu và thiết lập</string>
-    <string name="backup_item_games">Trò chơi: cả bốn game, ván đang lưu và điểm cao nhất</string>
+    <string name="backup_item_games">Trò chơi: tất cả game, ván đang lưu và điểm cao nhất</string>
     <string name="backup_item_browser">Trình duyệt: dấu trang, lịch sử, tab đã lưu, trang chủ và thiết lập (không gồm cookie hoặc bộ nhớ đệm)</string>
     <string name="backup_item_app_settings">Đơn vị BTC, độ chính xác thập phân và chế độ đồng bộ</string>
     <string name="backup_item_data_note">Địa chỉ theo dõi và khóa riêng đã import nằm trong file ví bắt buộc nên luôn được sao lưu. Dữ liệu blockchain và cache tạm không được sao lưu vì có thể tạo lại. Bản sao lưu chứa dữ liệu ví nhạy cảm; hãy giữ riêng tư.</string>
