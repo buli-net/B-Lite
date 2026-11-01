@@ -61,7 +61,7 @@
     <string name="backup_item_request">Request metadata and selected watch/imported wallet</string>
     <string name="backup_item_expense_manager">Expense manager: transactions, budgets and preferences</string>
     <string name="backup_item_calculator">Calculator: saved interest scenarios and preferences</string>
-    <string name="backup_item_games">Games: all games, saved runs and high scores</string>
+    <string name="backup_item_games">Games: all four games, saved runs and high scores</string>
     <string name="backup_item_browser">Browser: bookmarks, history, saved tabs, home page and preferences (no cookies or cache)</string>
     <string name="backup_item_app_settings">Bitcoin display unit, decimal precision and sync mode</string>
     <string name="backup_item_data_note">Watch-only addresses and imported private keys are stored inside the required wallet file, so they are always included. Blockchain data and temporary cache are not backed up because they can be rebuilt. A backup contains sensitive wallet data; keep it private.</string>
@@ -506,7 +506,7 @@ Use the application responsibly and keep independent backups of your wallet.</st
     <string name="nfc_reader_ndef_formatable">Android reports NDEF-formatable support.</string>
     <string name="nfc_reader_security_note">Only data exposed without protected authentication is shown. For EMV cards, this reader checks the public application directory only; it does not request the card number, cardholder data, PIN verification or payment authorization. Identity documents may require an authorized protocol and authentication.</string>
     <string name="wallet_import_wif_title">Import WIF</string>
-    <string name="wallet_tool_import_wif">Import WIF</string>
+    <string name="wallet_tool_import_wif">Import / Scan Paper Wallet</string>
     <string name="wallet_tool_watch_only">Watch-only Wallet</string>
     <string name="wallet_tool_paper_wallet">Paper Wallet</string>
     <string name="watch_only_tools_subtitle">Monitor Bitcoin addresses without private keys.</string>
@@ -1580,11 +1580,13 @@ Tag type: %2$s</string>
     <string name="browser_download_started">Download started.</string>
     <string name="browser_download_failed">Could not start download.</string>
     <string name="browser_permission_title">Website permission</string>
-    <string name="browser_permission_message">Allow this website to use the requested device feature?</string>
+    <string name="browser_permission_microphone">microphone</string>
+    <string name="browser_permission_camera">camera</string>
+    <string name="browser_permission_site_message">%1$s wants to use your %2$s. Allow this website?</string>
     <string name="browser_geolocation_permission_message">Allow %1$s to access your location?</string>
     <string name="browser_download_service_unavailable">Download service unavailable</string>
     <string name="browser_clear_data_title">Clear browser data?</string>
-    <string name="browser_clear_data_message">This removes browser history, cookies, cached pages, and saved form data. Saved bookmarks and downloaded files are kept.</string>
+    <string name="browser_clear_data_message">This removes browser history, cookies, cached pages, saved form data, and website permissions. Saved bookmarks and downloaded files are kept.</string>
     <string name="browser_cleared">Browser data cleared.</string>
     <string name="browser_external_open_failed">No app can open this link.</string>
     <string name="browser_invalid_url">Enter a valid website address or search text.</string>
