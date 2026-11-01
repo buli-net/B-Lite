@@ -50,10 +50,10 @@ public final class RacingGameView extends ArcadeGameView {
     }
 
     @Override protected long getTickDelay() {
-        return Math.max(180, 620 - (level - 1L) * 26L - ((boost || speedBoostTicks > 0) ? 90 : 0));
+        return Math.max(180, 620 - (level - 1L) * 26L - ((boost || speedBoostTicks > 0) ? 90 : 0)); // game speed
     }
 
-    @Override protected int getPointsPerLevel() { return 500; }
+    @Override protected int getPointsPerLevel() { return 5000; } // point level up
 
     @Override protected void onMoveLeft() { lane = Math.max(0, lane - 1); }
     @Override protected void onMoveRight() { lane = Math.min(columns - 1, lane + 1); }
