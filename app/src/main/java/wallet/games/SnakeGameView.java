@@ -54,10 +54,10 @@ public final class SnakeGameView extends ArcadeGameView {
     }
 
     @Override protected long getTickDelay() {
-        return Math.max(120, 520 - (level - 1L) * 24L - (boost ? 170 : 0));
+        return Math.max(120, 520 - (level - 1L) * 24L - (boost ? 170 : 0)); // game speed
     }
 
-    @Override protected int getPointsPerLevel() { return 500; }
+    @Override protected int getPointsPerLevel() { return 5000; } // point level up
 
     @Override protected void onMoveLeft() { setDirection(-1, 0); }
     @Override protected void onMoveRight() { setDirection(1, 0); }
