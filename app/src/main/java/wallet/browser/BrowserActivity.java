@@ -72,6 +72,8 @@ public final class BrowserActivity extends BaseActivity {
     private static final int REQUEST_STORED_PAGE = 8405;
     private static final int MAX_HISTORY = 100;
     private static final String PREFS_SITE_PERMISSIONS = "browser_site_permissions";
+    private static final int MAX_SPEECH_RETRIES = 8;
+    private static final long SPEECH_RETRY_DELAY_MS = 350L;
     static final String PREFS = "browser_storage";
     static final String KEY_HISTORY = "history";
     static final String KEY_BOOKMARKS = "bookmarks";
@@ -97,6 +99,11 @@ public final class BrowserActivity extends BaseActivity {
     private WebView speechOwnerWebView;
     private String speechSessionId;
     private String speechSessionToken;
+    private Intent speechRecognitionIntent;
+    private int speechRetryCount;
+    private boolean speechStopRequested;
+    private boolean speechStartEventSent;
+    private Runnable speechRetryRunnable;
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
     private BroadcastReceiver mediaCommandReceiver;
@@ -1234,7 +1241,7 @@ public final class BrowserActivity extends BaseActivity {
         try { webView.evaluateJavascript(script, null); } catch (RuntimeException ignored) { }
     }
 
-    private final class BrowserSpeechBridge {
+    public final class BrowserSpeechBridge {
         private final WebView owner;
         private final String token;
 
@@ -1290,7 +1297,8 @@ public final class BrowserActivity extends BaseActivity {
                 + "window.__browserSpeechDispatch=function(id,type,data){var r=instances[id];if(!r)return;data=data||{};"
                 + "if(type==='result'){if(data.isFinal===false&&!r.interimResults)return;var alts=(data.alternatives||[]).map(function(a){"
                 + "return {transcript:String(a.transcript||''),confidence:typeof a.confidence==='number'?a.confidence:0};});"
-                + "var result=alts;result.isFinal=!!data.isFinal;var results=[result];results.item=function(i){return results[i]||null;};"
+                + "var result=alts;result.isFinal=!!data.isFinal;result.item=function(i){return result[i]||null;};"
+                + "var results=[result];results.item=function(i){return results[i]||null;};"
                 + "var ev=new Event('result');ev.results=results;ev.resultIndex=0;ev.emma=null;ev.interpretation=null;r.dispatchEvent(ev);return;}"
                 + "var ev=new Event(type);Object.keys(data).forEach(function(k){try{ev[k]=data[k];}catch(e){}});"
                 + "r.dispatchEvent(ev);if(type==='end'){r._active=false;}};"
@@ -1344,10 +1352,16 @@ public final class BrowserActivity extends BaseActivity {
         speechOwnerWebView = owner;
         speechSessionId = sessionId;
         speechSessionToken = token;
+        speechRetryCount = 0;
+        speechStopRequested = false;
+        speechStartEventSent = false;
         recognizer.setRecognitionListener(new RecognitionListener() {
             @Override public void onReadyForSpeech(Bundle params) {
                 if (!isCurrentSpeechSession(owner, sessionId, recognizer)) return;
-                dispatchSpeechEvent(owner, sessionId, "start", null);
+                if (!speechStartEventSent) {
+                    speechStartEventSent = true;
+                    dispatchSpeechEvent(owner, sessionId, "start", null);
+                }
                 dispatchSpeechEvent(owner, sessionId, "audiostart", null);
                 dispatchSpeechEvent(owner, sessionId, "soundstart", null);
             }
@@ -1366,6 +1380,9 @@ public final class BrowserActivity extends BaseActivity {
             }
             @Override public void onError(int error) {
                 if (!isCurrentSpeechSession(owner, sessionId, recognizer)) return;
+                if (!speechStopRequested && scheduleSpeechRetry(owner, sessionId, recognizer, error)) {
+                    return;
+                }
                 dispatchSpeechError(owner, sessionId, mapSpeechRecognizerError(error),
                         "Android speech recognition failed (" + error + ").");
                 finishSpeechRecognition(owner, sessionId, recognizer, true);
@@ -1375,6 +1392,8 @@ public final class BrowserActivity extends BaseActivity {
                 JSONObject payload = speechResultsPayload(results, true);
                 if (payload == null || payload.optJSONArray("alternatives") == null
                         || payload.optJSONArray("alternatives").length() == 0) {
+                    if (!speechStopRequested && scheduleSpeechRetry(owner, sessionId, recognizer,
+                            SpeechRecognizer.ERROR_NO_MATCH)) return;
                     dispatchSpeechError(owner, sessionId, "no-speech", "No speech was recognized.");
                 } else {
                     dispatchSpeechEvent(owner, sessionId, "result", payload);
@@ -1408,6 +1427,7 @@ public final class BrowserActivity extends BaseActivity {
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L);
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L);
         if (Build.VERSION.SDK_INT >= 23) intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
+        speechRecognitionIntent = intent;
         try {
             recognizer.startListening(intent);
         } catch (RuntimeException ex) {
@@ -1415,6 +1435,35 @@ public final class BrowserActivity extends BaseActivity {
                     "The Android speech recognition service could not start.");
             finishSpeechRecognition(owner, sessionId, recognizer, true);
         }
+    }
+
+    private boolean scheduleSpeechRetry(WebView owner, String sessionId,
+            SpeechRecognizer recognizer, int error) {
+        if (error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                && error != SpeechRecognizer.ERROR_NO_MATCH) return false;
+        if (!isCurrentSpeechSession(owner, sessionId, recognizer)
+                || speechStopRequested || speechRecognitionIntent == null
+                || speechRetryCount >= MAX_SPEECH_RETRIES) return false;
+
+        speechRetryCount++;
+        if (speechRetryRunnable != null) {
+            mediaStateHandler.removeCallbacks(speechRetryRunnable);
+        }
+        dispatchSpeechEvent(owner, sessionId, "soundend", null);
+        dispatchSpeechEvent(owner, sessionId, "audioend", null);
+        speechRetryRunnable = () -> {
+            speechRetryRunnable = null;
+            if (!isCurrentSpeechSession(owner, sessionId, recognizer) || speechStopRequested) return;
+            try {
+                recognizer.startListening(speechRecognitionIntent);
+            } catch (RuntimeException ex) {
+                dispatchSpeechError(owner, sessionId, "service-not-allowed",
+                        "The Android speech recognition service could not restart.");
+                finishSpeechRecognition(owner, sessionId, recognizer, true);
+            }
+        };
+        mediaStateHandler.postDelayed(speechRetryRunnable, SPEECH_RETRY_DELAY_MS);
+        return true;
     }
 
     private JSONObject speechResultsPayload(Bundle bundle, boolean isFinal) {
@@ -1490,10 +1539,17 @@ public final class BrowserActivity extends BaseActivity {
     private void finishSpeechRecognition(WebView owner, String sessionId,
             SpeechRecognizer recognizer, boolean sendEnd) {
         if (!isCurrentSpeechSession(owner, sessionId, recognizer)) return;
+        if (speechRetryRunnable != null) {
+            mediaStateHandler.removeCallbacks(speechRetryRunnable);
+            speechRetryRunnable = null;
+        }
         speechRecognizer = null;
         speechOwnerWebView = null;
         speechSessionId = null;
         speechSessionToken = null;
+        speechRecognitionIntent = null;
+        speechStopRequested = false;
+        speechStartEventSent = false;
         if (sendEnd) dispatchSpeechEvent(owner, sessionId, "end", null);
         try { recognizer.destroy(); } catch (RuntimeException ignored) { }
     }
@@ -1504,14 +1560,28 @@ public final class BrowserActivity extends BaseActivity {
                 || !sessionId.equals(speechSessionId) || speechRecognizer == null) return;
         SpeechRecognizer recognizer = speechRecognizer;
         if (abort) {
+            if (speechRetryRunnable != null) {
+                mediaStateHandler.removeCallbacks(speechRetryRunnable);
+                speechRetryRunnable = null;
+            }
             speechRecognizer = null;
             speechOwnerWebView = null;
             speechSessionId = null;
             speechSessionToken = null;
+            speechRecognitionIntent = null;
+            speechStopRequested = false;
+            speechStartEventSent = false;
             try { recognizer.cancel(); } catch (RuntimeException ignored) { }
             try { recognizer.destroy(); } catch (RuntimeException ignored) { }
             dispatchSpeechEvent(owner, sessionId, "end", null);
         } else {
+            speechStopRequested = true;
+            if (speechRetryRunnable != null) {
+                mediaStateHandler.removeCallbacks(speechRetryRunnable);
+                speechRetryRunnable = null;
+                finishSpeechRecognition(owner, sessionId, recognizer, true);
+                return;
+            }
             try { recognizer.stopListening(); } catch (RuntimeException ex) {
                 finishSpeechRecognition(owner, sessionId, recognizer, true);
             }
@@ -1522,10 +1592,17 @@ public final class BrowserActivity extends BaseActivity {
         SpeechRecognizer recognizer = speechRecognizer;
         WebView owner = speechOwnerWebView;
         String sessionId = speechSessionId;
+        if (speechRetryRunnable != null) {
+            mediaStateHandler.removeCallbacks(speechRetryRunnable);
+            speechRetryRunnable = null;
+        }
         speechRecognizer = null;
         speechOwnerWebView = null;
         speechSessionId = null;
         speechSessionToken = null;
+        speechRecognitionIntent = null;
+        speechStopRequested = false;
+        speechStartEventSent = false;
         if (recognizer != null) {
             try { recognizer.cancel(); } catch (RuntimeException ignored) { }
             try { recognizer.destroy(); } catch (RuntimeException ignored) { }
