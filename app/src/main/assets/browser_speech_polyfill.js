@@ -13,12 +13,8 @@
     if (!bridge || typeof bridge.postMessage !== 'function'
             || typeof bridge.addEventListener !== 'function') return;
 
-    var NativeRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (NativeRecognition) {
-        if (!window.SpeechRecognition) window.SpeechRecognition = NativeRecognition;
-        if (!window.webkitSpeechRecognition) window.webkitSpeechRecognition = NativeRecognition;
-        return;
-    }
+    // Android WebView may expose the Web Speech API surface without a working
+    // recognition backend. Always use this app's Android SpeechRecognizer bridge.
 
     var sessions = Object.create(null);
     var nextSessionId = 1;
@@ -65,11 +61,9 @@
 
     function dispatch(recognition, type, detail) {
         var event = makeEvent(type, detail);
+        // EventTarget dispatch invokes both addEventListener() and on<type>
+        // handlers. Calling the property handler manually here would fire it twice.
         try { recognition.dispatchEvent(event); } catch (ignored) { }
-        var handler = recognition['on' + type];
-        if (typeof handler === 'function') {
-            try { handler.call(recognition, event); } catch (ignored) { }
-        }
     }
 
     class NativeSpeechRecognition extends EventTarget {
@@ -237,17 +231,35 @@
 
     bridge.addEventListener('message', onNativeMessage);
 
+    var standardInstalled = false;
+    var webkitInstalled = false;
     try {
         Object.defineProperty(window, 'SpeechRecognition', {
             configurable: true,
             writable: true,
             value: NativeSpeechRecognition
         });
+        standardInstalled = window.SpeechRecognition === NativeSpeechRecognition;
+    } catch (ignored) {
+        try {
+            window.SpeechRecognition = NativeSpeechRecognition;
+            standardInstalled = window.SpeechRecognition === NativeSpeechRecognition;
+        } catch (ignoredAgain) { }
+    }
+    try {
         Object.defineProperty(window, 'webkitSpeechRecognition', {
             configurable: true,
             writable: true,
             value: NativeSpeechRecognition
         });
+        webkitInstalled = window.webkitSpeechRecognition === NativeSpeechRecognition;
+    } catch (ignored) {
+        try {
+            window.webkitSpeechRecognition = NativeSpeechRecognition;
+            webkitInstalled = window.webkitSpeechRecognition === NativeSpeechRecognition;
+        } catch (ignoredAgain) { }
+    }
+    if (standardInstalled && webkitInstalled) {
         window.__nativeSpeechRecognitionPolyfillInstalled = true;
-    } catch (ignored) { }
+    }
 })();
