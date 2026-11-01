@@ -3,6 +3,7 @@ package wallet.games;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.Paint;
 import android.util.AttributeSet;
 
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public final class RacingGameView extends ArcadeGameView {
     @Override protected void onDrawGame(Canvas canvas, float left, float top, float cell) {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(Math.max(1f, cell * 0.07f));
-        paint.setColor(withAlpha(colorSecondary, 100));
+        paint.setColor(withThemeAlpha(colorSecondary, 100));
         for (int c = 1; c < columns; c++) {
             canvas.drawLine(left + c * cell, top, left + c * cell, top + rows * cell, paint);
         }
