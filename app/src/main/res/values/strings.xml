@@ -1902,4 +1902,7 @@ Final balance: %9$s</string>
     <string name="nfc_writer_mode_bitcoin_uri">Bitcoin URI request</string>
     <string name="nfc_copy_mode_one_to_one">One-to-one (one destination)</string>
     <string name="nfc_copy_mode_one_to_many">One-to-many (multiple destinations)</string>
+    <string name="browser_permission_microphone">microphone</string>
+    <string name="browser_permission_camera">camera</string>
+    <string name="browser_permission_site_message">Allow %1$s to use %2$s?</string>
 </resources>
