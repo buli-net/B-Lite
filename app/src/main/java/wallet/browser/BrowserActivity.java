@@ -168,14 +168,6 @@ public final class BrowserActivity extends BaseActivity {
             getWindow().setNavigationBarColor(color);
         }
 
-        android.util.TypedValue primary = new android.util.TypedValue();
-        if (getTheme().resolveAttribute(wallet.main.R.attr.colorPrimary, primary, true)
-                && browserRoot != null && browserRoot.getChildCount() > 0) {
-            int color = primary.resourceId != 0
-                    ? androidx.core.content.ContextCompat.getColor(this, primary.resourceId)
-                    : primary.data;
-            browserRoot.getChildAt(0).setBackgroundColor(color);
-        }
         if (browserRoot != null) browserRoot.requestLayout();
     }
 
