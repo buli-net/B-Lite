@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="address_book_avatar_options">
+        <item>@string/address_book_avatar_choose</item>
+        <item>@string/address_book_avatar_remove</item>
+    </string-array>
+
+</resources>
