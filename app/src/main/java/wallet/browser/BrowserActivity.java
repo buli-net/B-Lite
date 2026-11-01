@@ -1295,39 +1295,42 @@ public final class BrowserActivity extends BaseActivity {
 
     private void requestGeolocation(String origin, GeolocationPermissions.Callback callback) {
         if (origin == null || callback == null) return;
+
         boolean fine = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         boolean coarse = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 
-        if (GeolocationPermissions.getInstance().getAllowed(origin) && (fine || coarse)) {
-            callback.invoke(origin, true, true);
-            return;
-        }
+        GeolocationPermissions.getInstance().getAllowed(origin, allowed -> {
+            if (Boolean.TRUE.equals(allowed) && (fine || coarse)) {
+                callback.invoke(origin, true, true);
+                return;
+            }
 
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.browser_permission_title)
-                .setMessage(getString(R.string.browser_geolocation_permission_message, origin))
-                .setNegativeButton(android.R.string.cancel,
-                        (dialog, which) -> callback.invoke(origin, false, false))
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    boolean hasFine = ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-                    boolean hasCoarse = ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-                    if (hasFine || hasCoarse) {
-                        callback.invoke(origin, true, true);
-                    } else {
-                        pendingGeoCallback = callback;
-                        pendingGeoOrigin = origin;
-                        requestPermissions(new String[]{
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                Manifest.permission.ACCESS_FINE_LOCATION
-                        }, REQUEST_GEO_PERMISSION);
-                    }
-                })
-                .setOnCancelListener(dialog -> callback.invoke(origin, false, false))
-                .show();
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.browser_permission_title)
+                    .setMessage(getString(R.string.browser_geolocation_permission_message, origin))
+                    .setNegativeButton(android.R.string.cancel,
+                            (dialog, which) -> callback.invoke(origin, false, false))
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        boolean hasFine = ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                        boolean hasCoarse = ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                        if (hasFine || hasCoarse) {
+                            callback.invoke(origin, true, true);
+                        } else {
+                            pendingGeoCallback = callback;
+                            pendingGeoOrigin = origin;
+                            requestPermissions(new String[]{
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_FINE_LOCATION
+                            }, REQUEST_GEO_PERMISSION);
+                        }
+                    })
+                    .setOnCancelListener(dialog -> callback.invoke(origin, false, false))
+                    .show();
+        });
     }
 
     @Override
