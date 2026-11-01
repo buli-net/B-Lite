@@ -1617,7 +1617,6 @@ Tag type: %2$s</string>
     <string name="browser_downloads_delete_confirm_title">Remove download?</string>
     <string name="browser_downloads_delete_confirm_message">Remove this download from the download list?</string>
     <plurals name="browser_downloads_count"><item quantity="one">%1$d download</item><item quantity="other">%1$d downloads</item></plurals>
-
     <string name="browser_settings">Browser settings</string>
     <string name="browser_home_page_setting">Home page</string>
     <string name="browser_home_page_description">Choose the page opened by the Home icon.</string>
