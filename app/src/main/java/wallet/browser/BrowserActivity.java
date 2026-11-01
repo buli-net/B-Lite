@@ -398,13 +398,15 @@ public final class BrowserActivity extends BaseActivity {
         tabs.add(tab);
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String targetUrl = request.getUrl() == null ? null : request.getUrl().toString();
+                if (request.isForMainFrame()) applyDesktopSite(view, targetUrl);
                 return routeUrl(request.getUrl(), request.isForMainFrame());
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                applyDesktopSite(view, url);
                 return routeUrl(Uri.parse(url), true);
             }
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                applyDesktopSite(view, url);
                 tab.url = url;
                 persistOpenTabs();
                 if (currentTab() == tab) {
@@ -637,6 +639,7 @@ public final class BrowserActivity extends BaseActivity {
         WebView web = currentWebView();
         if (web == null) { createTab(url, true); return; }
         address.setText(url);
+        applyDesktopSite(web, url);
         web.loadUrl(url);
     }
 
@@ -693,8 +696,12 @@ public final class BrowserActivity extends BaseActivity {
             tab.url = url;
             String title = item.optString("title", "");
             tab.title = title.isEmpty() ? url : title;
-            if (isWebUrl(url)) tab.webView.loadUrl(url);
-            else tab.webView.loadUrl("about:blank");
+            if (isWebUrl(url)) {
+                applyDesktopSite(tab.webView, url);
+                tab.webView.loadUrl(url);
+            } else {
+                tab.webView.loadUrl("about:blank");
+            }
             restoredCount++;
         }
         if (restoredCount == 0) return false;
@@ -833,12 +840,25 @@ public final class BrowserActivity extends BaseActivity {
         if (!(storedAgent instanceof String)) webView.setTag(mobileAgent);
 
         boolean desktop = isDesktopSiteEnabled(url);
-        String desktopAgent = mobileAgent
-                .replaceFirst("\\(Linux; Android [^)]+\\)", "(X11; Linux x86_64)")
-                .replace(" Mobile ", " ");
-        settings.setUserAgentString(desktop ? desktopAgent : mobileAgent);
-        settings.setUseWideViewPort(desktop);
-        settings.setLoadWithOverviewMode(desktop);
+        if (desktop) {
+            String chromeVersion = "120.0.0.0";
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("Chrome/([0-9.]+)")
+                    .matcher(mobileAgent);
+            if (matcher.find()) chromeVersion = matcher.group(1);
+
+            String desktopAgent = "Mozilla/5.0 (X11; Linux x86_64) "
+                    + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"
+                    + chromeVersion + " Safari/537.36";
+            settings.setUserAgentString(desktopAgent);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setSupportZoom(true);
+        } else {
+            settings.setUserAgentString(mobileAgent);
+            settings.setUseWideViewPort(false);
+            settings.setLoadWithOverviewMode(false);
+        }
     }
 
     private void showTabs() {
@@ -1035,6 +1055,7 @@ public final class BrowserActivity extends BaseActivity {
         // Load into the active browser tab; do not launch an external browser or
         // create a second BrowserActivity for history/bookmark selections.
         address.setText(url);
+        applyDesktopSite(web, url);
         web.loadUrl(url);
         updateBrowserControls();
     }
