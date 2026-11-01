@@ -36,10 +36,10 @@ public final class TetrisGameView extends ArcadeGameView {
     @Override protected void onGameTick() { tickFallingPiece(); }
 
     @Override protected long getTickDelay() {
-        return Math.max(190, 720 - (level - 1L) * 30L);
+        return Math.max(190, 720 - (level - 1L) * 30L); //game speed
     }
 
-    @Override protected int getPointsPerLevel() { return 1000; }
+    @Override protected int getPointsPerLevel() { return 10000; } //point level up
 
     @Override protected void onMoveLeft() { movePiece(-1, 0); }
     @Override protected void onMoveRight() { movePiece(1, 0); }
