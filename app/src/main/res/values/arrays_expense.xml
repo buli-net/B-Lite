@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string-array name="expense_type_options"><item>@string/expense_type_expense</item><item>@string/expense_type_income</item></string-array>
-    <string-array name="expense_filter_options"><item>@string/expense_filter_all</item><item>@string/expense_filter_income</item><item>@string/expense_filter_expense</item></string-array>
-    <string-array name="expense_category_expense"><item>@string/expense_category_food</item><item>@string/expense_category_transport</item><item>@string/expense_category_housing</item><item>@string/expense_category_bills</item><item>@string/expense_category_health</item><item>@string/expense_category_shopping</item><item>@string/expense_category_education</item><item>@string/expense_category_entertainment</item><item>@string/expense_category_other</item></string-array>
-    <string-array name="expense_category_income"><item>@string/expense_category_salary</item><item>@string/expense_category_business</item><item>@string/expense_category_investment</item><item>@string/expense_category_gift</item><item>@string/expense_category_other</item></string-array>
-    <string-array name="expense_chart_range_units"><item>@string/expense_chart_range_months</item><item>@string/expense_chart_range_years</item></string-array>
-</resources>
