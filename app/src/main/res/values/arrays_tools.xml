@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array
+        name="currency_unit_options">
+        <item>@string/currency_unit_unit_option_btc</item>
+        <item>@string/currency_unit_unit_option_mbtc</item>
+        <item>@string/currency_unit_unit_option_ubtc</item>
+        <item>@string/currency_unit_unit_option_sat</item>
+    </string-array>
+    <string-array
+        name="calculator_frequency_options">
+        <item>@string/calculator_frequency_choose</item>
+        <item>@string/calculator_frequency_yearly</item>
+        <item>@string/calculator_frequency_quarterly</item>
+        <item>@string/calculator_frequency_monthly</item>
+        <item>@string/calculator_frequency_daily</item>
+    </string-array>
+    <string-array
+        name="calculator_table_options">
+        <item>@string/calculator_table_choose</item>
+        <item>@string/calculator_table_monthly</item>
+        <item>@string/calculator_table_yearly</item>
+    </string-array>
+    <string-array
+        name="expense_transaction_actions">
+        <item>@string/expense_edit</item>
+        <item>@string/expense_delete</item>
+    </string-array>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/browserRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_browser_surface">
+    <include
+        layout="@layout/activity_browser_toolbar" />
+    <include
+        layout="@layout/activity_browser_progress" />
+    <FrameLayout
+        android:id="@+id/browserWebContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+    <include
+        layout="@layout/activity_browser_status" />
+</LinearLayout>
