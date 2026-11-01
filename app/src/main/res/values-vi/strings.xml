@@ -1899,4 +1899,7 @@ Tổng cuối kỳ: %9$s</string>
     <string name="nfc_writer_mode_bitcoin_uri">Yêu cầu Bitcoin URI</string>
     <string name="nfc_copy_mode_one_to_one">Một nguồn → một thẻ đích (1:1)</string>
     <string name="nfc_copy_mode_one_to_many">Một nguồn → nhiều thẻ đích (1:N)</string>
+    <string name="browser_permission_microphone">micro</string>
+    <string name="browser_permission_camera">máy ảnh</string>
+    <string name="browser_permission_site_message">Cho phép %1$s sử dụng %2$s?</string>
 </resources>
