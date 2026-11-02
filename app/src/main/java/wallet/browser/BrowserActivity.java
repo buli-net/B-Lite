@@ -66,6 +66,8 @@ import wallet.ui.BaseActivity;
 /** Native WebView browser with local history, bookmarks, downloads, tabs and background audio support. */
 public final class BrowserActivity extends BaseActivity {
     public static final String EXTRA_URL = "browser_url";
+    public static final String EXTRA_INCOMING_FILE_REQUEST_CHECKED =
+            "browser_incoming_file_request_checked";
     private static final int REQUEST_FILE = 8401;
     private static final int REQUEST_WEB_PERMISSION = 8402;
     private static final int REQUEST_GEO_PERMISSION = 8403;
@@ -80,6 +82,7 @@ public final class BrowserActivity extends BaseActivity {
     private static final String STATE_ACTIVE_URL = "browser_active_url";
     private static final String KEY_OPEN_TABS = "open_tabs_state";
 
+    private Uri incomingDocumentUri;
     private EditText address;
     private ProgressBar progress;
     private FrameLayout webContainer;
@@ -194,6 +197,13 @@ public final class BrowserActivity extends BaseActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         if (routeIncomingRequestFile(intent)) return;
+
+        Uri incomingHtmlDocument = getIncomingHtmlDocumentUri(intent);
+        if (incomingHtmlDocument != null) {
+            openIncomingHtmlDocument(incomingHtmlDocument);
+            return;
+        }
+
         String requestedUrl = getIncomingWebUrl(intent);
         if (requestedUrl != null) navigate(requestedUrl);
     }
@@ -216,7 +226,11 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     private boolean routeIncomingRequestFile(Intent intent) {
-        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return false;
+        if (intent == null
+                || intent.getBooleanExtra(EXTRA_INCOMING_FILE_REQUEST_CHECKED, false)
+                || !Intent.ACTION_VIEW.equals(intent.getAction())) {
+            return false;
+        }
         Uri source = intent.getData();
         String type = intent.getType();
         if (source == null || type == null
@@ -265,10 +279,52 @@ public final class BrowserActivity extends BaseActivity {
         }
     }
 
+    private Uri getIncomingHtmlDocumentUri(Intent intent) {
+        if (intent == null || !"text/html".equalsIgnoreCase(intent.getType())) {
+            return null;
+        }
+
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            return intent.getData();
+        }
+
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            return intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        }
+
+        return null;
+    }
+
+    private void openIncomingHtmlDocument(Uri source) {
+        if (source == null) return;
+
+        incomingDocumentUri = source;
+        createTab(null, true);
+
+        BrowserTab tab = currentTab();
+        WebView webView = currentWebView();
+        if (tab == null || webView == null) {
+            Toast.makeText(this, R.string.browser_invalid_url, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String displayName = source.getLastPathSegment();
+        if (displayName == null || displayName.trim().isEmpty()) {
+            displayName = getString(R.string.browser_title);
+        }
+
+        tab.url = source.toString();
+        tab.title = displayName;
+        address.setText(source.toString());
+        status.setText(R.string.browser_loading);
+        webView.loadUrl(source.toString());
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         if (routeIncomingRequestFile(getIntent())) return;
+        final Uri incomingHtmlDocument = getIncomingHtmlDocumentUri(getIntent());
         setContentView(R.layout.activity_browser);
         // Match the app-wide system bar surfaces; the browser toolbar alone uses colorPrimary.
         android.util.TypedValue systemSurface = new android.util.TypedValue();
@@ -304,21 +360,26 @@ public final class BrowserActivity extends BaseActivity {
         registerMediaReceiver();
         String restoredUrl = state == null ? null : state.getString(STATE_ACTIVE_URL);
         String initialUrl = getIncomingWebUrl(getIntent());
-        boolean restoredTabs = false;
-        if (initialUrl == null || initialUrl.trim().isEmpty()) {
-            restoredTabs = restoreOpenTabs();
-        }
-        if (!restoredTabs) {
-            createTab(null, true);
-            if (restoredUrl != null && isWebUrl(restoredUrl)) {
-                navigate(restoredUrl);
-            } else if (initialUrl != null && !initialUrl.trim().isEmpty()) {
-                navigate(initialUrl);
-            } else {
-                loadHome();
+
+        if (incomingHtmlDocument != null) {
+            openIncomingHtmlDocument(incomingHtmlDocument);
+        } else {
+            boolean restoredTabs = false;
+            if (initialUrl == null || initialUrl.trim().isEmpty()) {
+                restoredTabs = restoreOpenTabs();
             }
-        } else if (restoredUrl != null && isWebUrl(restoredUrl) && state != null) {
-            navigate(restoredUrl);
+            if (!restoredTabs) {
+                createTab(null, true);
+                if (restoredUrl != null && isWebUrl(restoredUrl)) {
+                    navigate(restoredUrl);
+                } else if (initialUrl != null && !initialUrl.trim().isEmpty()) {
+                    navigate(initialUrl);
+                } else {
+                    loadHome();
+                }
+            } else if (restoredUrl != null && isWebUrl(restoredUrl) && state != null) {
+                navigate(restoredUrl);
+            }
         }
         updateBrowserControls();
     }
@@ -661,6 +722,7 @@ public final class BrowserActivity extends BaseActivity {
     private boolean routeUrl(Uri uri, boolean mainFrame) {
         if (uri == null || uri.getScheme() == null) return true;
         String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
+        if (incomingDocumentUri != null && incomingDocumentUri.equals(uri)) return false;
         if ("http".equals(scheme) || "https".equals(scheme)) return false;
         if ("about".equals(scheme) && "blank".equalsIgnoreCase(uri.getLastPathSegment())) return false;
         if (!mainFrame) return true;
