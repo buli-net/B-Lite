@@ -954,6 +954,19 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
         if (intent == null) return false;
 
         final String action = intent.getAction();
+        if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
+            final String scheme = intent.getData().getScheme();
+            if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                final Intent browserIntent = new Intent(
+                        this, wallet.browser.BrowserActivity.class);
+                browserIntent.putExtra(
+                        wallet.browser.BrowserActivity.EXTRA_URL,
+                        intent.getData().toString());
+                startActivity(browserIntent);
+                finish();
+                return true;
+            }
+        }
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
             final Tag tag = getTagExtra(intent);
             if (tag == null) return false;
