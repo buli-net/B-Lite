@@ -1926,6 +1926,8 @@ Final balance: %9$s</string>
     <string name="notepad_trash_empty">The trash is empty.</string>
     <string name="notepad_title_hint">Title</string>
     <string name="notepad_content_hint">Write something…</string>
+    <string name="notepad_import_failed">Could not open this text file in Notepad.</string>
+    <string name="notepad_import_too_large">This text file is too large to open in Notepad (maximum 2 MB).</string>
     <string name="notepad_editor_title">Note</string>
     <string name="notepad_default_title">Untitled note</string>
     <string name="notepad_no_content">No additional text</string>
