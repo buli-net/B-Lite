@@ -1226,9 +1226,15 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
 
             final String requestUri = extractBitcoinRequestUri(requestText);
             if (requestUri != null) {
+                // Preserve the existing Bitcoin Request route without changing parsing.
                 handleBitcoinUriString(requestUri);
             } else if ("text/html".equalsIgnoreCase(incomingType) && sharedFile != null) {
                 openHtmlFileInBrowser(sharedFile);
+            } else if ("text/plain".equalsIgnoreCase(incomingType) && sharedFile != null) {
+                openTextFileInNotepad(sharedFile);
+            } else if ("text/plain".equalsIgnoreCase(incomingType)
+                    && !TextUtils.isEmpty(requestText)) {
+                openTextInNotepad(requestText, intent.getStringExtra(Intent.EXTRA_SUBJECT));
             } else {
                 Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
             }
@@ -1286,6 +1292,48 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
             finish();
         } catch (RuntimeException exception) {
             Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openTextFileInNotepad(final Uri source) {
+        if (source == null) {
+            Toast.makeText(this, R.string.notepad_import_failed,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Intent editorIntent = new Intent(this, wallet.notepad.NoteEditorActivity.class);
+        editorIntent.putExtra(wallet.notepad.NoteEditorActivity.EXTRA_INCOMING_TEXT_URI, source);
+        editorIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        editorIntent.setClipData(android.content.ClipData.newUri(
+                getContentResolver(), "incoming_text", source));
+
+        try {
+            startActivity(editorIntent);
+            finish();
+        } catch (RuntimeException exception) {
+            Toast.makeText(this, R.string.notepad_import_failed,
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openTextInNotepad(final String text, final String title) {
+        if (TextUtils.isEmpty(text)) {
+            Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Intent editorIntent = new Intent(this, wallet.notepad.NoteEditorActivity.class);
+        editorIntent.putExtra(wallet.notepad.NoteEditorActivity.EXTRA_INITIAL_CONTENT, text);
+        if (!TextUtils.isEmpty(title)) {
+            editorIntent.putExtra(wallet.notepad.NoteEditorActivity.EXTRA_INITIAL_TITLE, title);
+        }
+        try {
+            startActivity(editorIntent);
+            finish();
+        } catch (RuntimeException exception) {
+            Toast.makeText(this, R.string.notepad_import_failed,
+                    Toast.LENGTH_LONG).show();
         }
     }
 
