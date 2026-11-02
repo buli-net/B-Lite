@@ -148,6 +148,13 @@
             android:checked="true"
             android:text="@string/backup_item_games"
          />
+        <CheckBox
+            android:id="@+id/backupOptionNotepad"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/backup_item_notepad"
+         />
 
         <TextView
             android:layout_width="match_parent"
