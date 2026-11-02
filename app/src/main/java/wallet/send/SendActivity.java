@@ -1198,12 +1198,17 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
             return handleNfcPaymentRequest(intent);
         }
 
-        // Bluetooth/nearby transfers may arrive as plain text or an HTML file.
-        // Accept only a bounded payload containing a Bitcoin URI; never import keys
-        // or treat arbitrary file contents as a payment request.
+        // Shared files may be assigned a generic MIME type by the sending app.
+        // Resolve the actual MIME type and filename so external .txt files follow
+        // the same Notepad route as files created by this app.
         final String incomingType = intent.getType();
-        final boolean supportedRequestText = "text/plain".equalsIgnoreCase(incomingType)
-                || "text/html".equalsIgnoreCase(incomingType);
+        final Uri incomingFile = Intent.ACTION_SEND.equals(action)
+                ? intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                : data;
+        final String resolvedType = resolveIncomingMimeType(incomingFile, incomingType);
+        final boolean incomingHtml = isIncomingHtmlFile(incomingFile, resolvedType);
+        final boolean incomingPlainText = isIncomingPlainTextFile(incomingFile, resolvedType);
+        final boolean supportedRequestText = incomingPlainText || incomingHtml;
         if (supportedRequestText
                 && (Intent.ACTION_VIEW.equals(action) || Intent.ACTION_SEND.equals(action))) {
             String requestText = null;
@@ -1228,12 +1233,11 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
             if (requestUri != null) {
                 // Preserve the existing Bitcoin Request route without changing parsing.
                 handleBitcoinUriString(requestUri);
-            } else if ("text/html".equalsIgnoreCase(incomingType) && sharedFile != null) {
+            } else if (incomingHtml && sharedFile != null) {
                 openHtmlFileInBrowser(sharedFile);
-            } else if ("text/plain".equalsIgnoreCase(incomingType) && sharedFile != null) {
+            } else if (incomingPlainText && sharedFile != null) {
                 openTextFileInNotepad(sharedFile);
-            } else if ("text/plain".equalsIgnoreCase(incomingType)
-                    && !TextUtils.isEmpty(requestText)) {
+            } else if (incomingPlainText && !TextUtils.isEmpty(requestText)) {
                 openTextInNotepad(requestText, intent.getStringExtra(Intent.EXTRA_SUBJECT));
             } else {
                 Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
@@ -1250,6 +1254,63 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
             }
         }
         return false;
+    }
+
+    private String resolveIncomingMimeType(final Uri source, final String intentType) {
+        String resolved = intentType;
+        if (source != null) {
+            try {
+                String providerType = getContentResolver().getType(source);
+                if (!TextUtils.isEmpty(providerType)) {
+                    resolved = providerType;
+                }
+            } catch (RuntimeException ignored) {
+                // Fall back to the MIME type supplied by the sending application.
+            }
+        }
+        if (resolved == null) {
+            return null;
+        }
+        int parameterStart = resolved.indexOf(';');
+        return (parameterStart >= 0 ? resolved.substring(0, parameterStart) : resolved)
+                .trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private boolean isIncomingPlainTextFile(final Uri source, final String mimeType) {
+        if ("text/plain".equals(mimeType) || "text/*".equals(mimeType)) {
+            return true;
+        }
+        String name = incomingDisplayName(source);
+        return name != null && name.toLowerCase(java.util.Locale.ROOT).endsWith(".txt");
+    }
+
+    private boolean isIncomingHtmlFile(final Uri source, final String mimeType) {
+        if ("text/html".equals(mimeType)) {
+            return true;
+        }
+        String name = incomingDisplayName(source);
+        return name != null && (name.toLowerCase(java.util.Locale.ROOT).endsWith(".html")
+                || name.toLowerCase(java.util.Locale.ROOT).endsWith(".htm"));
+    }
+
+    private String incomingDisplayName(final Uri source) {
+        if (source == null) {
+            return null;
+        }
+        try (android.database.Cursor cursor = getContentResolver().query(
+                source, new String[]{android.provider.OpenableColumns.DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int column = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                if (column >= 0) {
+                    return cursor.getString(column);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Some providers do not expose a display name.
+        }
+        String path = source.getLastPathSegment();
+        return path;
     }
 
     private String readSharedRequestText(final Uri source) {
