@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android">
@@ -177,6 +178,11 @@
 
         <activity
             android:name="wallet.games.RacingActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name="wallet.games.TankActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
 
