@@ -333,7 +333,14 @@ public class NoteEditorActivity extends BaseActivity {
             if (note.content == null) {
                 note.content = "";
             }
-            store.save(note);
+            // Reopening the same external TXT (or shared text) must open its existing
+            // note instead of inserting another identical row into the notepad.
+            NoteStore.Note existing = store.findMatchingActive(note.title, note.content);
+            if (existing != null) {
+                note = existing;
+            } else {
+                store.save(note);
+            }
             restoredNoteId = note.id;
 
             Intent updatedIntent = new Intent(getIntent());

@@ -89,6 +89,23 @@ final class NoteStore extends SQLiteOpenHelper {
         }
     }
 
+    synchronized Note findMatchingActive(String title, String content) throws Exception {
+        String expectedTitle = title == null ? "" : title;
+        String expectedContent = content == null ? "" : content;
+        try (Cursor cursor = getReadableDatabase().query(
+                "notes", null, "deleted_at=0", null, null, null,
+                "pinned DESC, updated_at DESC, id DESC")) {
+            while (cursor.moveToNext()) {
+                Note candidate = readNote(cursor);
+                if (expectedTitle.equals(candidate.title)
+                        && expectedContent.equals(candidate.content)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    }
+
     synchronized List<Note> load(boolean deleted) throws Exception {
         List<Note> notes = new ArrayList<>();
         String selection = deleted ? "deleted_at>0" : "deleted_at=0";
