@@ -1394,7 +1394,7 @@ public final class BrowserActivity extends BaseActivity {
             fileName = getString(R.string.browser_download_default_name);
         }
 
-        if (isDownloadNameInUse(fileName)) {
+        if (isDownloadNameOrVariantInUse(fileName)) {
             String suggestedName = createAvailableDownloadName(fileName);
             if (getSharedPreferences(PREFS, MODE_PRIVATE)
                     .getBoolean(KEY_SKIP_DOWNLOAD_CONFLICT_PROMPT, false)) {
@@ -1459,43 +1459,130 @@ public final class BrowserActivity extends BaseActivity {
     }
 
     private boolean isDownloadNameInUse(String fileName) {
+        return findDownloadNameInUse(fileName, false);
+    }
+
+    private boolean isDownloadNameOrVariantInUse(String fileName) {
+        return findDownloadNameInUse(fileName, true);
+    }
+
+    private boolean findDownloadNameInUse(String fileName, boolean includeNumberedVariants) {
+        if (!isValidDownloadName(fileName)) return false;
+
         DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         if (manager != null) {
-            DownloadManager.Query query = new DownloadManager.Query();
-            try (Cursor cursor = manager.query(query)) {
+            try (Cursor cursor = manager.query(new DownloadManager.Query())) {
                 if (cursor != null) {
                     int titleColumn = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE);
+                    int localUriColumn = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                    int statusColumn = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                     while (cursor.moveToNext()) {
-                        if (titleColumn >= 0 && fileName.equals(cursor.getString(titleColumn))) {
-                            int statusColumn = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                            if (statusColumn < 0
-                                    || cursor.getInt(statusColumn) != DownloadManager.STATUS_FAILED) {
-                                return true;
+                        if (statusColumn >= 0 && cursor.getInt(statusColumn)
+                                == DownloadManager.STATUS_FAILED) {
+                            continue;
+                        }
+                        if (titleColumn >= 0 && matchesDownloadName(
+                                fileName, cursor.getString(titleColumn), includeNumberedVariants)) {
+                            return true;
+                        }
+
+                        if (localUriColumn >= 0) {
+                            String localUri = cursor.getString(localUriColumn);
+                            if (localUri != null && !localUri.isEmpty()) {
+                                String localName = Uri.parse(localUri).getLastPathSegment();
+                                if (matchesDownloadName(
+                                        fileName, localName, includeNumberedVariants)) {
+                                    return true;
+                                }
                             }
                         }
                     }
                 }
-            } catch (RuntimeException ignored) { }
+            } catch (RuntimeException ignored) {
+                // Continue with MediaStore and the Downloads directory checks.
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            String relativePath = Environment.DIRECTORY_DOWNLOADS + "/";
+            String downloadsPath = Environment.DIRECTORY_DOWNLOADS + "/";
             try (Cursor cursor = getContentResolver().query(
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                    new String[]{MediaStore.Downloads._ID},
-                    MediaStore.Downloads.DISPLAY_NAME + "=? AND "
-                            + MediaStore.Downloads.RELATIVE_PATH + "=?",
-                    new String[]{fileName, relativePath},
+                    new String[]{
+                            MediaStore.Downloads.DISPLAY_NAME,
+                            MediaStore.Downloads.RELATIVE_PATH
+                    },
+                    null,
+                    null,
                     null)) {
-                return cursor != null && cursor.moveToFirst();
+                if (cursor != null) {
+                    int nameColumn = cursor.getColumnIndex(MediaStore.Downloads.DISPLAY_NAME);
+                    int pathColumn = cursor.getColumnIndex(MediaStore.Downloads.RELATIVE_PATH);
+                    while (cursor.moveToNext()) {
+                        if (nameColumn < 0) continue;
+                        String existingName = cursor.getString(nameColumn);
+                        String existingPath = pathColumn < 0 ? null : cursor.getString(pathColumn);
+                        boolean inDownloadsRoot = existingPath == null
+                                || downloadsPath.equals(existingPath);
+                        if (inDownloadsRoot && matchesDownloadName(
+                                fileName, existingName, includeNumberedVariants)) {
+                            return true;
+                        }
+                    }
+                }
             } catch (RuntimeException ignored) {
-                return false;
+                // A MediaStore failure must not prevent the filesystem fallback below.
             }
         }
 
         File downloadDirectory = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
-        return new File(downloadDirectory, fileName).exists();
+        if (new File(downloadDirectory, fileName).exists()) return true;
+
+        try {
+            File[] existingFiles = downloadDirectory.listFiles();
+            if (existingFiles != null) {
+                for (File existingFile : existingFiles) {
+                    if (existingFile.isFile() && matchesDownloadName(
+                            fileName, existingFile.getName(), includeNumberedVariants)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Public-folder access may be restricted on newer Android versions.
+        }
+        return false;
+    }
+
+    private boolean matchesDownloadName(
+            String expectedName, String actualName, boolean includeNumberedVariants) {
+        if (actualName == null || actualName.trim().isEmpty()) return false;
+
+        String expected = normalizeDownloadName(actualNameForComparison(expectedName));
+        String actual = normalizeDownloadName(actualNameForComparison(actualName));
+        if (expected.equals(actual)) return true;
+        return includeNumberedVariants
+                && downloadNameFamily(expected).equals(downloadNameFamily(actual));
+    }
+
+    private String actualNameForComparison(String name) {
+        String decoded = Uri.decode(name);
+        int separator = Math.max(decoded.lastIndexOf('/'), decoded.lastIndexOf('\\'));
+        return separator >= 0 ? decoded.substring(separator + 1) : decoded;
+    }
+
+    private String normalizeDownloadName(String name) {
+        return name.trim()
+                .replaceAll("\\s*\\(\\s*(\\d+)\\s*\\)", "($1)")
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private String downloadNameFamily(String normalizedName) {
+        int dot = normalizedName.lastIndexOf('.');
+        String baseName = dot > 0 ? normalizedName.substring(0, dot) : normalizedName;
+        String extension = dot > 0 ? normalizedName.substring(dot) : "";
+        baseName = baseName.replaceFirst("\\(\\d+\\)$", "");
+        return baseName + extension;
     }
 
     private String createAvailableDownloadName(String originalName) {
