@@ -26,6 +26,8 @@ import java.util.Locale;
 
 import wallet.ui.BaseActivity;
 
+import wallet.main.R;
+
 public class NotepadActivity extends BaseActivity {
 
     public static final String EXTRA_NOTE_ID = "wallet.notepad.extra.NOTE_ID";
