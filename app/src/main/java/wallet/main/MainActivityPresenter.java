@@ -1787,6 +1787,13 @@ public class MainActivityPresenter
     public void restoreWallet(
             final android.net.Uri backupUri,
             final AesKey currentWalletAuthorizationKey) {
+        restoreWallet(backupUri, currentWalletAuthorizationKey, new ForwardingBackupBundle.Options());
+    }
+
+    public void restoreWallet(
+            final android.net.Uri backupUri,
+            final AesKey currentWalletAuthorizationKey,
+            final ForwardingBackupBundle.Options restoreOptions) {
 
         if (backupUri == null) {
             runOnUi(() ->
@@ -1945,7 +1952,7 @@ public class MainActivityPresenter
                 // bitcoinj wallet files remain supported and leave current app preferences alone.
                 if (restoredBackupPayload != null && restoredBackupPayload.appDataSnapshot != null) {
                     ForwardingBackupBundle.restoreAppDataSnapshot(
-                            applicationContext, restoredBackupPayload);
+                            applicationContext, restoredBackupPayload, restoreOptions);
                 }
                 if (restoredBackupPayload != null) restoredBackupPayload.cleanup();
                 restoredBackupPayload = null;
