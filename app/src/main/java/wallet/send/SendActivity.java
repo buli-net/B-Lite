@@ -1194,20 +1194,28 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
         if (supportedRequestText
                 && (Intent.ACTION_VIEW.equals(action) || Intent.ACTION_SEND.equals(action))) {
             String requestText = null;
+            Uri sharedFile = null;
+
             if (Intent.ACTION_SEND.equals(action)) {
                 // Prefer the shared file stream; EXTRA_TEXT is a compatibility fallback.
-                final Uri stream = intent.getParcelableExtra(Intent.EXTRA_STREAM);
-                if (stream != null) requestText = readSharedRequestText(stream);
+                sharedFile = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (sharedFile != null) {
+                    requestText = readSharedRequestText(sharedFile);
+                }
                 if (TextUtils.isEmpty(requestText)) {
                     requestText = intent.getStringExtra(Intent.EXTRA_TEXT);
                 }
             } else if (data != null) {
                 // ACTION_VIEW may provide the received file as a content:// URI.
+                sharedFile = data;
                 requestText = readSharedRequestText(data);
             }
+
             final String requestUri = extractBitcoinRequestUri(requestText);
             if (requestUri != null) {
                 handleBitcoinUriString(requestUri);
+            } else if ("text/html".equalsIgnoreCase(incomingType) && sharedFile != null) {
+                openHtmlFileInBrowser(sharedFile);
             } else {
                 Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
             }
@@ -1241,6 +1249,30 @@ public class SendActivity extends BaseActivity implements SendPresenter.View {
             return output.toString(java.nio.charset.StandardCharsets.UTF_8.name()).trim();
         } catch (Exception ignored) {
             return null;
+        }
+    }
+
+    private void openHtmlFileInBrowser(final Uri source) {
+        if (source == null) {
+            Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Intent browserIntent = new Intent(this, wallet.browser.BrowserActivity.class);
+        browserIntent.setAction(Intent.ACTION_VIEW);
+        browserIntent.setDataAndType(source, "text/html");
+        browserIntent.putExtra(
+                wallet.browser.BrowserActivity.EXTRA_INCOMING_FILE_REQUEST_CHECKED,
+                true);
+        browserIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        browserIntent.setClipData(
+                android.content.ClipData.newUri(getContentResolver(), "incoming_html", source));
+
+        try {
+            startActivity(browserIntent);
+            finish();
+        } catch (RuntimeException exception) {
+            Toast.makeText(this, R.string.request_uri_invalid, Toast.LENGTH_LONG).show();
         }
     }
 
