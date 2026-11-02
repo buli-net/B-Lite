@@ -1965,4 +1965,5 @@ Tổng cuối kỳ: %9$s</string>
         <item quantity="other">%d ghi chú</item>
     </plurals>
     <string name="notepad_delete_action">Xóa</string>
+    <string name="backup_item_notepad">Sổ ghi chú</string>
 </resources>
