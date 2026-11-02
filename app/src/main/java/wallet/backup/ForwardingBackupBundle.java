@@ -900,6 +900,8 @@ public final class ForwardingBackupBundle {
                 validateExpenseSnapshot(category);
             } else if ("calculator".equals(key) || "browser".equals(key)) {
                 validateValues(category.getJSONObject("values"), name -> true);
+            } else if ("notepad".equals(key)) {
+                validateNotepadSnapshot(category);
             } else if ("games".equals(key)) {
                 if (category.has("storage")) {
                     validateGameStorageValues(category.getJSONObject("storage").getJSONObject("values"));
@@ -936,6 +938,28 @@ public final class ForwardingBackupBundle {
                 if ("contacts".equals(key) && category.has("avatars")) {
                     validateContactAvatars(category.getJSONObject("avatars"));
                 }
+            }
+        }
+    }
+
+
+    private static void validateNotepadSnapshot(JSONObject category)
+            throws IOException, JSONException {
+        JSONArray notes = category.getJSONArray("notes");
+        if (notes.length() > 10000) {
+            throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
+        }
+        for (int i = 0; i < notes.length(); i++) {
+            JSONObject note = notes.getJSONObject(i);
+            String title = note.getString("title");
+            String content = note.getString("content");
+            long createdAt = note.getLong("createdAt");
+            long updatedAt = note.getLong("updatedAt");
+            long deletedAt = note.getLong("deletedAt");
+            note.getBoolean("pinned");
+            if (title.length() > 4096 || content.length() > 1_000_000
+                    || createdAt < 0 || updatedAt < 0 || deletedAt < 0) {
+                throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
             }
         }
     }

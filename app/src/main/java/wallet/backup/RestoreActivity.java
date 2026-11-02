@@ -15,6 +15,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
 import android.view.View;
+import android.view.ViewGroup;
+import android.util.DisplayMetrics;
 
 import org.bitcoinj.crypto.AesKey;
 import org.bitcoinj.wallet.Wallet;
@@ -104,6 +106,11 @@ public class RestoreActivity extends BaseActivity {
 
     private void confirmRestore(Uri backupUri) {
         View optionsView = getLayoutInflater().inflate(R.layout.dialog_backup_options, null);
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int maxDialogContentHeight = (int) (metrics.heightPixels * 0.62f);
+        optionsView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                maxDialogContentHeight));
         CheckBox forwarding = optionsView.findViewById(R.id.backupOptionForwarding);
         CheckBox contacts = optionsView.findViewById(R.id.backupOptionContacts);
         CheckBox imported = optionsView.findViewById(R.id.backupOptionImportedMetadata);

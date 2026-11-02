@@ -7,6 +7,8 @@ import wallet.ui.LocalizedErrors;
 import wallet.ui.BaseActivity;
 
 import android.view.View;
+import android.view.ViewGroup;
+import android.util.DisplayMetrics;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.net.Uri;
@@ -94,6 +96,11 @@ public class BackupActivity extends BaseActivity {
 
     private void showBackupOptions() {
         View optionsView = getLayoutInflater().inflate(R.layout.dialog_backup_options, null);
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int maxDialogContentHeight = (int) (metrics.heightPixels * 0.62f);
+        optionsView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                maxDialogContentHeight));
         CheckBox walletData = optionsView.findViewById(R.id.backupOptionWallet);
         walletData.setContentDescription(getString(R.string.backup_item_wallet));
         CheckBox forwardingData = optionsView.findViewById(R.id.backupOptionForwarding);
