@@ -1969,4 +1969,5 @@ Final balance: %9$s</string>
         <item quantity="other">%d notes</item>
     </plurals>
     <string name="notepad_delete_action">Delete</string>
+    <string name="backup_item_notepad">Notepad</string>
 </resources>
