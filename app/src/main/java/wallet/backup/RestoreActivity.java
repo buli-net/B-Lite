@@ -122,27 +122,31 @@ public class RestoreActivity extends BaseActivity {
         CheckBox games = optionsView.findViewById(R.id.backupOptionGames);
         CheckBox notepad = optionsView.findViewById(R.id.backupOptionNotepad);
 
-        new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.backup_options_title)
                 .setMessage(R.string.backup_options_description)
                 .setView(optionsView)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.restore_action, (dialog, which) -> {
-                    ForwardingBackupBundle.Options selection = new ForwardingBackupBundle.Options();
-                    selection.forwarding = forwarding.isChecked();
-                    selection.contacts = contacts.isChecked();
-                    selection.importedWalletMetadata = imported.isChecked();
-                    selection.requestMetadata = request.isChecked();
-                    selection.appSettings = settings.isChecked();
-                    selection.expenseManager = expense.isChecked();
-                    selection.calculator = calculator.isChecked();
-                    selection.browser = browser.isChecked();
-                    selection.games = games.isChecked();
-                    selection.notepad = notepad.isChecked();
-                    selectedRestoreOptions = selection;
-                    authorizeCurrentWalletForRestore(backupUri);
-                })
-                .show();
+                .create();
+        optionsView.findViewById(R.id.backupOptionsCancel).setOnClickListener(v -> dialog.dismiss());
+        Button confirmButton = optionsView.findViewById(R.id.backupOptionsConfirm);
+        confirmButton.setText(R.string.restore_action);
+        confirmButton.setOnClickListener(v -> {
+            ForwardingBackupBundle.Options selection = new ForwardingBackupBundle.Options();
+            selection.forwarding = forwarding.isChecked();
+            selection.contacts = contacts.isChecked();
+            selection.importedWalletMetadata = imported.isChecked();
+            selection.requestMetadata = request.isChecked();
+            selection.appSettings = settings.isChecked();
+            selection.expenseManager = expense.isChecked();
+            selection.calculator = calculator.isChecked();
+            selection.browser = browser.isChecked();
+            selection.games = games.isChecked();
+            selection.notepad = notepad.isChecked();
+            selectedRestoreOptions = selection;
+            dialog.dismiss();
+            authorizeCurrentWalletForRestore(backupUri);
+        });
+        dialog.show();
     }
 
     private void authorizeCurrentWalletForRestore(Uri backupUri) {

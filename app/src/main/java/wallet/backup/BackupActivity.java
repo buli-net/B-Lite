@@ -114,27 +114,29 @@ public class BackupActivity extends BaseActivity {
         CheckBox games = optionsView.findViewById(R.id.backupOptionGames);
         CheckBox notepad = optionsView.findViewById(R.id.backupOptionNotepad);
 
-        new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.backup_options_title)
                 .setMessage(R.string.backup_options_description)
                 .setView(optionsView)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.continue_button, (dialog, which) -> {
-                    ForwardingBackupBundle.Options selection = new ForwardingBackupBundle.Options();
-                    selection.forwarding = forwardingData.isChecked();
-                    selection.contacts = contactsData.isChecked();
-                    selection.importedWalletMetadata = importedMetadata.isChecked();
-                    selection.requestMetadata = requestData.isChecked();
-                    selection.appSettings = appSettings.isChecked();
-                    selection.expenseManager = expenseManager.isChecked();
-                    selection.calculator = calculator.isChecked();
-                    selection.browser = browser.isChecked();
-                    selection.games = games.isChecked();
-                    selection.notepad = notepad.isChecked();
-                    selectedBackupOptions = selection;
-                    authorizeAndBackup();
-                })
-                .show();
+                .create();
+        optionsView.findViewById(R.id.backupOptionsCancel).setOnClickListener(v -> dialog.dismiss());
+        optionsView.findViewById(R.id.backupOptionsConfirm).setOnClickListener(v -> {
+            ForwardingBackupBundle.Options selection = new ForwardingBackupBundle.Options();
+            selection.forwarding = forwardingData.isChecked();
+            selection.contacts = contactsData.isChecked();
+            selection.importedWalletMetadata = importedMetadata.isChecked();
+            selection.requestMetadata = requestData.isChecked();
+            selection.appSettings = appSettings.isChecked();
+            selection.expenseManager = expenseManager.isChecked();
+            selection.calculator = calculator.isChecked();
+            selection.browser = browser.isChecked();
+            selection.games = games.isChecked();
+            selection.notepad = notepad.isChecked();
+            selectedBackupOptions = selection;
+            dialog.dismiss();
+            authorizeAndBackup();
+        });
+        dialog.show();
     }
 
     private void authorizeAndBackup() {
