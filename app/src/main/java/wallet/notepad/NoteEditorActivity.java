@@ -1,8 +1,12 @@
 package wallet.notepad;
 
+import wallet.main.R;
+
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
@@ -18,14 +22,25 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import wallet.ui.BaseActivity;
 
-import wallet.main.R;
-
 public class NoteEditorActivity extends BaseActivity {
+
+    public static final String EXTRA_INCOMING_TEXT_URI =
+            "wallet.notepad.extra.INCOMING_TEXT_URI";
+    public static final String EXTRA_INITIAL_CONTENT =
+            "wallet.notepad.extra.INITIAL_CONTENT";
+    public static final String EXTRA_INITIAL_TITLE =
+            "wallet.notepad.extra.INITIAL_TITLE";
+
+    private static final String STATE_NOTE_ID = "wallet.notepad.state.NOTE_ID";
+    private static final int MAX_INCOMING_TEXT_BYTES = 2 * 1024 * 1024;
 
     private final Handler saveHandler = new Handler(Looper.getMainLooper());
     private final Runnable saveTask = this::saveNow;
@@ -36,6 +51,7 @@ public class NoteEditorActivity extends BaseActivity {
     private NoteStore.Note note;
     private boolean loading;
     private boolean changed;
+    private long restoredNoteId;
 
     private final ActivityResultLauncher<String> exportLauncher =
             registerForActivityResult(
@@ -47,6 +63,9 @@ public class NoteEditorActivity extends BaseActivity {
         super.onCreate(state);
         setContentView(R.layout.activity_note_editor);
         store = new NoteStore(this);
+        if (state != null) {
+            restoredNoteId = state.getLong(STATE_NOTE_ID, 0L);
+        }
 
         Toolbar toolbar = findViewById(R.id.toolbar_note_editor);
         setSupportActionBar(toolbar);
@@ -62,6 +81,16 @@ public class NoteEditorActivity extends BaseActivity {
         installAutoSave();
 
         NotepadAccess.request(this, this::loadNote);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (note != null && note.id > 0) {
+            outState.putLong(STATE_NOTE_ID, note.id);
+        } else if (restoredNoteId > 0) {
+            outState.putLong(STATE_NOTE_ID, restoredNoteId);
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -140,8 +169,37 @@ public class NoteEditorActivity extends BaseActivity {
         if (isFinishing() || isDestroyed()) {
             return;
         }
+
+        long noteId = restoredNoteId > 0
+                ? restoredNoteId
+                : getIntent().getLongExtra(NotepadActivity.EXTRA_NOTE_ID, 0L);
+        if (noteId > 0) {
+            loadStoredNote(noteId);
+            return;
+        }
+
+        Uri incomingUri = getIntent().getParcelableExtra(EXTRA_INCOMING_TEXT_URI);
+        if (incomingUri != null) {
+            loadIncomingTextFile(incomingUri);
+            return;
+        }
+
+        if (getIntent().hasExtra(EXTRA_INITIAL_CONTENT)) {
+            NoteStore.Note imported = new NoteStore.Note();
+            imported.title = getIntent().getStringExtra(EXTRA_INITIAL_TITLE);
+            imported.content = getIntent().getStringExtra(EXTRA_INITIAL_CONTENT);
+            completeIncomingNote(imported);
+            return;
+        }
+
+        loadStoredNote(0L);
+    }
+
+    private void loadStoredNote(long noteId) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
         loading = true;
-        long noteId = getIntent().getLongExtra(NotepadActivity.EXTRA_NOTE_ID, 0L);
         try {
             note = noteId > 0 ? store.find(noteId) : new NoteStore.Note();
             if (note == null) {
@@ -163,6 +221,154 @@ public class NoteEditorActivity extends BaseActivity {
         } finally {
             loading = false;
         }
+    }
+
+    private void loadIncomingTextFile(final Uri source) {
+        saveStatus.setText(R.string.notepad_saving);
+        new Thread(() -> {
+            try {
+                ImportedText importedText = readIncomingText(source);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    NoteStore.Note imported = new NoteStore.Note();
+                    imported.title = importedText.title;
+                    imported.content = importedText.content;
+                    completeIncomingNote(imported);
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    int message = error instanceof IncomingTextTooLargeException
+                            ? R.string.notepad_import_too_large
+                            : R.string.notepad_import_failed;
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    finish();
+                });
+            }
+        }, "notepad-incoming-text-reader").start();
+    }
+
+    private ImportedText readIncomingText(Uri source) throws Exception {
+        String title = incomingFileTitle(source);
+        byte[] bytes;
+        try (InputStream input = getContentResolver().openInputStream(source);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            if (input == null) {
+                throw new IllegalStateException("Unable to open incoming text file");
+            }
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_INCOMING_TEXT_BYTES) {
+                    throw new IncomingTextTooLargeException();
+                }
+                output.write(buffer, 0, read);
+            }
+            bytes = output.toByteArray();
+        }
+        return new ImportedText(title, decodeIncomingText(bytes));
+    }
+
+    private String incomingFileTitle(Uri source) {
+        String displayName = null;
+        try (Cursor cursor = getContentResolver().query(
+                source, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (index >= 0) {
+                    displayName = cursor.getString(index);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Fall back to the URI path when the provider does not expose a display name.
+        }
+        if (displayName == null || displayName.trim().isEmpty()) {
+            displayName = source.getLastPathSegment();
+        }
+        if (displayName == null || displayName.trim().isEmpty()) {
+            return getString(R.string.notepad_default_title);
+        }
+        displayName = displayName.substring(displayName.lastIndexOf('/') + 1).trim();
+        if (displayName.toLowerCase(java.util.Locale.ROOT).endsWith(".txt")) {
+            displayName = displayName.substring(0, displayName.length() - 4);
+        }
+        return displayName.isEmpty()
+                ? getString(R.string.notepad_default_title) : displayName;
+    }
+
+    private String decodeIncomingText(byte[] bytes) {
+        int offset = 0;
+        Charset charset = StandardCharsets.UTF_8;
+        if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF
+                && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF) {
+            offset = 3;
+        } else if (bytes.length >= 2 && (bytes[0] & 0xFF) == 0xFF
+                && (bytes[1] & 0xFF) == 0xFE) {
+            charset = StandardCharsets.UTF_16LE;
+            offset = 2;
+        } else if (bytes.length >= 2 && (bytes[0] & 0xFF) == 0xFE
+                && (bytes[1] & 0xFF) == 0xFF) {
+            charset = StandardCharsets.UTF_16BE;
+            offset = 2;
+        }
+        return new String(bytes, offset, bytes.length - offset, charset);
+    }
+
+    private void completeIncomingNote(NoteStore.Note imported) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        loading = true;
+        try {
+            note = imported;
+            if (note.title == null || note.title.trim().isEmpty()) {
+                note.title = getString(R.string.notepad_default_title);
+            }
+            if (note.content == null) {
+                note.content = "";
+            }
+            store.save(note);
+            restoredNoteId = note.id;
+
+            Intent updatedIntent = new Intent(getIntent());
+            updatedIntent.removeExtra(EXTRA_INCOMING_TEXT_URI);
+            updatedIntent.removeExtra(EXTRA_INITIAL_CONTENT);
+            updatedIntent.removeExtra(EXTRA_INITIAL_TITLE);
+            updatedIntent.putExtra(NotepadActivity.EXTRA_NOTE_ID, note.id);
+            setIntent(updatedIntent);
+
+            titleInput.setText(note.title);
+            contentInput.setText(note.content);
+            changed = false;
+            saveStatus.setText(R.string.notepad_saved);
+            invalidateOptionsMenu();
+        } catch (Exception error) {
+            Toast.makeText(this, getString(
+                    R.string.notepad_load_failed, error.getClass().getSimpleName()),
+                    Toast.LENGTH_LONG).show();
+            finish();
+        } finally {
+            loading = false;
+        }
+    }
+
+    private static final class ImportedText {
+        final String title;
+        final String content;
+
+        ImportedText(String title, String content) {
+            this.title = title;
+            this.content = content;
+        }
+    }
+
+    private static final class IncomingTextTooLargeException extends Exception {
     }
 
     private void installAutoSave() {
