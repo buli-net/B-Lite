@@ -1922,6 +1922,8 @@ Tổng cuối kỳ: %9$s</string>
     <string name="notepad_trash_empty">Thùng rác đang trống.</string>
     <string name="notepad_title_hint">Tiêu đề</string>
     <string name="notepad_content_hint">Nhập nội dung ghi chú…</string>
+    <string name="notepad_import_failed">Không thể mở tệp văn bản này trong Ghi chú.</string>
+    <string name="notepad_import_too_large">Tệp văn bản quá lớn để mở trong Ghi chú (tối đa 2 MB).</string>
     <string name="notepad_editor_title">Ghi chú</string>
     <string name="notepad_default_title">Ghi chú chưa đặt tên</string>
     <string name="notepad_no_content">Không có nội dung bổ sung</string>
