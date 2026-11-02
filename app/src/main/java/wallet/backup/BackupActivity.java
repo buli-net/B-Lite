@@ -105,6 +105,7 @@ public class BackupActivity extends BaseActivity {
         CheckBox calculator = optionsView.findViewById(R.id.backupOptionCalculator);
         CheckBox browser = optionsView.findViewById(R.id.backupOptionBrowser);
         CheckBox games = optionsView.findViewById(R.id.backupOptionGames);
+        CheckBox notepad = optionsView.findViewById(R.id.backupOptionNotepad);
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.backup_options_title)
@@ -122,6 +123,7 @@ public class BackupActivity extends BaseActivity {
                     selection.calculator = calculator.isChecked();
                     selection.browser = browser.isChecked();
                     selection.games = games.isChecked();
+                    selection.notepad = notepad.isChecked();
                     selectedBackupOptions = selection;
                     authorizeAndBackup();
                 })

@@ -11,6 +11,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
 import android.view.View;
@@ -24,6 +25,8 @@ import wallet.main.MainActivityPresenter;
 import wallet.main.R;
 
 public class RestoreActivity extends BaseActivity {
+
+    private ForwardingBackupBundle.Options selectedRestoreOptions = new ForwardingBackupBundle.Options();
 
     private final ActivityResultLauncher<String[]> backupFileLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -100,12 +103,38 @@ public class RestoreActivity extends BaseActivity {
     }
 
     private void confirmRestore(Uri backupUri) {
+        View optionsView = getLayoutInflater().inflate(R.layout.dialog_backup_options, null);
+        CheckBox forwarding = optionsView.findViewById(R.id.backupOptionForwarding);
+        CheckBox contacts = optionsView.findViewById(R.id.backupOptionContacts);
+        CheckBox imported = optionsView.findViewById(R.id.backupOptionImportedMetadata);
+        CheckBox request = optionsView.findViewById(R.id.backupOptionRequest);
+        CheckBox settings = optionsView.findViewById(R.id.backupOptionAppSettings);
+        CheckBox expense = optionsView.findViewById(R.id.backupOptionExpenseManager);
+        CheckBox calculator = optionsView.findViewById(R.id.backupOptionCalculator);
+        CheckBox browser = optionsView.findViewById(R.id.backupOptionBrowser);
+        CheckBox games = optionsView.findViewById(R.id.backupOptionGames);
+        CheckBox notepad = optionsView.findViewById(R.id.backupOptionNotepad);
+
         new AlertDialog.Builder(this)
-                .setTitle(R.string.restore_question)
-                .setMessage(R.string.restore_message)
+                .setTitle(R.string.backup_options_title)
+                .setMessage(R.string.backup_options_description)
+                .setView(optionsView)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.restore_action, (dialog, which) ->
-                        authorizeCurrentWalletForRestore(backupUri))
+                .setPositiveButton(R.string.restore_action, (dialog, which) -> {
+                    ForwardingBackupBundle.Options selection = new ForwardingBackupBundle.Options();
+                    selection.forwarding = forwarding.isChecked();
+                    selection.contacts = contacts.isChecked();
+                    selection.importedWalletMetadata = imported.isChecked();
+                    selection.requestMetadata = request.isChecked();
+                    selection.appSettings = settings.isChecked();
+                    selection.expenseManager = expense.isChecked();
+                    selection.calculator = calculator.isChecked();
+                    selection.browser = browser.isChecked();
+                    selection.games = games.isChecked();
+                    selection.notepad = notepad.isChecked();
+                    selectedRestoreOptions = selection;
+                    authorizeCurrentWalletForRestore(backupUri);
+                })
                 .show();
     }
 
@@ -158,7 +187,7 @@ public class RestoreActivity extends BaseActivity {
             MainActivityPresenter presenter,
             Uri backupUri,
             AesKey authorizationKey) {
-        presenter.restoreWallet(backupUri, authorizationKey);
+        presenter.restoreWallet(backupUri, authorizationKey, selectedRestoreOptions);
         Toast.makeText(
                 this,
                 R.string.restore_in_progress,
