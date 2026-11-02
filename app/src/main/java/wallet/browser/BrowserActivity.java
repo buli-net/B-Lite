@@ -193,6 +193,7 @@ public final class BrowserActivity extends BaseActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (routeIncomingRequestFile(intent)) return;
         String requestedUrl = getIncomingWebUrl(intent);
         if (requestedUrl != null) navigate(requestedUrl);
     }
@@ -214,9 +215,60 @@ public final class BrowserActivity extends BaseActivity {
         return null;
     }
 
+    private boolean routeIncomingRequestFile(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return false;
+        Uri source = intent.getData();
+        String type = intent.getType();
+        if (source == null || type == null
+                || !("text/plain".equalsIgnoreCase(type)
+                || "text/html".equalsIgnoreCase(type))) {
+            return false;
+        }
+
+        String content = null;
+        try (java.io.InputStream input = getContentResolver().openInputStream(source);
+             java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
+            if (input == null) return false;
+            byte[] buffer = new byte[1024];
+            int total = 0;
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                total += count;
+                if (total > 8192) return false;
+                output.write(buffer, 0, count);
+            }
+            content = output.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+        } catch (Exception ignored) {
+            return false;
+        }
+
+        if (content == null) return false;
+        String normalized = content.trim()
+                .replace("&amp;", "&")
+                .replace("&#38;", "&")
+                .replace("&#x26;", "&")
+                .replace("&#X26;", "&");
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                "(?i)bitcoin:[a-z0-9]{20,100}(?:\\?[^\\s<>\\\"']*)?")
+                .matcher(normalized);
+        if (!matcher.find()) return false;
+
+        try {
+            Intent send = new Intent(Intent.ACTION_VIEW, Uri.parse(matcher.group()));
+            send.setClassName(this, "wallet.send.SendActivity");
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(send);
+            finish();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        if (routeIncomingRequestFile(getIntent())) return;
         setContentView(R.layout.activity_browser);
         // Match the app-wide system bar surfaces; the browser toolbar alone uses colorPrimary.
         android.util.TypedValue systemSurface = new android.util.TypedValue();
