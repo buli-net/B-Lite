@@ -15,6 +15,7 @@ import wallet.main.R;
 import wallet.ui.LocalizedErrors;
 import wallet.contacts.AddressBookStore;
 import wallet.games.ArcadeGameDataStore;
+import wallet.notepad.NotepadBackupStore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -61,10 +62,11 @@ public final class ForwardingBackupBundle {
         public boolean calculator = true;
         public boolean browser = true;
         public boolean games = true;
+        public boolean notepad = true;
 
         public boolean hasOptionalData() {
             return forwarding || contacts || importedWalletMetadata || requestMetadata || appSettings
-                    || expenseManager || calculator || browser || games;
+                    || expenseManager || calculator || browser || games || notepad;
         }
     }
 
@@ -269,11 +271,16 @@ public final class ForwardingBackupBundle {
 
     /** Restores the optional data categories included in a current or legacy backup. */
     public static void restoreAppDataSnapshot(Context context, RestorePayload payload) throws IOException {
+        restoreAppDataSnapshot(context, payload, new Options());
+    }
+
+    public static void restoreAppDataSnapshot(Context context, RestorePayload payload, Options selected) throws IOException {
         if (context == null || payload == null || payload.appDataSnapshot == null) return;
+        if (selected == null) selected = new Options();
         JSONObject snapshot = payload.appDataSnapshot;
         try {
             if (snapshot.optInt("formatVersion", -1) == LEGACY_FORMAT_VERSION) {
-                restoreLegacyForwardingSnapshot(context, snapshot);
+                if (selected.forwarding) restoreLegacyForwardingSnapshot(context, snapshot);
                 return;
             }
             validateAppDataSnapshot(snapshot);
@@ -282,11 +289,11 @@ public final class ForwardingBackupBundle {
                 throw new LocalizedErrors.IOException(R.string.restore_network_mismatch);
             }
             JSONObject categories = snapshot.getJSONObject("categories");
-            if (categories.has("forwarding")) {
+            if (selected.forwarding && categories.has("forwarding")) {
                 restoreWholePreferences(context, "forwarding_service_" + network,
                         categories.getJSONObject("forwarding").getJSONObject("values"));
             }
-            if (categories.has("contacts")) {
+            if (selected.contacts && categories.has("contacts")) {
                 JSONObject contacts = categories.getJSONObject("contacts");
                 // Restore image files before restoring contact records that reference them.
                 // Older backup files do not contain the optional "avatars" object.
@@ -297,31 +304,34 @@ public final class ForwardingBackupBundle {
                 restoreWholePreferences(context, networkPrefsName("address_book", network),
                         contacts.getJSONObject("values"));
             }
-            if (categories.has("importedWalletMetadata")) {
+            if (selected.importedWalletMetadata && categories.has("importedWalletMetadata")) {
                 restoreFilteredPreferences(context, networkPrefsName("imported_wif_wallets", network),
                         categories.getJSONObject("importedWalletMetadata").getJSONObject("values"),
                         ForwardingBackupBundle::isImportedMetadataKey, true);
             }
-            if (categories.has("requestMetadata")) {
+            if (selected.requestMetadata && categories.has("requestMetadata")) {
                 restoreFilteredPreferences(context, networkPrefsName("wallet_selection", network),
                         categories.getJSONObject("requestMetadata").getJSONObject("values"),
                         ForwardingBackupBundle::isRequestMetadataKey, true);
             }
-            if (categories.has("expenseManager")) {
+            if (selected.expenseManager && categories.has("expenseManager")) {
                 JSONObject expense = categories.getJSONObject("expenseManager");
                 restoreWholePreferences(context, "expense_manager_preferences",
                         expense.getJSONObject("preferences").getJSONObject("values"));
                 restoreExpenseDatabase(context, expense);
             }
-            if (categories.has("calculator")) {
+            if (selected.calculator && categories.has("calculator")) {
                 restoreWholePreferences(context, "calculator_preferences",
                         categories.getJSONObject("calculator").getJSONObject("values"));
             }
-            if (categories.has("browser")) {
+            if (selected.browser && categories.has("browser")) {
                 restoreWholePreferences(context, "browser_storage",
                         categories.getJSONObject("browser").getJSONObject("values"));
             }
-            if (categories.has("games")) {
+            if (selected.notepad && categories.has("notepad")) {
+                NotepadBackupStore.restoreSnapshot(context, categories.getJSONObject("notepad"));
+            }
+            if (selected.games && categories.has("games")) {
                 JSONObject games = categories.getJSONObject("games");
                 if (games.has("storage")) {
                     restoreWholePreferences(context, ArcadeGameDataStore.PREFERENCES_NAME,
@@ -336,7 +346,7 @@ public final class ForwardingBackupBundle {
                     throw new LocalizedErrors.IOException(R.string.backup_app_data_restore_failed);
                 }
             }
-            if (categories.has("appSettings")) {
+            if (selected.appSettings && categories.has("appSettings")) {
                 JSONObject settings = categories.getJSONObject("appSettings");
                 if (settings.has("moneyDisplay")) {
                     restoreWholePreferences(context, "money_display_preferences",
@@ -359,7 +369,9 @@ public final class ForwardingBackupBundle {
                     }
                 }
             }
-        } catch (JSONException | NumberFormatException error) {
+        } catch (IOException error) {
+            throw error;
+        } catch (Exception error) {
             throw new LocalizedErrors.IOException(R.string.backup_archive_invalid, error);
         }
     }
@@ -400,6 +412,13 @@ public final class ForwardingBackupBundle {
         if (options.browser) {
             categories.put("browser", createPreferencesSnapshot(context,
                     "browser_storage", key -> true));
+        }
+        if (options.notepad) {
+            try {
+                categories.put("notepad", NotepadBackupStore.createSnapshot(context));
+            } catch (Exception error) {
+                throw new IOException("Notepad backup failed", error);
+            }
         }
         if (options.games) {
             ArcadeGameDataStore.ensureMigrated(context);
@@ -872,7 +891,7 @@ public final class ForwardingBackupBundle {
                     && !"importedWalletMetadata".equals(key) && !"requestMetadata".equals(key)
                     && !"appSettings".equals(key) && !"expenseManager".equals(key)
                     && !"calculator".equals(key) && !"browser".equals(key)
-                    && !"games".equals(key)) {
+                    && !"games".equals(key) && !"notepad".equals(key)) {
                 throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
             }
             JSONObject category = categories.getJSONObject(key);
