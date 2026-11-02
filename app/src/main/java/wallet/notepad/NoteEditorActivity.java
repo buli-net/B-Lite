@@ -23,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 
 import wallet.ui.BaseActivity;
 
+import wallet.main.R;
+
 public class NoteEditorActivity extends BaseActivity {
 
     private final Handler saveHandler = new Handler(Looper.getMainLooper());
