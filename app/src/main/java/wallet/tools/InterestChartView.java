@@ -31,6 +31,10 @@ public final class InterestChartView extends View {
     private static final int AXIS_INTERVALS = 5;
     private static final int MAX_TOOLTIP_SERIES = 4;
 
+    // Change this value to adjust how long the crosshair and tooltip remain
+    // visible after the user releases the finger or the touch gesture is cancelled.
+    private static final long SELECTION_DISPLAY_DURATION_MS = 3_000L;
+
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -59,6 +63,14 @@ public final class InterestChartView extends View {
     private int selectedIndex = -1;
     private float downX;
     private float downY;
+
+    private final Runnable hideSelectionRunnable = new Runnable() {
+        @Override
+        public void run() {
+            clearSelection();
+            invalidate();
+        }
+    };
 
     public InterestChartView(Context context) {
         super(context);
@@ -111,14 +123,16 @@ public final class InterestChartView extends View {
         if (selectedCurrencyCode != null && !selectedCurrencyCode.trim().isEmpty()) {
             currencyCode = selectedCurrencyCode;
         }
-        selectedIndex = -1;
+        removeCallbacks(hideSelectionRunnable);
+        clearSelection();
         invalidate();
     }
 
     public void setSeries(@Nullable List<Series> newSeries) {
         series.clear();
         if (newSeries != null) series.addAll(newSeries);
-        selectedIndex = -1;
+        removeCallbacks(hideSelectionRunnable);
+        clearSelection();
         invalidate();
     }
 
@@ -449,12 +463,14 @@ public final class InterestChartView extends View {
         if (series.isEmpty() || pointCount() < 2) return false;
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                removeCallbacks(hideSelectionRunnable);
                 downX = event.getX();
                 downY = event.getY();
                 requestParentInterception(false);
                 updateSelectionFromX(event.getX());
                 return true;
             case MotionEvent.ACTION_MOVE:
+                removeCallbacks(hideSelectionRunnable);
                 if (Math.abs(event.getX() - downX) > Math.abs(event.getY() - downY)) {
                     requestParentInterception(true);
                     updateSelectionFromX(event.getX());
@@ -464,15 +480,33 @@ public final class InterestChartView extends View {
                 updateSelectionFromX(event.getX());
                 requestParentInterception(false);
                 performClick();
+                scheduleSelectionDismissal();
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 requestParentInterception(false);
-                selectedIndex = -1;
+                scheduleSelectionDismissal();
                 invalidate();
                 return true;
             default:
                 return true;
         }
+    }
+
+    private void scheduleSelectionDismissal() {
+        if (selectedIndex < 0) return;
+        removeCallbacks(hideSelectionRunnable);
+        postDelayed(hideSelectionRunnable, SELECTION_DISPLAY_DURATION_MS);
+    }
+
+    private void clearSelection() {
+        selectedIndex = -1;
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        removeCallbacks(hideSelectionRunnable);
+        clearSelection();
+        super.onDetachedFromWindow();
     }
 
     private void requestParentInterception(boolean disallow) {
