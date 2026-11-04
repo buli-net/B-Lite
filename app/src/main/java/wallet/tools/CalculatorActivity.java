@@ -969,6 +969,7 @@ public class CalculatorActivity extends BaseActivity {
             total.add(chartNumber(result.total));
             invested.add(chartNumber(result.invested));
         }
+        chartView.setProjectionPeriod(config.start, config.end, locale, config.currencyCode);
         values.add(new InterestChartView.Series(getString(R.string.calculator_chart_total), total, false));
         values.add(new InterestChartView.Series(getString(R.string.calculator_chart_invested), invested, true));
         for (JSONObject scenario : scenarios) {
