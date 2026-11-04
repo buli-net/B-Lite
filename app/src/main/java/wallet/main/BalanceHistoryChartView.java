@@ -37,6 +37,18 @@ public final class BalanceHistoryChartView extends View {
     private static final long DAY_MS = 24L * 60L * 60L * 1000L;
     private static final int VERTICAL_TICK_INTERVALS = 5;
 
+    // Change this value to adjust how long the crosshair and tooltip remain
+    // visible after the user releases the finger or the touch gesture is cancelled.
+    private static final long SELECTION_DISPLAY_DURATION_MS = 3_000L;
+
+    private final Runnable hideSelectionRunnable = new Runnable() {
+        @Override
+        public void run() {
+            clearSelection();
+            invalidate();
+        }
+    };
+
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -106,13 +118,25 @@ public final class BalanceHistoryChartView extends View {
     public void setHistory(List<BalanceHistoryPoint> points,
                            long creationTimeMillis,
                            boolean available) {
+        // MainActivity refreshes this snapshot whenever wallet data is refreshed.
+        // Keep an active selection across those refreshes instead of making the
+        // crosshair disappear while the user is inspecting a historical point.
+        boolean preserveSelection = selectedPoint != null && selectedTimeMillis > 0L;
+        long previousSelectedTime = selectedTimeMillis;
+
         history = points == null ? new ArrayList<>() : new ArrayList<>(points);
         walletCreationTimeMillis = creationTimeMillis;
         historyAvailable = available;
-        selectedX = -1f;
-        selectedTimeMillis = -1L;
-        selectedPoint = null;
         rebuildVisiblePoints();
+
+        if (preserveSelection && historyAvailable && !visiblePoints.isEmpty()) {
+            selectedTimeMillis = Math.max(visibleStartMillis,
+                    Math.min(visibleEndMillis, previousSelectedTime));
+            selectedPoint = balanceAtTime(selectedTimeMillis);
+        } else {
+            removeCallbacks(hideSelectionRunnable);
+            clearSelection();
+        }
         invalidate();
     }
 
@@ -122,9 +146,8 @@ public final class BalanceHistoryChartView extends View {
         }
         if (range == selectedRange) return;
         range = selectedRange;
-        selectedX = -1f;
-        selectedTimeMillis = -1L;
-        selectedPoint = null;
+        removeCallbacks(hideSelectionRunnable);
+        clearSelection();
         rebuildVisiblePoints();
         invalidate();
     }
@@ -237,6 +260,9 @@ public final class BalanceHistoryChartView extends View {
 
         calculateVerticalRange();
         calculateGraphBounds(width);
+        if (selectedPoint != null && selectedTimeMillis > 0L) {
+            selectedX = xForTime(selectedTimeMillis);
+        }
         drawGrid(canvas);
         drawVerticalAxisLabels(canvas);
         drawBalanceLine(canvas);
@@ -424,6 +450,17 @@ public final class BalanceHistoryChartView extends View {
         return new SimpleDateFormat(pattern, Locale.getDefault()).format(new Date(time));
     }
 
+    private void clearSelection() {
+        selectedX = -1f;
+        selectedTimeMillis = -1L;
+        selectedPoint = null;
+    }
+
+    private void scheduleSelectionDismissal() {
+        removeCallbacks(hideSelectionRunnable);
+        postDelayed(hideSelectionRunnable, SELECTION_DISPLAY_DURATION_MS);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (!historyAvailable || visiblePoints.isEmpty()) return false;
@@ -431,6 +468,7 @@ public final class BalanceHistoryChartView extends View {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
             case MotionEvent.ACTION_UP:
+                removeCallbacks(hideSelectionRunnable);
                 // Map the finger's actual X coordinate to the chart's time domain.
                 // The crosshair and tooltip use this exact time; the balance is the
                 // last real wallet state at or before that time (step-chart semantics).
@@ -445,17 +483,25 @@ public final class BalanceHistoryChartView extends View {
                 invalidate();
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     performClick();
+                    scheduleSelectionDismissal();
                 }
                 return true;
             case MotionEvent.ACTION_CANCEL:
-                selectedX = -1f;
-                selectedTimeMillis = -1L;
-                selectedPoint = null;
+                // A parent view can cancel the gesture while intercepting a swipe.
+                // Keep the last inspected point visible briefly instead of clearing it.
+                scheduleSelectionDismissal();
                 invalidate();
                 return true;
             default:
                 return true;
         }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        removeCallbacks(hideSelectionRunnable);
+        clearSelection();
+        super.onDetachedFromWindow();
     }
 
     private BalanceHistoryPoint balanceAtTime(long time) {
