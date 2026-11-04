@@ -35,6 +35,7 @@ public final class BalanceHistoryChartView extends View {
     public static final int RANGE_ALL = 6;
 
     private static final long DAY_MS = 24L * 60L * 60L * 1000L;
+    private static final int VERTICAL_TICK_INTERVALS = 5;
 
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -56,8 +57,8 @@ public final class BalanceHistoryChartView extends View {
     private float graphRight;
     private float graphTop;
     private float graphBottom;
-    private long minimumBalance;
     private long maximumBalance;
+    private long verticalAxisMaximum;
     private List<BalanceHistoryPoint> visiblePoints = new ArrayList<>();
     private int accentColor;
     private int secondaryColor;
@@ -228,13 +229,13 @@ public final class BalanceHistoryChartView extends View {
 
         float width = getWidth();
         float height = getHeight();
-        graphLeft = dp(6f);
-        graphRight = Math.max(graphLeft + 1f, width - dp(6f));
         graphTop = dp(12f);
         graphBottom = Math.max(graphTop + 1f, height - dp(23f));
 
         calculateVerticalRange();
+        calculateGraphBounds(width);
         drawGrid(canvas);
+        drawVerticalAxisLabels(canvas);
         drawBalanceLine(canvas);
         drawAxisLabels(canvas);
         if (selectedPoint != null && selectedX >= graphLeft && selectedX <= graphRight) {
@@ -250,34 +251,80 @@ public final class BalanceHistoryChartView extends View {
     }
 
     private void calculateVerticalRange() {
-        minimumBalance = Long.MAX_VALUE;
-        maximumBalance = Long.MIN_VALUE;
+        maximumBalance = 0L;
         for (BalanceHistoryPoint point : visiblePoints) {
-            minimumBalance = Math.min(minimumBalance, point.balanceSatoshis);
             maximumBalance = Math.max(maximumBalance, point.balanceSatoshis);
         }
-        if (minimumBalance == Long.MAX_VALUE) {
-            minimumBalance = 0L;
-            maximumBalance = 0L;
+
+        // Keep the vertical axis grounded at zero and leave 10% headroom above
+        // the highest balance in the currently selected time range.
+        long margin = maximumBalance / 10L;
+        if (maximumBalance % 10L != 0L) {
+            margin++;
         }
-        long span = maximumBalance - minimumBalance;
-        if (span <= 0L) {
-            long margin = Math.max(1L, Math.abs(maximumBalance) / 10L);
-            minimumBalance = Math.max(0L, minimumBalance - margin);
-            maximumBalance = maximumBalance + margin;
-        } else {
-            long margin = Math.max(1L, span / 10L);
-            minimumBalance = Math.max(0L, minimumBalance - margin);
-            maximumBalance = maximumBalance + margin;
+        margin = Math.max(1L, margin);
+        verticalAxisMaximum = maximumBalance > Long.MAX_VALUE - margin
+                ? Long.MAX_VALUE : maximumBalance + margin;
+    }
+
+    private void calculateGraphBounds(float width) {
+        float widestLabel = 0f;
+        for (int i = 0; i <= VERTICAL_TICK_INTERVALS; i++) {
+            widestLabel = Math.max(widestLabel,
+                    labelPaint.measureText(formatVerticalAxisValue(balanceAtVerticalTick(i))));
         }
+
+        // Reserve only the space actually needed by the selected display unit.
+        // The cap keeps a usable plot width on narrow devices and large font scales.
+        float maximumAxisWidth = Math.max(dp(24f),
+                Math.min(width * 0.38f, width - dp(100f)));
+        float axisWidth = Math.min(widestLabel, maximumAxisWidth);
+        graphLeft = dp(6f) + axisWidth + dp(8f);
+        graphRight = Math.max(graphLeft + dp(1f), width - dp(6f));
     }
 
     private void drawGrid(Canvas canvas) {
-        float rowHeight = (graphBottom - graphTop) / 2f;
-        canvas.drawLine(graphLeft, graphTop, graphRight, graphTop, gridPaint);
-        canvas.drawLine(graphLeft, graphTop + rowHeight, graphRight,
-                graphTop + rowHeight, gridPaint);
-        canvas.drawLine(graphLeft, graphBottom, graphRight, graphBottom, gridPaint);
+        float graphHeight = graphBottom - graphTop;
+        for (int i = 0; i <= VERTICAL_TICK_INTERVALS; i++) {
+            float y = graphBottom - graphHeight * i / VERTICAL_TICK_INTERVALS;
+            canvas.drawLine(graphLeft, y, graphRight, y, gridPaint);
+        }
+
+        // Five evenly spaced time intervals create four internal time markers.
+        float graphWidth = graphRight - graphLeft;
+        for (int i = 0; i <= 4; i++) {
+            float x = graphLeft + graphWidth * i / 4f;
+            if (i > 0 && i < 4) {
+                canvas.drawLine(x, graphTop, x, graphBottom, gridPaint);
+            }
+            canvas.drawLine(x, graphBottom, x, graphBottom + dp(4f), gridPaint);
+        }
+    }
+
+    private void drawVerticalAxisLabels(Canvas canvas) {
+        Paint.Align previousAlignment = labelPaint.getTextAlign();
+        labelPaint.setTextAlign(Paint.Align.RIGHT);
+        Paint.FontMetrics metrics = labelPaint.getFontMetrics();
+        float labelRight = graphLeft - dp(6f);
+        float graphHeight = graphBottom - graphTop;
+
+        for (int i = 0; i <= VERTICAL_TICK_INTERVALS; i++) {
+            float y = graphBottom - graphHeight * i / VERTICAL_TICK_INTERVALS;
+            float baseline = y - (metrics.ascent + metrics.descent) / 2f;
+            canvas.drawText(formatVerticalAxisValue(balanceAtVerticalTick(i)),
+                    labelRight, baseline, labelPaint);
+        }
+        labelPaint.setTextAlign(previousAlignment);
+    }
+
+    private long balanceAtVerticalTick(int tick) {
+        if (tick <= 0) return 0L;
+        if (tick >= VERTICAL_TICK_INTERVALS) return verticalAxisMaximum;
+        return Math.round(verticalAxisMaximum * (tick / (double) VERTICAL_TICK_INTERVALS));
+    }
+
+    private String formatVerticalAxisValue(long satoshis) {
+        return MoneyFormatter.format(getContext(), Coin.valueOf(satoshis));
     }
 
     private void drawBalanceLine(Canvas canvas) {
@@ -300,12 +347,22 @@ public final class BalanceHistoryChartView extends View {
     }
 
     private void drawAxisLabels(Canvas canvas) {
-        labelPaint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText(formatShortDate(visibleStartMillis), graphLeft,
-                getHeight() - dp(5f), labelPaint);
-        labelPaint.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText(formatShortDate(visibleEndMillis), graphRight,
-                getHeight() - dp(5f), labelPaint);
+        float graphWidth = graphRight - graphLeft;
+        long duration = Math.max(1L, visibleEndMillis - visibleStartMillis);
+        float labelBaseline = getHeight() - dp(5f);
+
+        for (int i = 0; i <= 4; i++) {
+            long time = visibleStartMillis + duration * i / 4L;
+            float x = graphLeft + graphWidth * i / 4f;
+            if (i == 0) {
+                labelPaint.setTextAlign(Paint.Align.LEFT);
+            } else if (i == 4) {
+                labelPaint.setTextAlign(Paint.Align.RIGHT);
+            } else {
+                labelPaint.setTextAlign(Paint.Align.CENTER);
+            }
+            canvas.drawText(formatShortDate(time), x, labelBaseline, labelPaint);
+        }
         labelPaint.setTextAlign(Paint.Align.LEFT);
     }
 
@@ -343,16 +400,21 @@ public final class BalanceHistoryChartView extends View {
     }
 
     private float yForBalance(long balance) {
-        double span = Math.max(1d, (double) maximumBalance - (double) minimumBalance);
-        double fraction = ((double) balance - (double) minimumBalance) / span;
+        double span = Math.max(1d, (double) verticalAxisMaximum);
+        double fraction = Math.max(0d, Math.min(1d, balance / span));
         return graphBottom - (float) fraction * (graphBottom - graphTop);
     }
 
     private String formatShortDate(long time) {
-        String pattern = range == RANGE_1_DAY ? "HH:mm" : "dd/MM";
-        if (range == RANGE_ALL && walletCreationTimeMillis > 0L
-                && visibleEndMillis - visibleStartMillis > 365L * DAY_MS) {
-            pattern = "MM/yyyy";
+        String pattern;
+        if (range == RANGE_1_DAY) {
+            pattern = "HH:mm";
+        } else if (range == RANGE_1_YEAR
+                || (range == RANGE_ALL
+                && visibleEndMillis - visibleStartMillis > 180L * DAY_MS)) {
+            pattern = "MM/yy";
+        } else {
+            pattern = "dd/MM";
         }
         return new SimpleDateFormat(pattern, Locale.getDefault()).format(new Date(time));
     }
