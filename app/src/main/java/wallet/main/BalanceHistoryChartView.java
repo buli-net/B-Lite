@@ -53,6 +53,7 @@ public final class BalanceHistoryChartView extends View {
     private BalanceHistoryPoint selectedPoint;
     private long visibleStartMillis;
     private long visibleEndMillis;
+    private long selectedTimeMillis = -1L;
     private float graphLeft;
     private float graphRight;
     private float graphTop;
@@ -109,6 +110,7 @@ public final class BalanceHistoryChartView extends View {
         walletCreationTimeMillis = creationTimeMillis;
         historyAvailable = available;
         selectedX = -1f;
+        selectedTimeMillis = -1L;
         selectedPoint = null;
         rebuildVisiblePoints();
         invalidate();
@@ -121,6 +123,7 @@ public final class BalanceHistoryChartView extends View {
         if (range == selectedRange) return;
         range = selectedRange;
         selectedX = -1f;
+        selectedTimeMillis = -1L;
         selectedPoint = null;
         rebuildVisiblePoints();
         invalidate();
@@ -374,8 +377,10 @@ public final class BalanceHistoryChartView extends View {
 
         String amount = MoneyFormatter.format(getContext(),
                 Coin.valueOf(selectedPoint.balanceSatoshis));
+        long tooltipTime = selectedTimeMillis > 0L
+                ? selectedTimeMillis : selectedPoint.timestampMillis;
         String date = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                .format(new Date(selectedPoint.timestampMillis));
+                .format(new Date(tooltipTime));
         String label = amount + "  •  " + date;
         float textWidth = tooltipTextPaint.measureText(label);
         float horizontalPadding = dp(8f);
@@ -425,19 +430,26 @@ public final class BalanceHistoryChartView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
-                selectedX = Math.max(graphLeft, Math.min(graphRight, event.getX()));
-                long selectedTime = visibleStartMillis
-                        + (long) ((selectedX - graphLeft)
-                        / Math.max(1f, graphRight - graphLeft)
-                        * (visibleEndMillis - visibleStartMillis));
-                selectedPoint = nearestPoint(selectedTime);
-                invalidate();
-                return true;
             case MotionEvent.ACTION_UP:
-                performClick();
+                // Map the finger's actual X coordinate to the chart's time domain.
+                // The crosshair and tooltip use this exact time; the balance is the
+                // last real wallet state at or before that time (step-chart semantics).
+                selectedX = Math.max(graphLeft, Math.min(graphRight, event.getX()));
+                double horizontalFraction = (selectedX - graphLeft)
+                        / Math.max(1f, graphRight - graphLeft);
+                horizontalFraction = Math.max(0d, Math.min(1d, horizontalFraction));
+                selectedTimeMillis = visibleStartMillis
+                        + (long) (horizontalFraction
+                        * (visibleEndMillis - visibleStartMillis));
+                selectedPoint = balanceAtTime(selectedTimeMillis);
+                invalidate();
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    performClick();
+                }
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 selectedX = -1f;
+                selectedTimeMillis = -1L;
                 selectedPoint = null;
                 invalidate();
                 return true;
@@ -446,13 +458,25 @@ public final class BalanceHistoryChartView extends View {
         }
     }
 
-    private BalanceHistoryPoint nearestPoint(long time) {
-        BalanceHistoryPoint selected = visiblePoints.get(0);
-        for (BalanceHistoryPoint point : visiblePoints) {
-            if (point.timestampMillis > time) break;
-            selected = point;
+    private BalanceHistoryPoint balanceAtTime(long time) {
+        // Find the last recorded balance state whose timestamp is not after
+        // the selected instant. This keeps the chart faithful to real transactions
+        // without interpolating balances between transaction events.
+        int low = 0;
+        int high = visiblePoints.size() - 1;
+        int selectedIndex = 0;
+
+        while (low <= high) {
+            int middle = low + (high - low) / 2;
+            BalanceHistoryPoint candidate = visiblePoints.get(middle);
+            if (candidate.timestampMillis <= time) {
+                selectedIndex = middle;
+                low = middle + 1;
+            } else {
+                high = middle - 1;
+            }
         }
-        return selected;
+        return visiblePoints.get(selectedIndex);
     }
 
     @Override
