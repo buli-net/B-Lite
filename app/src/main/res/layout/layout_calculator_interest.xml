@@ -485,7 +485,7 @@
         <wallet.tools.InterestChartView
             android:id="@+id/calculatorInterestChart"
             android:layout_width="match_parent"
-            android:layout_height="210dp"
+            android:layout_height="250dp"
             android:contentDescription="@string/calculator_growth_chart"
          />
     </LinearLayout>
