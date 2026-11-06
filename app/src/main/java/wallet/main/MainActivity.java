@@ -108,6 +108,9 @@ public class MainActivity extends BaseActivity
     private static final String STATE_TRANSACTION_FILTER = "transaction_filter";
     private static final String STATE_TRANSACTION_LIMIT = "transaction_limit";
     private static final String STATE_BALANCE_HISTORY_RANGE = "balance_history_range";
+    private static final String MAIN_SCREEN_PREFERENCES = "main_screen_preferences";
+    private static final String PREF_TRANSACTION_FILTER = "transaction_filter";
+    private static final String PREF_BALANCE_HISTORY_RANGE = "balance_history_range";
     private static final int FILTER_ALL = 0;
     private static final int FILTER_SENT = 1;
     private static final int FILTER_RECEIVED = 2;
@@ -154,12 +157,19 @@ public class MainActivity extends BaseActivity
         setContentView(R.layout.activity_main);
         requestNotificationPermissionIfNeeded();
 
+        android.content.SharedPreferences screenPreferences = getSharedPreferences(
+                MAIN_SCREEN_PREFERENCES, MODE_PRIVATE);
+        transactionFilter = screenPreferences.getInt(PREF_TRANSACTION_FILTER, FILTER_ALL);
+        balanceHistoryRange = screenPreferences.getInt(PREF_BALANCE_HISTORY_RANGE,
+                BalanceHistoryChartView.RANGE_1_YEAR);
         if (state != null) {
-            transactionFilter = state.getInt(STATE_TRANSACTION_FILTER, FILTER_ALL);
+            transactionFilter = state.getInt(STATE_TRANSACTION_FILTER, transactionFilter);
             transactionLimit = state.getInt(STATE_TRANSACTION_LIMIT, -1);
             balanceHistoryRange = state.getInt(STATE_BALANCE_HISTORY_RANGE,
-                    BalanceHistoryChartView.RANGE_1_YEAR);
+                    balanceHistoryRange);
         }
+        transactionFilter = normalizeTransactionFilter(transactionFilter);
+        balanceHistoryRange = normalizeBalanceHistoryRange(balanceHistoryRange);
 
         bindViews();
         setupToolbar();
@@ -354,6 +364,7 @@ public class MainActivity extends BaseActivity
             }
             styleBalanceHistoryRangeButtons(selectedId);
             balanceHistoryChart.setRange(balanceHistoryRange);
+            saveMainScreenPreferences();
         });
     }
 
@@ -368,8 +379,36 @@ public class MainActivity extends BaseActivity
     }
 
     private void selectTransactionFilter(int selectedFilter) {
-        transactionFilter = selectedFilter;
+        transactionFilter = normalizeTransactionFilter(selectedFilter);
         applyTransactionFilter();
+        saveMainScreenPreferences();
+    }
+
+    private int normalizeTransactionFilter(int value) {
+        return value == FILTER_SENT || value == FILTER_RECEIVED ? value : FILTER_ALL;
+    }
+
+    private int normalizeBalanceHistoryRange(int value) {
+        switch (value) {
+            case BalanceHistoryChartView.RANGE_1_DAY:
+            case BalanceHistoryChartView.RANGE_7_DAYS:
+            case BalanceHistoryChartView.RANGE_1_MONTH:
+            case BalanceHistoryChartView.RANGE_3_MONTHS:
+            case BalanceHistoryChartView.RANGE_6_MONTHS:
+            case BalanceHistoryChartView.RANGE_1_YEAR:
+            case BalanceHistoryChartView.RANGE_ALL:
+                return value;
+            default:
+                return BalanceHistoryChartView.RANGE_1_YEAR;
+        }
+    }
+
+    private void saveMainScreenPreferences() {
+        getSharedPreferences(MAIN_SCREEN_PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .putInt(PREF_TRANSACTION_FILTER, transactionFilter)
+                .putInt(PREF_BALANCE_HISTORY_RANGE, balanceHistoryRange)
+                .apply();
     }
 
     private void updateTransactionFilter() {
