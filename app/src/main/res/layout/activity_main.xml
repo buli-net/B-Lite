@@ -454,7 +454,8 @@
                         android:layout_weight="1"
                         android:layout_marginTop="6dp"
                         android:overScrollMode="never"
-                        android:scrollbars="vertical|horizontal"
+                        android:scrollbars="vertical"
+                        android:scrollbarStyle="outsideOverlay"
                     />
                 </LinearLayout>
             </LinearLayout>
