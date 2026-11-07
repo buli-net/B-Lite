@@ -290,6 +290,7 @@ public class MainActivity extends BaseActivity
     private void setupTransactionList() {
         RecyclerView list = findViewById(R.id.transactionsList);
         list.setLayoutManager(new LinearLayoutManager(this));
+        list.setNestedScrollingEnabled(false);
         transactionAdapter = new TransactionAdapter(filteredTransactions);
         list.setAdapter(transactionAdapter);
         transactionsEmpty = findViewById(R.id.transactionsEmpty);
