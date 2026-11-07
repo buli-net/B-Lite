@@ -21,7 +21,9 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
         android:scrollbars="vertical"
+        android:scrollbarStyle="outsideInset"
     >
 
         <LinearLayout
