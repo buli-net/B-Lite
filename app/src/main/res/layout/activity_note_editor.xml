@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical"
+>
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar_note_editor"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+    />
+
+    <EditText
+        android:id="@+id/noteTitleInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/bg_card"
+        android:hint="@string/notepad_title_hint"
+        android:inputType="textCapSentences"
+        android:maxLines="2"
+        android:padding="13dp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textColorHint="?android:attr/textColorSecondary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+    />
+
+    <TextView
+        android:id="@+id/noteSaveStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingTop="7dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="5dp"
+        android:text="@string/notepad_saved"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="11sp"
+    />
+
+    <EditText
+        android:id="@+id/noteContentInput"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_card"
+        android:gravity="top|start"
+        android:hint="@string/notepad_content_hint"
+        android:inputType="textMultiLine|textNoSuggestions"
+        android:paddingStart="13dp"
+        android:paddingTop="13dp"
+        android:paddingEnd="13dp"
+        android:paddingBottom="13dp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textColorHint="?android:attr/textColorSecondary"
+        android:textSize="15sp"
+        android:scrollbars="vertical"
+    />
+</LinearLayout>
