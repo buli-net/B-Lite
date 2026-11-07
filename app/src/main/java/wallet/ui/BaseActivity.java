@@ -30,6 +30,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     private ViewTreeObserver.OnGlobalLayoutListener autoScrollbarLayoutListener;
     private final WeakHashMap<View, Boolean> autoScrollbarConfigured = new WeakHashMap<>();
+    private final WeakHashMap<View, Boolean> autoScrollbarAwakened = new WeakHashMap<>();
 
     /** Applies the shared AppCompat DayNight styling used by selectable buttons. */
     protected final void applyChoiceButtonState(Button button, boolean selected) {
@@ -117,6 +118,11 @@ public abstract class BaseActivity extends AppCompatActivity {
             configureScrollbarsOnce(view, false, true);
         }
 
+        // Enabling a native scrollbar does not make it visible immediately. Wake it
+        // once when this view first acquires a real scroll range (including after
+        // asynchronously loaded content has been laid out), then let Android fade it.
+        awakenScrollbarWhenScrollable(view);
+
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
@@ -131,6 +137,33 @@ public abstract class BaseActivity extends AppCompatActivity {
         if (vertical) configureVerticalScrollbar(view);
         if (horizontal) configureHorizontalScrollbar(view);
         autoScrollbarConfigured.put(view, Boolean.TRUE);
+    }
+
+    private void awakenScrollbarWhenScrollable(View view) {
+        boolean canScroll = (view.isVerticalScrollBarEnabled()
+                && (view.canScrollVertically(-1) || view.canScrollVertically(1)))
+                || (view.isHorizontalScrollBarEnabled()
+                && (view.canScrollHorizontally(-1) || view.canScrollHorizontally(1)));
+
+        if (!canScroll) {
+            // Allow a future false-to-true transition to wake the indicator again.
+            autoScrollbarAwakened.remove(view);
+            return;
+        }
+
+        if (Boolean.TRUE.equals(autoScrollbarAwakened.get(view))) return;
+        autoScrollbarAwakened.put(view, Boolean.TRUE);
+
+        // Post until after the current layout pass so the scroll range and thumb
+        // geometry are based on the final measured viewport and content dimensions.
+        view.post(() -> {
+            if (!view.isAttachedToWindow()) {
+                autoScrollbarAwakened.remove(view);
+                return;
+            }
+            view.awakenScrollBars();
+            view.invalidate();
+        });
     }
 
     private void configureVerticalScrollbar(View view) {
@@ -163,6 +196,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
         autoScrollbarLayoutListener = null;
         autoScrollbarConfigured.clear();
+        autoScrollbarAwakened.clear();
         super.onDestroy();
     }
 
