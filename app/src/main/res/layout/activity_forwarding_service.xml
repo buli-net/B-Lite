@@ -688,6 +688,7 @@
                     android:layout_marginTop="4dp"
                     android:overScrollMode="ifContentScrolls"
                     android:scrollbars="vertical"
+                    android:scrollbarStyle="outsideInset"
                 />
 
                 <View
