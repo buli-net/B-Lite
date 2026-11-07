@@ -447,16 +447,26 @@
                         android:visibility="gone"
                         android:textIsSelectable="true"
                      />
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/transactionsList"
+                    <androidx.core.widget.NestedScrollView
+                        android:id="@+id/transactionsScroll"
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
                         android:layout_marginTop="6dp"
-                        android:overScrollMode="never"
+                        android:fillViewport="true"
+                        android:overScrollMode="ifContentScrolls"
                         android:scrollbars="vertical"
                         android:scrollbarStyle="outsideInset"
-                    />
+                    >
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/transactionsList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:overScrollMode="never"
+                            android:scrollbars="none"
+                        />
+                    </androidx.core.widget.NestedScrollView>
                 </LinearLayout>
             </LinearLayout>
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
