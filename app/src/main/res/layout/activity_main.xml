@@ -357,11 +357,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_card"
                     android:orientation="vertical"
-                    android:padding="14dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="14dp"
                 >
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                     >
@@ -408,6 +411,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                     >
@@ -440,6 +445,8 @@
                         android:id="@+id/transactionsEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
                         android:paddingTop="16dp"
                         android:text="@string/no_transactions_yet"
                         android:textColor="?android:attr/textColorSecondary"
@@ -462,6 +469,8 @@
                             android:id="@+id/transactionsList"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
                             android:nestedScrollingEnabled="false"
                             android:overScrollMode="never"
                             android:scrollbars="none"
