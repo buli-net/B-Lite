@@ -30,6 +30,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     private ViewTreeObserver.OnGlobalLayoutListener autoScrollbarLayoutListener;
     private final WeakHashMap<View, Boolean> autoScrollbarConfigured = new WeakHashMap<>();
+    private final WeakHashMap<View, Boolean> autoScrollbarAwakened = new WeakHashMap<>();
 
     /** Applies the shared AppCompat DayNight styling used by selectable buttons. */
     protected final void applyChoiceButtonState(Button button, boolean selected) {
@@ -117,12 +118,50 @@ public abstract class BaseActivity extends AppCompatActivity {
             configureScrollbarsOnce(view, false, true);
         }
 
+        // Native Android scrollbars are normally awakened by a real scroll gesture.
+        // Nudge scrollable views by one pixel and immediately restore their position
+        // so a long screen also shows its proportional thumb briefly on first layout.
+        awakenScrollbarWhenScrollable(view);
+
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
                 configureAutomaticScrollbars(group.getChildAt(i));
             }
         }
+    }
+
+    private void awakenScrollbarWhenScrollable(View view) {
+        if (autoScrollbarAwakened.containsKey(view)) return;
+
+        final boolean canScrollDown = view.canScrollVertically(1);
+        final boolean canScrollUp = view.canScrollVertically(-1);
+        final boolean canScrollRight = view.canScrollHorizontally(1);
+        final boolean canScrollLeft = view.canScrollHorizontally(-1);
+        if (!canScrollDown && !canScrollUp && !canScrollRight && !canScrollLeft) return;
+
+        autoScrollbarAwakened.put(view, Boolean.TRUE);
+        view.post(() -> {
+            if (view.isAttachedToWindow()) {
+                if (view.canScrollVertically(1)) {
+                    view.scrollBy(0, 1);
+                    view.scrollBy(0, -1);
+                } else if (view.canScrollVertically(-1)) {
+                    view.scrollBy(0, -1);
+                    view.scrollBy(0, 1);
+                } else if (view.canScrollHorizontally(1)) {
+                    view.scrollBy(1, 0);
+                    view.scrollBy(-1, 0);
+                } else if (view.canScrollHorizontally(-1)) {
+                    view.scrollBy(-1, 0);
+                    view.scrollBy(1, 0);
+                } else {
+                    autoScrollbarAwakened.remove(view);
+                }
+            } else {
+                autoScrollbarAwakened.remove(view);
+            }
+        });
     }
 
     private void configureScrollbarsOnce(View view, boolean vertical, boolean horizontal) {
@@ -163,6 +202,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
         autoScrollbarLayoutListener = null;
         autoScrollbarConfigured.clear();
+        autoScrollbarAwakened.clear();
         super.onDestroy();
     }
 
