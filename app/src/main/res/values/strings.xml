@@ -46,6 +46,27 @@
     <string name="wallet_status_tap_to_retry">Wallet data could not be loaded. Tap here to retry.</string>
     <string name="wallet_title">Bitcoin Wallet</string>
     <string name="about_title">About</string>
+    <string name="about_intro_title">Bitcoin Wallet</string>
+    <string name="about_intro_subtitle">Bitcoin wallet tools for Android</string>
+    <string name="about_intro_body">Create and manage Bitcoin wallets, send and receive BTC, monitor addresses, and review transaction activity from one place. The wallet engine is based on BitcoinJ 0.17.1.</string>
+    <string name="about_wallets_title">Wallets and addresses</string>
+    <string name="about_wallets_body">Manage the main HD wallet, import a private key in WIF format, or add watch-only addresses. A watch-only entry contains no private key and cannot authorize spending. The Paper Wallet tool can generate or display a paper wallet and its QR codes. Supported address formats depend on the key and network in use.</string>
+    <string name="about_payments_title">Payments and transactions</string>
+    <string name="about_payments_body">Receive Bitcoin through wallet addresses and QR codes. Create a BIP21 bitcoin: payment request with an optional amount and label, then copy, share, open it in a compatible app, or use supported NFC and nearby Bluetooth handoff features. Send transactions, review fees and transaction details, monitor confirmations, and select spendable outputs with Coin Control. Fee increases use CPFP; transactions are not created with opt-in RBF.</string>
+    <string name="about_network_title">Networks and synchronization</string>
+    <string name="about_network_body">Bitcoin Mainnet and Bitcoin Signet are supported. Each network keeps its wallet and blockchain data separate; switching networks does not move coins between them. Mainnet is the production Bitcoin network. Signet is a test network and its coins have no real-world monetary value. Choose Lite synchronization to reduce downloaded data and resource use, or Full synchronization to download all transactions in the blocks processed. A rescan may be needed after changing modes to rebuild earlier history. Full synchronization mode does not mean the app is an independently operated Bitcoin Core full node.</string>
+    <string name="about_security_title">Security and wallet protection</string>
+    <string name="about_security_body">An optional wallet password encrypts wallet private-key material supported by the BitcoinJ wallet and is requested for operations that use private keys. It is not a separate app sign-in password. Notepad entries are encrypted with AES-GCM using a key managed by Android Keystore. Device security still matters: protect the screen lock, keep the operating system updated, and do not expose recovery words, WIF keys, passwords, or wallet files.</string>
+    <string name="about_backup_title">Backup and recovery</string>
+    <string name="about_backup_body">Use Backup &amp; Restore to create a backup and select the supported wallet or app data to include. A backup can contain sensitive information that may allow access to wallet funds. Store it somewhere safe and separate from the phone, restrict who can access it, and verify that you can locate it before changing or replacing your device. Restoring data does not reverse blockchain transactions or recover information that was never included in the backup.</string>
+    <string name="about_tools_title">Additional tools</string>
+    <string name="about_tools_body">The app also includes a Bitcoin address book, message signing and verification, an interest calculator, an expense manager, encrypted notes, a web browser with bookmarks and downloads, and NFC utilities for reading, writing, copying, and managing supported NDEF data. Some functions depend on Android permissions, device hardware, network access, or compatibility with the other device or tag. NFC tools do not clone every chip, access card, payment card, UID, or protected memory area.</string>
+    <string name="about_privacy_title">Data and connectivity</string>
+    <string name="about_privacy_body">Wallet files and wallet transaction records are maintained in the app on this device; the app does not require a separate hosted-wallet account. Synchronization and transaction broadcasting require communication with Bitcoin network peers. Bitcoin addresses and confirmed transactions are public blockchain data and are not made private by the app. The built-in browser also connects to the websites you choose to visit.</string>
+    <string name="about_license_title">Open-source software and licenses</string>
+    <string name="about_license_body">The project source is distributed under the Apache License 2.0, as provided in the accompanying license file. BitcoinJ 0.17.1 supplies the wallet and Bitcoin protocol functionality; ZXing is used for QR-related functionality. The app also uses AndroidX and other third-party libraries, each subject to its own license terms. Refer to the included license notices and source distribution for applicable details.</string>
+    <string name="about_safety_title">Important safety notes</string>
+    <string name="about_safety_body">Before sending, verify the selected network, the complete recipient address, the amount, and the fee. Bitcoin transactions are generally irreversible after broadcast and confirmation. Never share recovery words, private keys, WIF strings, wallet passwords, or backup files. Test-network coins on Signet are not real Bitcoin. Keep a current backup and make sure you understand which wallet and network are selected before every sensitive operation.</string>
     <string name="backup_options_title">Choose backup contents</string>
     <string name="backup_options_description">Choose which optional app data to include. Wallet data is always included.</string>
     <string name="backup_section_wallets">WALLETS AND KEYS</string>
@@ -95,24 +116,7 @@
     <string name="send_receive_nfc_read_complete">NFC data read. Check the address and amount before continuing.</string>
     <string name="send_receive_nfc_password_message">This NFC tag is password-protected. Enter its tag password, then keep the tag near the phone while the Bitcoin request is read. The password is used only for this operation and is not saved.</string>
     <string name="send_receive_nfc_cancelled">NFC receiving stopped.</string>
-    <string name="about_text">Bitcoin Wallet\n
-\n
-A lightweight Bitcoin wallet built on BitcoinJ 0.17.1. The application is designed to keep wallet operations local, simple, and transparent.\n
-\n
-WALLET AND TRANSACTIONS\n
-Your wallet data and transaction history are maintained locally by the BitcoinJ wallet engine. The application does not require a separate account or hosted wallet service.\n
-\n
-SECURITY AND BACKUPS\n
-Private wallet data is stored in the application’s private storage. Backups contain sensitive wallet information and should be kept in a secure location. Never share a wallet backup or private keys with anyone.\n
-\n
-NETWORK\n
-The application supports Bitcoin Mainnet and Bitcoin Signet. The active network is selected in Sync &amp; Network, and each network keeps separate wallet and blockchain storage.\n
-\n
-OPEN SOURCE COMPONENT\n
-BitcoinJ provides the wallet and Bitcoin protocol functionality used by this application.\n
-\n
-Use the application responsibly and keep independent backups of your wallet.</string>
-    <string name="scan_bitcoin_address">Scan Bitcoin address</string>
+<string name="scan_bitcoin_address">Scan Bitcoin address</string>
     <string name="scan_recipient_address">Scan recipient address</string>
     <string name="got_it">GOT IT</string>
     <string name="cancel">CANCEL</string>
