@@ -66,5 +66,6 @@
         android:textColorHint="?android:attr/textColorSecondary"
         android:textSize="15sp"
         android:scrollbars="vertical"
+        android:scrollbarStyle="outsideOverlay"
     />
 </LinearLayout>
