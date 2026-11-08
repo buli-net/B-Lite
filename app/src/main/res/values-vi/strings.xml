@@ -286,9 +286,7 @@
     <string name="backup_title_file">%1$s-backup.zip</string>
     <string name="restore_unlock_title">Mở khóa ví để khôi phục backup</string>
     <string name="restore_unlock_message">Nhập mật khẩu của ví hiện tại trước khi thay thế ví này bằng backup đã chọn.</string>
-    <string name="restore_question">Khôi phục ví?</string>
-    <string name="restore_message">Ví hiện tại sẽ được thay thế bằng ví trong bản sao lưu đã chọn. Những nhóm dữ liệu ứng dụng có trong bản sao lưu (ví dụ: chuyển tiếp, danh bạ, giao dịch chi tiêu, kịch bản máy tính hoặc dữ liệu trình duyệt) sẽ thay thế dữ liệu tương ứng hiện tại. Các nhóm không có trong bản sao lưu sẽ được giữ nguyên. Tiếp tục?</string>
-    <string name="wallet_core_not_ready">Lõi ví chưa sẵn sàng.</string>
+<string name="wallet_core_not_ready">Lõi ví chưa sẵn sàng.</string>
     <string name="restore_in_progress">Đang khôi phục ví...</string>
     <string name="restore_read_failed">Không thể đọc bản sao lưu ví.</string>
     <string name="restore_too_large">Tệp sao lưu ví quá lớn.</string>
@@ -1616,6 +1614,7 @@ Loại thẻ: %2$s</string>
 <string name="browser_downloads_remove">Xóa mục tải xuống</string>
     <string name="browser_downloads_completed">Đã tải xong</string>
     <string name="browser_downloads_running">Đang tải xuống</string>
+    <string name="browser_downloads_progress">Đang tải xuống · %1$d%%</string>
     <string name="browser_downloads_pending">Đang chờ tải</string>
     <string name="browser_downloads_failed">Tải xuống thất bại</string>
     <string name="browser_downloads_paused">Đã tạm dừng</string>
@@ -1919,8 +1918,7 @@ Tổng cuối kỳ: %9$s</string>
     <string name="browser_download_conflict_message">Tên tệp này đã tồn tại.</string>
     <string name="browser_download_conflict_file_label">Tên tệp</string>
     <string name="browser_download_conflict_folder_label">Lưu vào</string>
-    <string name="browser_download_conflict_folder">%1$s</string>
-    <string name="browser_download_conflict_skip_prompt">Không hiện lại</string>
+<string name="browser_download_conflict_skip_prompt">Không hiện lại</string>
     <string name="browser_download_conflict_action">Tải xuống</string>
     <string name="browser_download_invalid_name">Vui lòng nhập tên tệp hợp lệ.</string>
     <string name="browser_download_name_exists">Tên tệp này vẫn đang được sử dụng.</string>
