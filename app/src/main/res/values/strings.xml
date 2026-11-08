@@ -287,9 +287,7 @@
     <string name="backup_title_file">%1$s-backup.zip</string>
     <string name="restore_unlock_title">Unlock wallet to restore backup</string>
     <string name="restore_unlock_message">Enter the current wallet password before replacing this wallet with the selected backup.</string>
-    <string name="restore_question">Restore wallet?</string>
-    <string name="restore_message">The current wallet will be replaced by the wallet in the selected backup. Any optional app-data categories included in the backup (such as forwarding, contacts, expense records, calculator scenarios or browser data) will replace the matching current data. Categories not included in the backup will remain unchanged. Continue?</string>
-    <string name="wallet_core_not_ready">Wallet core is not ready.</string>
+<string name="wallet_core_not_ready">Wallet core is not ready.</string>
     <string name="restore_in_progress">Restoring wallet...</string>
     <string name="restore_read_failed">Unable to read the wallet backup.</string>
     <string name="restore_too_large">The wallet backup file is too large.</string>
@@ -1923,8 +1921,7 @@ Final balance: %9$s</string>
     <string name="browser_download_conflict_message">A file with this name already exists.</string>
     <string name="browser_download_conflict_file_label">File name</string>
     <string name="browser_download_conflict_folder_label">Save to</string>
-    <string name="browser_download_conflict_folder">%1$s</string>
-    <string name="browser_download_conflict_skip_prompt">Do not ask again</string>
+<string name="browser_download_conflict_skip_prompt">Do not ask again</string>
     <string name="browser_download_conflict_action">Download</string>
     <string name="browser_download_invalid_name">Enter a valid file name.</string>
     <string name="browser_download_name_exists">This file name is already in use.</string>
