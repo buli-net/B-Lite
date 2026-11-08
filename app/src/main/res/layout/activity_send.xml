@@ -130,8 +130,8 @@
                 </LinearLayout>
                 <ImageView
                     android:id="@+id/receiveQr"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
+                    android:layout_width="102dp"
+                    android:layout_height="102dp"
                     android:clickable="true"
                     android:contentDescription="@string/receive_qr_title"
                     android:focusable="true"
