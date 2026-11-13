@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="qr_tools_format_names">
+        <item>QR Code</item>
+        <item>Code 128</item>
+        <item>Code 39</item>
+        <item>Code 93</item>
+        <item>EAN-13</item>
+        <item>EAN-8</item>
+        <item>UPC-A</item>
+        <item>UPC-E</item>
+        <item>ITF</item>
+        <item>Codabar</item>
+        <item>Data Matrix</item>
+        <item>Aztec</item>
+        <item>PDF417</item>
+    </string-array>
+    <string-array name="qr_tools_format_values">
+        <item>QR_CODE</item>
+        <item>CODE_128</item>
+        <item>CODE_39</item>
+        <item>CODE_93</item>
+        <item>EAN_13</item>
+        <item>EAN_8</item>
+        <item>UPC_A</item>
+        <item>UPC_E</item>
+        <item>ITF</item>
+        <item>CODABAR</item>
+        <item>DATA_MATRIX</item>
+        <item>AZTEC</item>
+        <item>PDF_417</item>
+    </string-array>
+</resources>
