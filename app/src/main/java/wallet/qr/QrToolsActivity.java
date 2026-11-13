@@ -58,13 +58,7 @@ public class QrToolsActivity extends BaseActivity {
 
     private final ExecutorService imageDecoder = Executors.newSingleThreadExecutor();
     private final ActivityResultLauncher<ScanOptions> cameraScanner =
-            registerForActivityResult(new ScanContract(), result -> {
-                if (result == null || result.getContents() == null) {
-                    scanStatus.setText(R.string.qr_tools_scan_cancelled);
-                    return;
-                }
-                showScannedContent(result.getContents(), result.getFormatName());
-            });
+            registerForActivityResult(new ScanContract(), this::handleCameraScanResult);
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) decodeSelectedImage(uri);
@@ -125,6 +119,14 @@ public class QrToolsActivity extends BaseActivity {
             View generatorCard = findViewById(R.id.qr_tools_generate_card);
             contentScroll.post(() -> contentScroll.smoothScrollTo(0, generatorCard.getTop()));
         }
+    }
+
+    private void handleCameraScanResult(com.journeyapps.barcodescanner.ScanIntentResult result) {
+        if (result == null || result.getContents() == null) {
+            scanStatus.setText(R.string.qr_tools_scan_cancelled);
+            return;
+        }
+        showScannedContent(result.getContents(), result.getFormatName());
     }
 
     private void startCameraScan() {
