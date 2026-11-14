@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar_qr_generate"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar" />
+
+    <ScrollView
+        android:id="@+id/qr_generate_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbarStyle="outsideOverlay"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="18dp">
+
+            <LinearLayout
+                android:id="@+id/qr_tools_generate_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/qr_tools_generate_section_title"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/qr_tools_content_type_label"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+                <Spinner
+                    android:id="@+id/qr_tools_content_type_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:spinnerMode="dropdown" />
+
+                <LinearLayout
+                    android:id="@+id/qr_input_text_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/qr_tools_content_label"
+                        android:textColor="?android:attr/textColorSecondary" />
+                    <EditText
+                        android:id="@+id/qr_tools_content_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="top|start"
+                        android:hint="@string/qr_tools_content_hint"
+                        android:inputType="textMultiLine|textNoSuggestions"
+                        android:minHeight="96dp"
+                        android:padding="12dp"
+                        android:scrollbars="vertical"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textColorHint="?android:attr/textColorHint" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_url_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_url" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_url" android:inputType="textUri" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_wifi_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_ssid" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_ssid" android:inputType="text" />
+                    <EditText android:id="@+id/qr_field_password" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_password" android:inputType="textPassword" />
+                    <CheckBox android:id="@+id/qr_field_wifi_hidden" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/qr_tools_field_wifi_hidden" android:textColor="?android:attr/textColorPrimary" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_field_security" android:textColor="?android:attr/textColorSecondary" />
+                    <Spinner android:id="@+id/qr_field_wifi_security" android:layout_width="match_parent" android:layout_height="48dp" android:spinnerMode="dropdown" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_phone_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_phone" android:inputType="phone" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_contact_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_name" android:inputType="textPersonName|textCapWords" />
+                    <EditText android:id="@+id/qr_field_contact_phone" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_contact_phone" android:inputType="phone" />
+                    <EditText android:id="@+id/qr_field_contact_email" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_contact_email" android:inputType="textEmailAddress" />
+                    <EditText android:id="@+id/qr_field_company" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_company" android:inputType="textCapWords" />
+                    <EditText android:id="@+id/qr_field_address" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_address" android:inputType="textPostalAddress|textMultiLine" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_location_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_latitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_latitude" android:inputType="numberDecimal|numberSigned" />
+                    <EditText android:id="@+id/qr_field_longitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_longitude" android:inputType="numberDecimal|numberSigned" />
+                    <EditText android:id="@+id/qr_field_location_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_location_label" android:inputType="textCapSentences" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_sms_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_sms_number" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_sms_number" android:inputType="phone" />
+                    <EditText android:id="@+id/qr_field_sms_body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="top|start" android:hint="@string/qr_tools_field_sms_body" android:inputType="textMultiLine|textCapSentences" android:minHeight="72dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_email_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_email_to" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_email_to" android:inputType="textEmailAddress" />
+                    <EditText android:id="@+id/qr_field_email_subject" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_email_subject" android:inputType="textCapSentences" />
+                    <EditText android:id="@+id/qr_field_email_body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="top|start" android:hint="@string/qr_tools_field_email_body" android:inputType="textMultiLine|textCapSentences" android:minHeight="72dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_event_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_event_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_event_title" android:inputType="textCapSentences" />
+                    <EditText android:id="@+id/qr_field_event_location" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_event_location" android:inputType="textPostalAddress" />
+                    <EditText android:id="@+id/qr_field_event_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_event_start" android:inputType="text" />
+                    <EditText android:id="@+id/qr_field_event_end" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_event_end" android:inputType="text" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/qr_input_bitcoin_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/qr_field_btc_address" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_btc_address" android:inputType="textNoSuggestions" />
+                    <EditText android:id="@+id/qr_field_btc_amount" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_btc_amount" android:inputType="numberDecimal" />
+                    <EditText android:id="@+id/qr_field_btc_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_btc_label" android:inputType="textCapSentences" />
+                    <EditText android:id="@+id/qr_field_btc_message" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="@string/qr_tools_field_btc_message" android:inputType="textCapSentences|textMultiLine" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/qr_tools_structured_notice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/qr_tools_structured_qr_notice"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/qr_tools_format_label"
+                    android:textColor="?android:attr/textColorSecondary" />
+                <Spinner
+                    android:id="@+id/qr_tools_format_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:spinnerMode="dropdown" />
+
+                <LinearLayout
+                    android:id="@+id/qr_tools_qr_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_customization_title" android:textColor="?android:attr/textColorPrimary" android:textStyle="bold" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/qr_tools_size_label" android:textColor="?android:attr/textColorSecondary" />
+                    <Spinner android:id="@+id/qr_tools_size_spinner" android:layout_width="match_parent" android:layout_height="48dp" android:spinnerMode="dropdown" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/qr_tools_error_correction_label" android:textColor="?android:attr/textColorSecondary" />
+                    <Spinner android:id="@+id/qr_tools_error_correction_spinner" android:layout_width="match_parent" android:layout_height="48dp" android:spinnerMode="dropdown" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/qr_tools_margin_label" android:textColor="?android:attr/textColorSecondary" />
+                    <Spinner android:id="@+id/qr_tools_margin_spinner" android:layout_width="match_parent" android:layout_height="48dp" android:spinnerMode="dropdown" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/qr_tools_generate"
+                    style="@style/WalletPrimaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/qr_tools_generate" />
+                <Button
+                    android:id="@+id/qr_tools_generate_batch"
+                    style="@style/WalletSecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/qr_tools_batch_generate" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/qr_tools_generated_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/qr_tools_generated_preview_title" android:textColor="?android:attr/textColorPrimary" android:textSize="17sp" android:textStyle="bold" />
+                <ImageView android:id="@+id/qr_tools_generated_image" android:layout_width="match_parent" android:layout_height="240dp" android:layout_marginTop="12dp" android:adjustViewBounds="true" android:contentDescription="@string/qr_tools_code_content_description" android:scaleType="fitCenter" />
+                <TextView android:id="@+id/qr_tools_generated_content_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="?attr/colorControlHighlight" android:padding="12dp" android:textColor="?android:attr/textColorPrimary" android:textIsSelectable="true" />
+                <Button android:id="@+id/qr_tools_generated_copy" style="@style/WalletPrimaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/qr_tools_copy_generated" />
+                <Button android:id="@+id/qr_tools_generated_share" style="@style/WalletSecondaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_share_generated" />
+                <Button android:id="@+id/qr_tools_generated_share_image" style="@style/WalletSecondaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_share_generated_image" />
+                <Button android:id="@+id/qr_tools_generated_save" style="@style/WalletPrimaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_save_generated_image" />
+                <Button android:id="@+id/qr_tools_generated_favorite" style="@style/WalletSecondaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_add_favorite" />
+                <Button android:id="@+id/qr_tools_generated_print" style="@style/WalletSecondaryButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/qr_tools_print_generated" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
