@@ -24,6 +24,7 @@ import com.google.zxing.BinaryBitmap;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.ChecksumException;
 import com.google.zxing.DecodeHintType;
+import com.google.zxing.client.android.Intents;
 import com.google.zxing.FormatException;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
@@ -98,7 +99,8 @@ public class QrScanActivity extends BaseActivity {
                 .setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
                 .setPrompt(getString(R.string.qr_tools_scan_prompt))
                 .setBeepEnabled(false)
-                .setOrientationLocked(true);
+                .setOrientationLocked(true)
+                .addExtra(Intents.Scan.CHARACTER_SET, "UTF-8");
         cameraScanner.launch(options);
     }
 
@@ -150,6 +152,7 @@ public class QrScanActivity extends BaseActivity {
         Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
         hints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.allOf(BarcodeFormat.class));
         hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+        hints.put(DecodeHintType.CHARACTER_SET, "UTF-8");
         MultiFormatReader reader = new MultiFormatReader();
         try {
             return reader.decode(new BinaryBitmap(new HybridBinarizer(source)), hints);

@@ -29,6 +29,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
+import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -37,6 +40,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -138,7 +142,10 @@ public class QrGenerateActivity extends BaseActivity {
             height = getResources().getInteger(R.integer.qr_tools_linear_code_height_px);
         }
 
-        BitMatrix matrix = new MultiFormatWriter().encode(contents, format, width, height);
+        Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+        hints.put(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+        BitMatrix matrix = new MultiFormatWriter().encode(
+                contents, format, width, height, hints);
         int matrixWidth = matrix.getWidth();
         int matrixHeight = matrix.getHeight();
         int[] pixels = new int[matrixWidth * matrixHeight];
