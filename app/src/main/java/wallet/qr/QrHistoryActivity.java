@@ -195,6 +195,12 @@ public class QrHistoryActivity extends BaseActivity {
             meta.setText(getString(QrHistoryStore.SOURCE_GENERATED.equals(source)
                     ? R.string.qr_tools_history_source_generated : R.string.qr_tools_history_source_scanned)
                     + " • " + format + " • " + date);
+            // Make the whole card an explicit click target. ListView item clicks can be
+            // swallowed by focusable child buttons on some Android versions/devices.
+            row.setClickable(true);
+            row.setFocusable(true);
+            row.setOnClickListener(v -> showEntry(item));
+
             Button favoriteButton = row.findViewById(R.id.qr_history_row_favorite);
             favoriteButton.setText(isFavorite ? R.string.qr_tools_remove_favorite : R.string.qr_tools_add_favorite);
             favoriteButton.setOnClickListener(v -> toggleFavorite(item));
