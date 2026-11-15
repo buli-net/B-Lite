@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <integer name="qr_tools_max_image_dimension_px">2048</integer>
-    <integer name="qr_tools_square_code_size_px">720</integer>
-    <integer name="qr_tools_linear_code_width_px">960</integer>
-    <integer name="qr_tools_linear_code_height_px">300</integer>
-    <integer name="qr_tools_pdf417_width_px">960</integer>
-    <integer name="qr_tools_pdf417_height_px">480</integer>
-</resources>
