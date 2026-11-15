@@ -115,6 +115,7 @@ public class RestoreActivity extends BaseActivity {
         CheckBox contacts = optionsView.findViewById(R.id.backupOptionContacts);
         CheckBox imported = optionsView.findViewById(R.id.backupOptionImportedMetadata);
         CheckBox request = optionsView.findViewById(R.id.backupOptionRequest);
+        CheckBox qrTools = optionsView.findViewById(R.id.backupOptionQrTools);
         CheckBox settings = optionsView.findViewById(R.id.backupOptionAppSettings);
         CheckBox expense = optionsView.findViewById(R.id.backupOptionExpenseManager);
         CheckBox calculator = optionsView.findViewById(R.id.backupOptionCalculator);
@@ -136,6 +137,7 @@ public class RestoreActivity extends BaseActivity {
             selection.contacts = contacts.isChecked();
             selection.importedWalletMetadata = imported.isChecked();
             selection.requestMetadata = request.isChecked();
+            selection.qrTools = qrTools.isChecked();
             selection.appSettings = settings.isChecked();
             selection.expenseManager = expense.isChecked();
             selection.calculator = calculator.isChecked();
