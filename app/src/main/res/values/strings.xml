@@ -1781,7 +1781,6 @@ Tag type: %2$s</string>
         <item quantity="one">%1$d download</item>
         <item quantity="other">%1$d downloads</item>
     </plurals>
-
     <string name="browser_download_conflict_prompt_setting">Confirm when a download file name already exists</string>
     <string name="browser_download_conflict_prompt_description">Show a confirmation dialog before downloading a file with a duplicate name.</string>
     <string name="browser_settings">Browser settings</string>
