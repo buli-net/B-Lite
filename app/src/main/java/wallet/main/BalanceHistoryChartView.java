@@ -421,8 +421,8 @@ public final class BalanceHistoryChartView extends View {
                 getWidth() - boxWidth - dp(4f)));
         float boxTop = graphTop + dp(2f);
         tooltipRect.set(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight);
-        canvas.drawRoundRect(tooltipRect, dp(6f), dp(6f), tooltipBackgroundPaint);
-        canvas.drawRoundRect(tooltipRect, dp(6f), dp(6f), gridPaint);
+        canvas.drawRoundRect(tooltipRect, dp(2f), dp(2f), tooltipBackgroundPaint);
+        canvas.drawRoundRect(tooltipRect, dp(2f), dp(2f), gridPaint);
         canvas.drawText(label, boxLeft + horizontalPadding,
                 boxTop + verticalPadding + tooltipTextPaint.getTextSize() * 0.82f,
                 tooltipTextPaint);
