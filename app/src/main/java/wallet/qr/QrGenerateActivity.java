@@ -19,6 +19,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
+import android.os.Parcelable;
+import android.util.SparseArray;
 import android.print.PageRange;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -91,9 +93,44 @@ public class QrGenerateActivity extends BaseActivity {
     private boolean favorite;
     private boolean pendingBatchAfterPermission;
 
+    private static final class RetainedState {
+        final SparseArray<Parcelable> viewState;
+        final Bitmap generatedBitmap;
+        final String generatedContent;
+        final String generatedFormatValue;
+        final String historyId;
+        final boolean favorite;
+        final boolean pendingBatchAfterPermission;
+        final int scrollY;
+
+        RetainedState(SparseArray<Parcelable> viewState, Bitmap generatedBitmap,
+                      String generatedContent, String generatedFormatValue,
+                      String historyId, boolean favorite,
+                      boolean pendingBatchAfterPermission, int scrollY) {
+            this.viewState = viewState;
+            this.generatedBitmap = generatedBitmap;
+            this.generatedContent = generatedContent;
+            this.generatedFormatValue = generatedFormatValue;
+            this.historyId = historyId;
+            this.favorite = favorite;
+            this.pendingBatchAfterPermission = pendingBatchAfterPermission;
+            this.scrollY = scrollY;
+        }
+    }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        SparseArray<Parcelable> viewState = new SparseArray<>();
+        if (contentScroll != null) contentScroll.saveHierarchyState(viewState);
+        return new RetainedState(viewState, generatedBitmap, generatedContent,
+                generatedFormatValue, historyId, favorite, pendingBatchAfterPermission,
+                contentScroll == null ? 0 : contentScroll.getScrollY());
+    }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        RetainedState retained = (RetainedState) getLastCustomNonConfigurationInstance();
         setContentView(R.layout.activity_qr_generate);
 
         Toolbar toolbar = findViewById(R.id.toolbar_qr_generate);
@@ -116,8 +153,39 @@ public class QrGenerateActivity extends BaseActivity {
         findViewById(R.id.qr_tools_generated_save).setOnClickListener(v -> saveGeneratedImage());
         findViewById(R.id.qr_tools_generated_favorite).setOnClickListener(v -> toggleFavorite());
         findViewById(R.id.qr_tools_generated_print).setOnClickListener(v -> printGeneratedImage());
-        updateInputType(0);
-        applyInitialContent();
+
+        if (retained != null) {
+            restoreRetainedState(retained);
+        } else {
+            updateInputType(0);
+            applyInitialContent();
+        }
+    }
+
+    private void restoreRetainedState(RetainedState retained) {
+        if (retained.viewState != null) contentScroll.restoreHierarchyState(retained.viewState);
+        updateInputType(Math.max(0, contentTypeSpinner.getSelectedItemPosition()));
+        updateFormatOptions();
+
+        generatedContent = retained.generatedContent == null ? "" : retained.generatedContent;
+        generatedFormatValue = TextUtils.isEmpty(retained.generatedFormatValue)
+                ? "QR_CODE" : retained.generatedFormatValue;
+        historyId = retained.historyId == null ? "" : retained.historyId;
+        favorite = retained.favorite;
+        pendingBatchAfterPermission = retained.pendingBatchAfterPermission;
+        generatedBitmap = retained.generatedBitmap;
+        if (!TextUtils.isEmpty(generatedContent) && generatedBitmap != null
+                && !generatedBitmap.isRecycled()) {
+            generatedImage.setImageBitmap(generatedBitmap);
+            generatedContentValue.setText(generatedContent);
+            generatedCard.setVisibility(View.VISIBLE);
+            updateFavoriteButton();
+        } else {
+            generatedContent = "";
+            generatedBitmap = null;
+            generatedCard.setVisibility(View.GONE);
+        }
+        contentScroll.post(() -> contentScroll.scrollTo(0, Math.max(0, retained.scrollY)));
     }
 
     private void applyInitialContent() {
@@ -795,7 +863,9 @@ public class QrGenerateActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        if (generatedBitmap != null && !generatedBitmap.isRecycled()) generatedBitmap.recycle();
+        if (!isChangingConfigurations() && generatedBitmap != null && !generatedBitmap.isRecycled()) {
+            generatedBitmap.recycle();
+        }
         super.onDestroy();
     }
 
