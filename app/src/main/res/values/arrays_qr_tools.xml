@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="qr_tools_format_names">
-        <item>QR Code</item>
-        <item>Code 128</item>
-        <item>Code 39</item>
-        <item>Code 93</item>
-        <item>EAN-13</item>
-        <item>EAN-8</item>
-        <item>UPC-A</item>
-        <item>UPC-E</item>
-        <item>ITF</item>
-        <item>Codabar</item>
-        <item>Data Matrix</item>
-        <item>Aztec</item>
-        <item>PDF417</item>
+        <item>@string/qr_tools_format_name_qr_code</item>
+        <item>@string/qr_tools_format_name_code_128</item>
+        <item>@string/qr_tools_format_name_code_39</item>
+        <item>@string/qr_tools_format_name_code_93</item>
+        <item>@string/qr_tools_format_name_ean_13</item>
+        <item>@string/qr_tools_format_name_ean_8</item>
+        <item>@string/qr_tools_format_name_upc_a</item>
+        <item>@string/qr_tools_format_name_upc_e</item>
+        <item>@string/qr_tools_format_name_itf</item>
+        <item>@string/qr_tools_format_name_codabar</item>
+        <item>@string/qr_tools_format_name_data_matrix</item>
+        <item>@string/qr_tools_format_name_aztec</item>
+        <item>@string/qr_tools_format_name_pdf417</item>
     </string-array>
     <string-array name="qr_tools_format_values">
         <item>QR_CODE</item>
@@ -31,16 +31,16 @@
         <item>PDF_417</item>
     </string-array>
     <string-array name="qr_tools_content_type_names">
-        <item>Plain text</item>
-        <item>Website / URL</item>
-        <item>Wi-Fi network</item>
-        <item>Phone number</item>
-        <item>Contact / vCard</item>
-        <item>Location</item>
-        <item>SMS message</item>
-        <item>Email</item>
-        <item>Calendar event</item>
-        <item>Bitcoin payment</item>
+        <item>@string/qr_tools_content_name_plain_text</item>
+        <item>@string/qr_tools_type_url</item>
+        <item>@string/qr_tools_type_wifi</item>
+        <item>@string/qr_tools_type_phone</item>
+        <item>@string/qr_tools_type_contact</item>
+        <item>@string/qr_tools_type_location</item>
+        <item>@string/qr_tools_type_sms</item>
+        <item>@string/qr_tools_type_email</item>
+        <item>@string/qr_tools_type_event</item>
+        <item>@string/qr_tools_type_bitcoin</item>
     </string-array>
     <string-array name="qr_tools_content_type_values">
         <item>TEXT</item>
@@ -55,9 +55,9 @@
         <item>BITCOIN</item>
     </string-array>
     <string-array name="qr_tools_wifi_security_names">
-        <item>WPA / WPA2</item>
-        <item>WEP</item>
-        <item>No password</item>
+        <item>@string/qr_tools_wifi_security_name_wpa</item>
+        <item>@string/qr_tools_wifi_security_name_wep</item>
+        <item>@string/qr_tools_wifi_security_name_none</item>
     </string-array>
     <string-array name="qr_tools_wifi_security_values">
         <item>WPA</item>
@@ -65,10 +65,10 @@
         <item>nopass</item>
     </string-array>
     <string-array name="qr_tools_size_names">
-        <item>Small (256 px)</item>
-        <item>Medium (512 px)</item>
-        <item>Large (720 px)</item>
-        <item>Extra large (1024 px)</item>
+        <item>@string/qr_tools_size_name_small</item>
+        <item>@string/qr_tools_size_name_medium</item>
+        <item>@string/qr_tools_size_name_large</item>
+        <item>@string/qr_tools_size_name_extra_large</item>
     </string-array>
     <string-array name="qr_tools_size_values">
         <item>256</item>
@@ -77,10 +77,10 @@
         <item>1024</item>
     </string-array>
     <string-array name="qr_tools_error_correction_names">
-        <item>Low (L)</item>
-        <item>Medium (M)</item>
-        <item>Quartile (Q)</item>
-        <item>High (H)</item>
+        <item>@string/qr_tools_error_correction_name_low</item>
+        <item>@string/qr_tools_error_correction_name_medium</item>
+        <item>@string/qr_tools_error_correction_name_quartile</item>
+        <item>@string/qr_tools_error_correction_name_high</item>
     </string-array>
     <string-array name="qr_tools_error_correction_values">
         <item>L</item>
@@ -89,10 +89,10 @@
         <item>H</item>
     </string-array>
     <string-array name="qr_tools_history_filter_names">
-        <item>All</item>
-        <item>Favorites</item>
-        <item>Scanned</item>
-        <item>Generated</item>
+        <item>@string/qr_tools_history_filter_all</item>
+        <item>@string/qr_tools_history_filter_favorites</item>
+        <item>@string/qr_tools_history_filter_scanned</item>
+        <item>@string/qr_tools_history_filter_generated</item>
     </string-array>
     <string-array name="qr_tools_history_filter_values">
         <item>all</item>
@@ -100,12 +100,11 @@
         <item>scanned</item>
         <item>generated</item>
     </string-array>
-
     <string-array name="qr_tools_margin_names">
-        <item>None</item>
-        <item>Small (2)</item>
-        <item>Default (4)</item>
-        <item>Wide (8)</item>
+        <item>@string/qr_tools_margin_name_none</item>
+        <item>@string/qr_tools_margin_name_small</item>
+        <item>@string/qr_tools_margin_name_default</item>
+        <item>@string/qr_tools_margin_name_wide</item>
     </string-array>
     <string-array name="qr_tools_margin_values">
         <item>0</item>
@@ -113,5 +112,4 @@
         <item>4</item>
         <item>8</item>
     </string-array>
-
 </resources>
