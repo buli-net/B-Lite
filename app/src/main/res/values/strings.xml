@@ -1364,7 +1364,7 @@ Tag type: %2$s</string>
     <string name="forwarding_error_received_funds_insufficient">The spendable outputs from the incoming transaction cannot cover the required amount plus network fee. Other wallet UTXOs were not used, and nothing was broadcast.</string>
 
 
-    
+
     <string name="forwarding_sync_paused_title">Automatic forwarding temporarily paused</string>
     <string name="forwarding_sync_paused_detail">Wallet status: %1$s. New forwarding transactions are paused until synchronization finishes. Saved work will be checked again automatically.</string>
     <string name="forwarding_sync_paused_detail_default">The wallet is synchronizing. Saved forwarding work is being kept for recovery.</string>
@@ -1418,7 +1418,8 @@ Tag type: %2$s</string>
     <string name="forwarding_history_confirmations">%1$d confirmations</string>
     <string name="forwarding_activity_history_empty">No forwarding history yet.</string>
     <string name="forwarding_history_filter_empty">No forwarding entries match this filter.</string>
-<string name="bitcoin_transaction_id_clip_label">Bitcoin transaction ID</string><string name="transaction_id_clip_label">Transaction ID</string>
+<string name="bitcoin_transaction_id_clip_label">Bitcoin transaction ID</string>
+    <string name="transaction_id_clip_label">Transaction ID</string>
     <string name="error_unknown">The operation could not be completed.</string>
     <string name="error_amount_empty">Amount is empty.</string>
     <string name="error_taproot_invalid_tweak">Invalid Taproot tweak.</string>
@@ -1777,7 +1778,10 @@ Tag type: %2$s</string>
     <string name="browser_downloads_open_failed">This file cannot be opened.</string>
     <string name="browser_downloads_delete_confirm_title">Remove download?</string>
     <string name="browser_downloads_delete_confirm_message">Remove this download from the download list?</string>
-<plurals name="browser_downloads_count"><item quantity="one">%1$d download</item><item quantity="other">%1$d downloads</item></plurals>
+    <plurals name="browser_downloads_count">
+        <item quantity="one">%1$d download</item>
+        <item quantity="other">%1$d downloads</item>
+    </plurals>
 
     <string name="browser_download_conflict_prompt_setting">Confirm when a download file name already exists</string>
     <string name="browser_download_conflict_prompt_description">Show a confirmation dialog before downloading a file with a duplicate name.</string>
@@ -1834,9 +1838,9 @@ Tag type: %2$s</string>
     <string name="menu_calculator">Calculator</string>
     <string name="calculator_zero">0</string>
     <string name="calculator_placeholder">—</string>
-    
-    
-    
+
+
+
     <string name="calculator_digit_0">0</string>
     <string name="calculator_digit_1">1</string>
     <string name="calculator_digit_2">2</string>
@@ -1956,7 +1960,10 @@ Final balance: %9$s</string>
         <item quantity="other">%d days</item>
     </plurals>
 
-    <string name="calculator_start_date_hint">Choose start date</string>\n    <string name="calculator_maturity_date_hint">Choose maturity date</string>\n    <string name="calculator_maturity_before_start">Maturity date cannot be before the start date.</string>\n    <string name="calculator_frequency_choose">Choose frequency</string>
+    <string name="calculator_start_date_hint">Choose start date</string>
+    <string name="calculator_maturity_date_hint">Choose maturity date</string>
+    <string name="calculator_maturity_before_start">Maturity date cannot be before the start date.</string>
+    <string name="calculator_frequency_choose">Choose frequency</string>
     <string name="calculator_table_choose">Choose table interval</string>
     <string name="calculator_maturity_years_hint">Number of years to maturity (e.g. 1, 2, 10)</string>
     <string name="calculator_maturity_years">Maturity period (years)</string>
