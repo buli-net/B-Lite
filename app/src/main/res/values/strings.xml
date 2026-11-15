@@ -2128,4 +2128,5 @@ Final balance: %9$s</string>
     </plurals>
     <string name="notepad_delete_action">Delete</string>
     <string name="backup_item_notepad">Notepad</string>
+    <string name="backup_item_qr_tools">QR Tools history and favorites</string>
 </resources>
