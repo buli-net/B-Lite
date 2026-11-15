@@ -289,11 +289,11 @@ public abstract class ArcadeGameView extends View {
         RectF boardRect = new RectF(left - dp(5), top - dp(5), left + boardWidth + dp(5), top + boardHeight + dp(5));
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(withThemeAlpha(colorPrimary, 18));
-        canvas.drawRoundRect(boardRect, dp(8), dp(8), paint);
+        canvas.drawRoundRect(boardRect, dp(2), dp(2), paint);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(1));
         paint.setColor(withThemeAlpha(colorSecondary, 100));
-        canvas.drawRoundRect(boardRect, dp(8), dp(8), paint);
+        canvas.drawRoundRect(boardRect, dp(2), dp(2), paint);
         paint.setStrokeWidth(1f);
         paint.setColor(withThemeAlpha(colorSecondary, 55));
         for (int c = 0; c <= columns; c++) canvas.drawLine(left + c * cell, top, left + c * cell, top + boardHeight, paint);
@@ -304,7 +304,7 @@ public abstract class ArcadeGameView extends View {
         if (gameOver) {
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(withThemeAlpha(colorBackground, 215));
-            canvas.drawRoundRect(boardRect, dp(8), dp(8), paint);
+            canvas.drawRoundRect(boardRect, dp(2), dp(2), paint);
             paint.setColor(colorPrimary);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setTextSize(dp(20));
