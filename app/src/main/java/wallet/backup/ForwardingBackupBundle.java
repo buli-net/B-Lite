@@ -39,8 +39,9 @@ public final class ForwardingBackupBundle {
     private static final String APP_DATA_ENTRY = "appdata.json";
     private static final String CONTACT_AVATAR_ENTRY_PREFIX = "contact-avatars/";
     private static final int LEGACY_FORMAT_VERSION = 1;
-    private static final int PREVIOUS_APP_DATA_FORMAT_VERSION = 2;
-    private static final int FORMAT_VERSION = 3;
+    private static final int OLDEST_SUPPORTED_APP_DATA_FORMAT_VERSION = 2;
+    private static final int PREVIOUS_APP_DATA_FORMAT_VERSION = 3;
+    private static final int FORMAT_VERSION = 4;
     private static final long MAX_WALLET_BYTES = 64L * 1024L * 1024L;
     private static final long MAX_PACKAGE_UNCOMPRESSED_BYTES = 96L * 1024L * 1024L;
     private static final int MAX_APP_DATA_JSON_BYTES = 24 * 1024 * 1024;
@@ -63,10 +64,11 @@ public final class ForwardingBackupBundle {
         public boolean browser = true;
         public boolean games = true;
         public boolean notepad = true;
+        public boolean qrTools = true;
 
         public boolean hasOptionalData() {
             return forwarding || contacts || importedWalletMetadata || requestMetadata || appSettings
-                    || expenseManager || calculator || browser || games || notepad;
+                    || expenseManager || calculator || browser || games || notepad || qrTools;
         }
     }
 
@@ -253,7 +255,7 @@ public final class ForwardingBackupBundle {
             deleteRecursively(avatarDirectory);
             throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
         }
-        // Prefer v2 if present; otherwise migrate the legacy single-category snapshot in memory.
+        // Prefer appdata.json when present; otherwise migrate the legacy forwarding snapshot in memory.
         JSONObject snapshot = appData != null ? appData : legacyForwarding;
         try {
             if (appData != null) validateExtractedAvatarSet(appData, extractedAvatarNames);
@@ -292,6 +294,10 @@ public final class ForwardingBackupBundle {
             if (selected.forwarding && categories.has("forwarding")) {
                 restoreWholePreferences(context, "forwarding_service_" + network,
                         categories.getJSONObject("forwarding").getJSONObject("values"));
+            }
+            if (selected.qrTools && categories.has("qrTools")) {
+                restoreWholePreferences(context, "qr_tools_history",
+                        categories.getJSONObject("qrTools").getJSONObject("values"));
             }
             if (selected.contacts && categories.has("contacts")) {
                 JSONObject contacts = categories.getJSONObject("contacts");
@@ -391,6 +397,10 @@ public final class ForwardingBackupBundle {
                     networkPrefsName("address_book", network), key -> "entries".equals(key));
             contacts.put("avatars", createContactAvatarsSnapshot(context));
             categories.put("contacts", contacts);
+        }
+        if (options.qrTools) {
+            categories.put("qrTools", createPreferencesSnapshot(context,
+                    "qr_tools_history", key -> "entries".equals(key)));
         }
         if (options.importedWalletMetadata) {
             categories.put("importedWalletMetadata", createPreferencesSnapshot(context,
@@ -878,7 +888,9 @@ public final class ForwardingBackupBundle {
     private static void validateAppDataSnapshot(JSONObject snapshot) throws IOException, JSONException {
         String network = snapshot.optString("network", "");
         int formatVersion = snapshot.optInt("formatVersion", -1);
-        if ((formatVersion != FORMAT_VERSION && formatVersion != PREVIOUS_APP_DATA_FORMAT_VERSION)
+        if ((formatVersion != FORMAT_VERSION
+                && formatVersion != PREVIOUS_APP_DATA_FORMAT_VERSION
+                && formatVersion != OLDEST_SUPPORTED_APP_DATA_FORMAT_VERSION)
                 || !("mainnet".equals(network) || "signet".equals(network))
                 || !(snapshot.opt("categories") instanceof JSONObject)) {
             throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
@@ -887,7 +899,7 @@ public final class ForwardingBackupBundle {
         java.util.Iterator<String> keys = categories.keys();
         while (keys.hasNext()) {
             String key = keys.next();
-            if (!"forwarding".equals(key) && !"contacts".equals(key)
+            if (!"forwarding".equals(key) && !"contacts".equals(key) && !"qrTools".equals(key)
                     && !"importedWalletMetadata".equals(key) && !"requestMetadata".equals(key)
                     && !"appSettings".equals(key) && !"expenseManager".equals(key)
                     && !"calculator".equals(key) && !"browser".equals(key)
@@ -902,10 +914,14 @@ public final class ForwardingBackupBundle {
                 validateValues(category.getJSONObject("values"), name -> true);
             } else if ("notepad".equals(key)) {
                 validateNotepadSnapshot(category);
+            } else if ("qrTools".equals(key)) {
+                JSONObject values = category.getJSONObject("values");
+                validateValues(values, name -> "entries".equals(name));
+                validateQrToolsSnapshot(values);
             } else if ("games".equals(key)) {
                 if (category.has("storage")) {
                     validateGameStorageValues(category.getJSONObject("storage").getJSONObject("values"));
-                } else if (formatVersion == PREVIOUS_APP_DATA_FORMAT_VERSION) {
+                } else if (formatVersion == OLDEST_SUPPORTED_APP_DATA_FORMAT_VERSION) {
                     // Accept the former split score/progress representation.
                     validateValues(category.getJSONObject("scores").getJSONObject("values"), name -> true);
                     validateValues(category.getJSONObject("progress").getJSONObject("values"), name -> true);
@@ -942,6 +958,39 @@ public final class ForwardingBackupBundle {
         }
     }
 
+
+    private static void validateQrToolsSnapshot(JSONObject values) throws IOException, JSONException {
+        if (!values.has("entries")) return;
+        Object decoded = decodeValue(values.getJSONObject("entries"));
+        if (!(decoded instanceof String)) {
+            throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
+        }
+
+        JSONArray entries = new JSONArray((String) decoded);
+        if (entries.length() > 300) {
+            throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
+        }
+        Set<String> ids = new HashSet<>();
+        for (int i = 0; i < entries.length(); i++) {
+            JSONObject entry = entries.getJSONObject(i);
+            String id = entry.getString("id");
+            String content = entry.getString("content");
+            String format = entry.getString("format");
+            String type = entry.getString("type");
+            String source = entry.getString("source");
+            Object timestampValue = entry.get("timestamp");
+            Object favoriteValue = entry.get("favorite");
+            if (id.isEmpty() || id.length() > 128 || !ids.add(id)
+                    || content.isEmpty() || content.length() > MAX_APP_DATA_JSON_BYTES
+                    || format.length() > 64 || type.isEmpty() || type.length() > 64
+                    || !("scanned".equals(source) || "generated".equals(source))
+                    || !(timestampValue instanceof Number)
+                    || ((Number) timestampValue).longValue() < 0L
+                    || !(favoriteValue instanceof Boolean)) {
+                throw new LocalizedErrors.IOException(R.string.backup_archive_invalid);
+            }
+        }
+    }
 
     private static void validateNotepadSnapshot(JSONObject category)
             throws IOException, JSONException {
