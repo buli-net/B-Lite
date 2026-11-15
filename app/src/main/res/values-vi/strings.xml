@@ -1583,6 +1583,7 @@ Loại thẻ: %2$s</string>
     <string name="address_book_address_copied">Đã sao chép địa chỉ Bitcoin.</string>
     <string name="address_book_delete_message">Xóa %1$s khỏi sổ địa chỉ?\n%2$s</string>
     <plurals name="address_book_saved_count">
+        <item quantity="one">%1$d saved contact</item>
         <item quantity="other">%1$d liên hệ đã lưu</item>
     </plurals>
     <string name="address_book_search_hint">Tìm theo tên, tổ chức, địa chỉ Bitcoin, điện thoại hoặc email</string>
