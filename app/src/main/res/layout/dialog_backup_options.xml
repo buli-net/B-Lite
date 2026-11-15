@@ -108,6 +108,13 @@
             android:checked="true"
             android:text="@string/backup_item_request"
          />
+        <CheckBox
+            android:id="@+id/backupOptionQrTools"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/backup_item_qr_tools"
+         />
 
         <TextView
             android:layout_width="match_parent"
