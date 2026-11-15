@@ -1363,7 +1363,7 @@ Loại thẻ: %2$s</string>
     <string name="forwarding_error_received_funds_insufficient">Các đầu ra có thể chi tiêu của giao dịch vừa nhận không đủ số tiền cần gửi cộng phí mạng. Không dùng UTXO khác trong ví và chưa phát giao dịch.</string>
 
 
-    
+
     <string name="forwarding_sync_paused_title">Tạm hoãn chuyển tiếp tự động</string>
     <string name="forwarding_sync_paused_detail">Trạng thái ví: %1$s. Giao dịch chuyển tiếp mới tạm dừng cho đến khi đồng bộ hoàn tất. Công việc đã lưu sẽ được tự động kiểm tra lại.</string>
     <string name="forwarding_sync_paused_detail_default">Ví đang đồng bộ. Công việc chuyển tiếp đã lưu được giữ lại để khôi phục.</string>
@@ -1417,7 +1417,8 @@ Loại thẻ: %2$s</string>
     <string name="forwarding_history_confirmations">Đã xác nhận: %1$d block</string>
     <string name="forwarding_activity_history_empty">Chưa có lịch sử chuyển tiếp.</string>
     <string name="forwarding_history_filter_empty">Không có bản ghi chuyển tiếp phù hợp với bộ lọc này.</string>
-<string name="bitcoin_transaction_id_clip_label">Mã giao dịch Bitcoin</string><string name="transaction_id_clip_label">Mã giao dịch</string>
+<string name="bitcoin_transaction_id_clip_label">Mã giao dịch Bitcoin</string>
+    <string name="transaction_id_clip_label">Mã giao dịch</string>
     <string name="error_unknown">Không thể hoàn tất thao tác.</string>
     <string name="error_amount_empty">Chưa nhập số tiền.</string>
     <string name="error_taproot_invalid_tweak">Giá trị điều chỉnh Taproot không hợp lệ.</string>
@@ -1775,7 +1776,10 @@ Loại thẻ: %2$s</string>
     <string name="browser_downloads_open_failed">Không thể mở tệp này.</string>
     <string name="browser_downloads_delete_confirm_title">Xóa mục tải xuống?</string>
     <string name="browser_downloads_delete_confirm_message">Xóa mục này khỏi danh sách tải xuống?</string>
-<plurals name="browser_downloads_count"><item quantity="one">%1$d tệp tải xuống</item><item quantity="other">%1$d tệp tải xuống</item></plurals>
+    <plurals name="browser_downloads_count">
+        <item quantity="one">%1$d tệp tải xuống</item>
+        <item quantity="other">%1$d tệp tải xuống</item>
+    </plurals>
     <string name="browser_download_conflict_prompt_setting">Hỏi xác nhận khi tên tệp tải xuống đã tồn tại</string>
     <string name="browser_download_conflict_prompt_description">Hiển thị hộp thoại xác nhận trước khi tải tệp có tên trùng.</string>
     <string name="browser_settings">Cài đặt trình duyệt</string>
@@ -1831,9 +1835,9 @@ Loại thẻ: %2$s</string>
     <string name="menu_calculator">Máy tính</string>
     <string name="calculator_zero">0</string>
     <string name="calculator_placeholder">—</string>
-    
-    
-    
+
+
+
     <string name="calculator_digit_0">0</string>
     <string name="calculator_digit_1">1</string>
     <string name="calculator_digit_2">2</string>
@@ -1953,7 +1957,10 @@ Tổng cuối kỳ: %9$s</string>
         <item quantity="other">%d ngày</item>
     </plurals>
 
-    <string name="calculator_start_date_hint">Chọn ngày bắt đầu</string>\n    <string name="calculator_maturity_date_hint">Chọn ngày đáo hạn</string>\n    <string name="calculator_maturity_before_start">Ngày đáo hạn không thể trước ngày bắt đầu.</string>\n    <string name="calculator_frequency_choose">Chọn tần suất</string>
+    <string name="calculator_start_date_hint">Chọn ngày bắt đầu</string>
+    <string name="calculator_maturity_date_hint">Chọn ngày đáo hạn</string>
+    <string name="calculator_maturity_before_start">Ngày đáo hạn không thể trước ngày bắt đầu.</string>
+    <string name="calculator_frequency_choose">Chọn tần suất</string>
     <string name="calculator_table_choose">Chọn khoảng thời gian</string>
     <string name="calculator_maturity_years_hint">Số năm đáo hạn (ví dụ: 1, 2, 10)</string>
     <string name="calculator_maturity_years">Thời hạn đáo hạn (năm)</string>
