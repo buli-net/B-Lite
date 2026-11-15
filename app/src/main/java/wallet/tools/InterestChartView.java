@@ -365,8 +365,8 @@ public final class InterestChartView extends View {
                 getWidth() - boxWidth - dp(4f)));
         float boxTop = graphTop + dp(3f);
         tooltipRect.set(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight);
-        canvas.drawRoundRect(tooltipRect, dp(6f), dp(6f), tooltipBackgroundPaint);
-        canvas.drawRoundRect(tooltipRect, dp(6f), dp(6f), tooltipBorderPaint);
+        canvas.drawRoundRect(tooltipRect, dp(2f), dp(2f), tooltipBackgroundPaint);
+        canvas.drawRoundRect(tooltipRect, dp(2f), dp(2f), tooltipBorderPaint);
 
         float baseline = boxTop + verticalPadding + tooltipTextPaint.getTextSize();
         for (int i = 0; i < fittedRows.size(); i++) {
