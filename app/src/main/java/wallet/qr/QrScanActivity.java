@@ -66,10 +66,46 @@ public class QrScanActivity extends BaseActivity {
     private String scannedContent = "";
     private String historyId = "";
     private boolean favorite;
+    private Uri pendingImageUri;
+
+    private static final class RetainedState {
+        final String scannedContent;
+        final String formatName;
+        final String historyId;
+        final boolean favorite;
+        final String status;
+        final boolean resultVisible;
+        final int scrollY;
+        final Uri pendingImageUri;
+
+        RetainedState(String scannedContent, String formatName, String historyId,
+                      boolean favorite, String status, boolean resultVisible,
+                      int scrollY, Uri pendingImageUri) {
+            this.scannedContent = scannedContent;
+            this.formatName = formatName;
+            this.historyId = historyId;
+            this.favorite = favorite;
+            this.status = status;
+            this.resultVisible = resultVisible;
+            this.scrollY = scrollY;
+            this.pendingImageUri = pendingImageUri;
+        }
+    }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        return new RetainedState(scannedContent,
+                scanFormatValue == null ? "" : scanFormatValue.getText().toString(),
+                historyId, favorite,
+                scanStatus == null ? "" : scanStatus.getText().toString(),
+                scanResultCard != null && scanResultCard.getVisibility() == View.VISIBLE,
+                contentScroll == null ? 0 : contentScroll.getScrollY(), pendingImageUri);
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        RetainedState retained = (RetainedState) getLastCustomNonConfigurationInstance();
         setContentView(R.layout.activity_qr_scan);
 
         Toolbar toolbar = findViewById(R.id.toolbar_qr_scan);
@@ -93,6 +129,33 @@ public class QrScanActivity extends BaseActivity {
         findViewById(R.id.qr_tools_scan_share).setOnClickListener(v -> shareScannedContent());
         findViewById(R.id.qr_tools_scan_favorite).setOnClickListener(v -> toggleFavorite());
         openActionButton.setOnClickListener(v -> confirmAndOpenCompatibleApp());
+
+        if (retained != null) {
+            scannedContent = retained.scannedContent == null ? "" : retained.scannedContent;
+            historyId = retained.historyId == null ? "" : retained.historyId;
+            favorite = retained.favorite;
+            pendingImageUri = retained.pendingImageUri;
+            if (retained.resultVisible && !scannedContent.isEmpty()) {
+                restoreScannedResult(retained.formatName);
+            }
+            if (!TextUtils.isEmpty(retained.status)) scanStatus.setText(retained.status);
+            contentScroll.post(() -> contentScroll.scrollTo(0, Math.max(0, retained.scrollY)));
+            if (pendingImageUri != null) decodeSelectedImage(pendingImageUri);
+        }
+    }
+
+    private void restoreScannedResult(@Nullable String formatName) {
+        scanFormatValue.setText(TextUtils.isEmpty(formatName)
+                ? getString(R.string.qr_tools_unknown_format) : formatName);
+        scanContentValue.setText(scannedContent);
+        QrContentClassifier.Detection detection = QrContentClassifier.detect(scannedContent);
+        scanTypeValue.setText(detection.typeLabel);
+        openActionButton.setVisibility(detection.actionable ? View.VISIBLE : View.GONE);
+        if (detection.actionable) openActionButton.setText(detection.actionLabel);
+        scanResultCard.setVisibility(View.VISIBLE);
+        findViewById(R.id.qr_tools_scan_copy).setEnabled(!scannedContent.isEmpty());
+        findViewById(R.id.qr_tools_scan_share).setEnabled(!scannedContent.isEmpty());
+        updateFavoriteButton();
     }
 
     private void handleCameraScanResult(com.journeyapps.barcodescanner.ScanIntentResult result) {
@@ -114,6 +177,7 @@ public class QrScanActivity extends BaseActivity {
     }
 
     private void showScannedContent(String contents, @Nullable String formatName) {
+        pendingImageUri = null;
         scannedContent = contents == null ? "" : contents;
         scanFormatValue.setText(TextUtils.isEmpty(formatName)
                 ? getString(R.string.qr_tools_unknown_format) : formatName);
@@ -173,16 +237,25 @@ public class QrScanActivity extends BaseActivity {
     }
 
     private void decodeSelectedImage(Uri imageUri) {
+        pendingImageUri = imageUri;
         scanStatus.setText(R.string.qr_tools_image_scan_in_progress);
         imageDecoder.execute(() -> {
             try {
                 Result result = decodeImage(imageUri);
-                postImageResult(() -> showScannedContent(
-                        result.getText(), result.getBarcodeFormat().toString()));
+                postImageResult(() -> {
+                    pendingImageUri = null;
+                    showScannedContent(result.getText(), result.getBarcodeFormat().toString());
+                });
             } catch (NotFoundException e) {
-                postImageResult(() -> scanStatus.setText(R.string.qr_tools_no_code_found));
+                postImageResult(() -> {
+                    pendingImageUri = null;
+                    scanStatus.setText(R.string.qr_tools_no_code_found);
+                });
             } catch (IOException | ChecksumException | FormatException | RuntimeException e) {
-                postImageResult(() -> scanStatus.setText(R.string.qr_tools_scan_image_failed));
+                postImageResult(() -> {
+                    pendingImageUri = null;
+                    scanStatus.setText(R.string.qr_tools_scan_image_failed);
+                });
             }
         });
     }
