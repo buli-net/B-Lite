@@ -79,6 +79,54 @@ public final class PaperWalletActivity extends BaseActivity {
     private boolean addressVisible = true;
     private boolean privateVisible = false;
 
+    private static final class RetainedState {
+        final String importInput;
+        final String currentAddress;
+        final String currentAddressType;
+        final String selectedAddressType;
+        final String currentPrivateText;
+        final boolean addressVisible;
+        final boolean privateVisible;
+        final boolean bip38Enabled;
+        final ECKey pendingBip38Key;
+        final String pendingBip38Address;
+        final String pendingBip38DisplayAddress;
+        final String pendingImportedBip38;
+
+        RetainedState(String importInput, String currentAddress, String currentAddressType,
+                      String selectedAddressType, String currentPrivateText,
+                      boolean addressVisible, boolean privateVisible, boolean bip38Enabled,
+                      ECKey pendingBip38Key, String pendingBip38Address,
+                      String pendingBip38DisplayAddress, String pendingImportedBip38) {
+            this.importInput = importInput;
+            this.currentAddress = currentAddress;
+            this.currentAddressType = currentAddressType;
+            this.selectedAddressType = selectedAddressType;
+            this.currentPrivateText = currentPrivateText;
+            this.addressVisible = addressVisible;
+            this.privateVisible = privateVisible;
+            this.bip38Enabled = bip38Enabled;
+            this.pendingBip38Key = pendingBip38Key;
+            this.pendingBip38Address = pendingBip38Address;
+            this.pendingBip38DisplayAddress = pendingBip38DisplayAddress;
+            this.pendingImportedBip38 = pendingImportedBip38;
+        }
+    }
+
+    private ECKey pendingBip38Key;
+    private String pendingBip38Address;
+    private String pendingBip38DisplayAddress;
+    private String pendingImportedBip38;
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        return new RetainedState(importInput == null ? "" : importInput.getText().toString(),
+                currentAddress, currentAddressType, selectedAddressType, currentPrivateText,
+                addressVisible, privateVisible, bip38CheckBox != null && bip38CheckBox.isChecked(),
+                pendingBip38Key, pendingBip38Address, pendingBip38DisplayAddress,
+                pendingImportedBip38);
+    }
+
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher =
             registerForActivityResult(new ScanContract(), result -> {
                 if (!TextUtils.isEmpty(result.getContents())) {
@@ -109,6 +157,7 @@ public final class PaperWalletActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        RetainedState retained = (RetainedState) getLastCustomNonConfigurationInstance();
         setContentView(R.layout.activity_paper_wallet);
         Toolbar toolbar = findViewById(R.id.toolbar_paper_wallet);
         setSupportActionBar(toolbar);
@@ -163,6 +212,35 @@ public final class PaperWalletActivity extends BaseActivity {
         exportButton.setOnClickListener(v -> exportText());
         resultCard.setVisibility(View.GONE);
         updateActionButtons();
+
+        if (retained != null) {
+            importInput.setText(retained.importInput == null ? "" : retained.importInput);
+            importInput.setSelection(importInput.length());
+            selectedAddressType = WalletAddressType.normalize(retained.selectedAddressType);
+            addressTypeGroup.check(addressTypeToCheckedId(selectedAddressType));
+            bip38CheckBox.setChecked(retained.bip38Enabled);
+            pendingBip38Key = retained.pendingBip38Key;
+            pendingBip38Address = retained.pendingBip38Address;
+            pendingBip38DisplayAddress = retained.pendingBip38DisplayAddress;
+            pendingImportedBip38 = retained.pendingImportedBip38;
+            if (!TextUtils.isEmpty(retained.currentAddress)
+                    && !TextUtils.isEmpty(retained.currentPrivateText)) {
+                showResult(retained.currentAddress, retained.currentPrivateText,
+                        retained.currentAddressType == null
+                                ? selectedAddressType : retained.currentAddressType);
+                addressVisible = retained.addressVisible;
+                privateVisible = retained.privateVisible;
+                updateValueVisibility();
+            }
+            // Passphrases are deliberately never retained. Re-open the appropriate prompt
+            // after a theme/configuration recreation and ask the user to enter it again.
+            if (pendingBip38Key != null && pendingBip38Address != null
+                    && pendingBip38DisplayAddress != null) {
+                promptForBip38(pendingBip38Key, pendingBip38Address, pendingBip38DisplayAddress);
+            } else if (!TextUtils.isEmpty(pendingImportedBip38)) {
+                promptForImportedBip38(pendingImportedBip38);
+            }
+        }
     }
 
     private void createRandomWallet() {
@@ -233,6 +311,9 @@ public final class PaperWalletActivity extends BaseActivity {
                 // address shown on the paper wallet.
                 String bip38Address = WalletAddressType.addressForKey(
                         network, key, WalletAddressType.P2PKH).toString();
+                pendingBip38Key = key;
+                pendingBip38Address = bip38Address;
+                pendingBip38DisplayAddress = address;
                 promptForBip38(key, bip38Address, address);
                 return;
             } else {
@@ -251,7 +332,7 @@ public final class PaperWalletActivity extends BaseActivity {
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.paper_wallet_bip38_title)
                 .setView(fields)
-                .setNegativeButton(R.string.close, null)
+                .setNegativeButton(R.string.close, (d, w) -> clearPendingBip38Generation())
                 .setPositiveButton(R.string.paper_wallet_encrypt, null)
                 .create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -267,10 +348,12 @@ public final class PaperWalletActivity extends BaseActivity {
             }
             confirmation.setError(null);
             dialog.dismiss();
+            clearPendingBip38Generation();
+            String resultAddressType = selectedAddressType;
             new Thread(() -> {
                 try {
                     String encrypted = Bip38Encoder.encrypt(key, bip38Address, password);
-                    runOnUiThread(() -> showResult(displayAddress, encrypted, selectedAddressType));
+                    runOnUiThread(() -> showResult(displayAddress, encrypted, resultAddressType));
                 } catch (Exception error) {
                     runOnUiThread(() -> showError(error));
                 }
@@ -419,13 +502,20 @@ public final class PaperWalletActivity extends BaseActivity {
         inputFileLauncher.launch(new String[]{"*/*"});
     }
 
+    private void clearPendingBip38Generation() {
+        pendingBip38Key = null;
+        pendingBip38Address = null;
+        pendingBip38DisplayAddress = null;
+    }
+
     private void promptForImportedBip38(String encrypted) {
+        pendingImportedBip38 = encrypted;
         View passwordView = getLayoutInflater().inflate(R.layout.dialog_bip38_passphrase_input, null);
         EditText passphrase = passwordView.findViewById(R.id.bip38ImportPassphraseInput);
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.paper_wallet_bip38_title)
                 .setView(passwordView)
-                .setNegativeButton(R.string.close, null)
+                .setNegativeButton(R.string.close, (d, w) -> pendingImportedBip38 = null)
                 .setPositiveButton(R.string.paper_wallet_unlock, null)
                 .create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -435,6 +525,7 @@ public final class PaperWalletActivity extends BaseActivity {
                 return;
             }
             dialog.dismiss();
+            pendingImportedBip38 = null;
             new Thread(() -> {
                 try {
                     NetworkParameters network = NetworkConfig.parameters(this);
@@ -481,6 +572,14 @@ public final class PaperWalletActivity extends BaseActivity {
         String message = LocalizedErrors.resolve(this, error);
         Toast.makeText(this, getString(R.string.paper_wallet_failed,
                 message == null ? error.getClass().getSimpleName() : message), Toast.LENGTH_LONG).show();
+    }
+
+    private int addressTypeToCheckedId(String addressType) {
+        String normalized = WalletAddressType.normalize(addressType);
+        if (WalletAddressType.P2WPKH.equals(normalized)) return R.id.walletAddressTypeP2wpkh;
+        if (WalletAddressType.P2SH_P2WPKH.equals(normalized)) return R.id.walletAddressTypeP2shP2wpkh;
+        if (WalletAddressType.P2TR.equals(normalized)) return R.id.walletAddressTypeP2tr;
+        return R.id.walletAddressTypeP2pkh;
     }
 
     private String addressTypeFromCheckedId(int checkedId) {
