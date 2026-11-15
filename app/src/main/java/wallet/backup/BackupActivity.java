@@ -107,6 +107,7 @@ public class BackupActivity extends BaseActivity {
         CheckBox contactsData = optionsView.findViewById(R.id.backupOptionContacts);
         CheckBox importedMetadata = optionsView.findViewById(R.id.backupOptionImportedMetadata);
         CheckBox requestData = optionsView.findViewById(R.id.backupOptionRequest);
+        CheckBox qrTools = optionsView.findViewById(R.id.backupOptionQrTools);
         CheckBox appSettings = optionsView.findViewById(R.id.backupOptionAppSettings);
         CheckBox expenseManager = optionsView.findViewById(R.id.backupOptionExpenseManager);
         CheckBox calculator = optionsView.findViewById(R.id.backupOptionCalculator);
@@ -126,6 +127,7 @@ public class BackupActivity extends BaseActivity {
             selection.contacts = contactsData.isChecked();
             selection.importedWalletMetadata = importedMetadata.isChecked();
             selection.requestMetadata = requestData.isChecked();
+            selection.qrTools = qrTools.isChecked();
             selection.appSettings = appSettings.isChecked();
             selection.expenseManager = expenseManager.isChecked();
             selection.calculator = calculator.isChecked();
