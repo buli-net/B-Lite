@@ -2125,4 +2125,5 @@ Tổng cuối kỳ: %9$s</string>
     </plurals>
     <string name="notepad_delete_action">Xóa</string>
     <string name="backup_item_notepad">Sổ ghi chú</string>
+    <string name="backup_item_qr_tools">Lịch sử và mục yêu thích QR Tools</string>
 </resources>
