@@ -74,6 +74,28 @@ public class QrGenerateActivity extends BaseActivity {
     public static final String EXTRA_INITIAL_FORMAT = "wallet.qr.extra.INITIAL_FORMAT";
     private static final int REQUEST_WRITE_IMAGE_PERMISSION = 7301;
 
+    // Display labels remain in localized string-array resources. Technical values
+    // stay beside the QR generation logic, matching the rest of the app.
+    private static final String[] FORMAT_VALUES = {
+            "QR_CODE", "CODE_128", "CODE_39", "CODE_93", "EAN_13", "EAN_8",
+            "UPC_A", "UPC_E", "ITF", "CODABAR", "DATA_MATRIX", "AZTEC", "PDF_417"
+    };
+    private static final String[] CONTENT_TYPE_VALUES = {
+            QrPayloadBuilder.TYPE_TEXT, QrPayloadBuilder.TYPE_URL, QrPayloadBuilder.TYPE_WIFI,
+            QrPayloadBuilder.TYPE_PHONE, QrPayloadBuilder.TYPE_CONTACT,
+            QrPayloadBuilder.TYPE_LOCATION, QrPayloadBuilder.TYPE_SMS,
+            QrPayloadBuilder.TYPE_EMAIL, QrPayloadBuilder.TYPE_EVENT,
+            QrPayloadBuilder.TYPE_BITCOIN
+    };
+    private static final String[] WIFI_SECURITY_VALUES = {
+            QrPayloadBuilder.WIFI_SECURITY_WPA,
+            QrPayloadBuilder.WIFI_SECURITY_WEP,
+            QrPayloadBuilder.WIFI_SECURITY_NONE
+    };
+    private static final int[] SIZE_VALUES = {256, 512, 720, 1024};
+    private static final String[] ERROR_CORRECTION_VALUES = {"L", "M", "Q", "H"};
+    private static final int[] MARGIN_VALUES = {0, 2, 4, 8};
+
     private ScrollView contentScroll;
     private EditText contentInput;
     private Spinner contentTypeSpinner;
@@ -195,7 +217,7 @@ public class QrGenerateActivity extends BaseActivity {
         contentInput.setText(initialContent);
         String requestedFormat = getIntent().getStringExtra(EXTRA_INITIAL_FORMAT);
         if (!TextUtils.isEmpty(requestedFormat)) {
-            String[] formats = getResources().getStringArray(R.array.qr_tools_format_values);
+            String[] formats = FORMAT_VALUES;
             for (int i = 0; i < formats.length; i++) {
                 if (requestedFormat.equalsIgnoreCase(formats[i])) {
                     formatSpinner.setSelection(i);
@@ -256,7 +278,7 @@ public class QrGenerateActivity extends BaseActivity {
     }
 
     private void updateInputType(int position) {
-        String[] values = getResources().getStringArray(R.array.qr_tools_content_type_values);
+        String[] values = CONTENT_TYPE_VALUES;
         int selected = Math.max(0, Math.min(position, values.length - 1));
         for (int i = 0; i < inputGroups.length; i++) {
             inputGroups[i].setVisibility(i == selected ? View.VISIBLE : View.GONE);
@@ -270,7 +292,7 @@ public class QrGenerateActivity extends BaseActivity {
     }
 
     private void updateFormatOptions() {
-        String[] formats = getResources().getStringArray(R.array.qr_tools_format_values);
+        String[] formats = FORMAT_VALUES;
         int position = Math.max(0, Math.min(formatSpinner.getSelectedItemPosition(), formats.length - 1));
         String format = formats[position];
         boolean qr = "QR_CODE".equals(format);
@@ -417,7 +439,7 @@ public class QrGenerateActivity extends BaseActivity {
     }
 
     private void generateCode() {
-        String[] types = getResources().getStringArray(R.array.qr_tools_content_type_values);
+        String[] types = CONTENT_TYPE_VALUES;
         int typePosition = Math.max(0, Math.min(contentTypeSpinner.getSelectedItemPosition(), types.length - 1));
         String type = types[typePosition];
         String contents;
@@ -428,7 +450,7 @@ public class QrGenerateActivity extends BaseActivity {
             return;
         }
 
-        String[] formatValues = getResources().getStringArray(R.array.qr_tools_format_values);
+        String[] formatValues = FORMAT_VALUES;
         int formatPosition = Math.max(0, Math.min(formatSpinner.getSelectedItemPosition(), formatValues.length - 1));
         String formatValue = formatValues[formatPosition];
         Integer validationError = validateLinearBarcode(contents, formatValue);
@@ -475,7 +497,7 @@ public class QrGenerateActivity extends BaseActivity {
             fields.put("password", text(R.id.qr_field_password));
             fields.put("hidden", Boolean.toString(((android.widget.CheckBox)
                     findViewById(R.id.qr_field_wifi_hidden)).isChecked()));
-            String[] security = getResources().getStringArray(R.array.qr_tools_wifi_security_values);
+            String[] security = WIFI_SECURITY_VALUES;
             int index = Math.max(0, Math.min(((Spinner) findViewById(R.id.qr_field_wifi_security)).getSelectedItemPosition(), security.length - 1));
             fields.put("security", security[index]);
         } else if (QrPayloadBuilder.TYPE_PHONE.equals(type)) fields.put("phone", text(R.id.qr_field_phone));
@@ -534,13 +556,13 @@ public class QrGenerateActivity extends BaseActivity {
     }
 
     private Bitmap createCodeBitmap(String contents, BarcodeFormat format) throws WriterException {
-        int[] sizeValues = readIntArray(R.array.qr_tools_size_values);
+        int[] sizeValues = SIZE_VALUES;
         int size = sizeValues[Math.max(0, Math.min(sizeSpinner.getSelectedItemPosition(), sizeValues.length - 1))];
         if (format == BarcodeFormat.QR_CODE) {
-            String[] levels = getResources().getStringArray(R.array.qr_tools_error_correction_values);
+            String[] levels = ERROR_CORRECTION_VALUES;
             int levelPosition = Math.max(0, Math.min(errorCorrectionSpinner.getSelectedItemPosition(), levels.length - 1));
             ErrorCorrectionLevel level = ErrorCorrectionLevel.valueOf(levels[levelPosition]);
-            int[] margins = readIntArray(R.array.qr_tools_margin_values);
+            int[] margins = MARGIN_VALUES;
             int margin = margins[Math.max(0, Math.min(marginSpinner.getSelectedItemPosition(), margins.length - 1))];
             return QrCodeGenerator.generate(contents, size, level, margin);
         }
@@ -563,13 +585,6 @@ public class QrGenerateActivity extends BaseActivity {
         return new BarcodeEncoder().createBitmap(matrix);
     }
 
-    private int[] readIntArray(int resource) {
-        String[] values = getResources().getStringArray(resource);
-        int[] result = new int[values.length];
-        for (int i = 0; i < values.length; i++) result[i] = Integer.parseInt(values[i]);
-        return result;
-    }
-
     private void generateBatch() {
         if (contentTypeSpinner.getSelectedItemPosition() != 0) return;
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
@@ -587,7 +602,7 @@ public class QrGenerateActivity extends BaseActivity {
         String raw = text(R.id.qr_tools_content_input);
         String[] lines = raw.split("\\r?\\n");
         int saved = 0;
-        String[] formats = getResources().getStringArray(R.array.qr_tools_format_values);
+        String[] formats = FORMAT_VALUES;
         int selected = Math.max(0, Math.min(formatSpinner.getSelectedItemPosition(), formats.length - 1));
         try {
             BarcodeFormat format = BarcodeFormat.valueOf(formats[selected]);
