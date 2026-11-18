@@ -21,6 +21,10 @@ final class QrPayloadBuilder {
     static final String TYPE_EVENT = "EVENT";
     static final String TYPE_BITCOIN = "BITCOIN";
 
+    static final String WIFI_SECURITY_WPA = "WPA";
+    static final String WIFI_SECURITY_WEP = "WEP";
+    static final String WIFI_SECURITY_NONE = "nopass";
+
     private static final Pattern EVENT_DATE = Pattern.compile("^[0-9]{8}T[0-9]{6}Z?$|^[0-9]{8}$");
     private static final Pattern BTC_AMOUNT = Pattern.compile("^[0-9]+(?:\\.[0-9]{1,8})?$");
 
@@ -67,11 +71,12 @@ final class QrPayloadBuilder {
     }
 
     private static String buildWifi(String ssid, String password, String security, boolean hidden) {
-        String mode = TextUtils.isEmpty(security) ? "WPA" : security.toUpperCase(Locale.ROOT);
-        if (!("WPA".equals(mode) || "WEP".equals(mode) || "nopass".equalsIgnoreCase(mode))) {
+        String mode = TextUtils.isEmpty(security) ? WIFI_SECURITY_WPA : security.toUpperCase(Locale.ROOT);
+        if (!(WIFI_SECURITY_WPA.equals(mode) || WIFI_SECURITY_WEP.equals(mode)
+                || WIFI_SECURITY_NONE.equalsIgnoreCase(mode))) {
             throw new IllegalArgumentException("Invalid Wi-Fi security type");
         }
-        if (!"nopass".equalsIgnoreCase(mode) && TextUtils.isEmpty(password)) {
+        if (!WIFI_SECURITY_NONE.equalsIgnoreCase(mode) && TextUtils.isEmpty(password)) {
             throw new IllegalArgumentException("Wi-Fi password is required");
         }
         return "WIFI:T:" + mode + ";S:" + wifiEscape(ssid) + ";P:"
