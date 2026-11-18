@@ -35,11 +35,18 @@ import wallet.ui.BaseActivity;
 
 /** Shows locally stored scanned/generated code history and favorites. */
 public class QrHistoryActivity extends BaseActivity {
+    private static final String FILTER_ALL = "all";
+    private static final String FILTER_FAVORITES = "favorites";
+    private static final String FILTER_SCANNED = "scanned";
+    private static final String FILTER_GENERATED = "generated";
+    private static final String[] FILTER_VALUES = {
+            FILTER_ALL, FILTER_FAVORITES, FILTER_SCANNED, FILTER_GENERATED
+    };
     private Spinner filterSpinner;
     private ListView listView;
     private TextView emptyView;
     private HistoryAdapter adapter;
-    private String filter = "all";
+    private String filter = FILTER_ALL;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -66,8 +73,7 @@ public class QrHistoryActivity extends BaseActivity {
         listView.setOnItemClickListener((parent, view, position, id) -> showEntry(adapter.getItem(position)));
         filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String[] values = getResources().getStringArray(R.array.qr_tools_history_filter_values);
-                filter = values[Math.max(0, Math.min(position, values.length - 1))];
+                filter = FILTER_VALUES[Math.max(0, Math.min(position, FILTER_VALUES.length - 1))];
                 reload();
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
@@ -87,9 +93,9 @@ public class QrHistoryActivity extends BaseActivity {
         for (int i = 0; i < source.length(); i++) {
             JSONObject row = source.optJSONObject(i);
             if (row == null) continue;
-            if ("favorites".equals(filter) && !row.optBoolean("favorite", false)) continue;
-            if ("scanned".equals(filter) && !QrHistoryStore.SOURCE_SCANNED.equals(row.optString("source"))) continue;
-            if ("generated".equals(filter) && !QrHistoryStore.SOURCE_GENERATED.equals(row.optString("source"))) continue;
+            if (FILTER_FAVORITES.equals(filter) && !row.optBoolean("favorite", false)) continue;
+            if (FILTER_SCANNED.equals(filter) && !QrHistoryStore.SOURCE_SCANNED.equals(row.optString("source"))) continue;
+            if (FILTER_GENERATED.equals(filter) && !QrHistoryStore.SOURCE_GENERATED.equals(row.optString("source"))) continue;
             result.add(row);
         }
         return result;
