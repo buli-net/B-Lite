@@ -13,13 +13,13 @@
         android:id="@+id/menuSend"
         android:title="@string/menu_send"
         android:icon="@drawable/ic_toolbar_send_24dp"
-        android:showAsAction="ifRoom"
+        app:showAsAction="ifRoom"
      />
     <item
         android:id="@+id/menuRequestCoins"
         android:title="@string/request_coins_title"
         android:icon="@drawable/ic_menu_request_legacy_24dp"
-        android:showAsAction="ifRoom"
+        app:showAsAction="ifRoom"
      />
     <item
         android:id="@+id/menuAddressBook"
