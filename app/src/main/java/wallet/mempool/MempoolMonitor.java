@@ -325,7 +325,7 @@ public final class MempoolMonitor {
             } else {
                 riskStatus = RiskStatus.OK;
             }
-        } catch (VerificationException | RuntimeException failure) {
+        } catch (RuntimeException failure) {
             riskStatus = RiskStatus.ERROR;
         }
 
