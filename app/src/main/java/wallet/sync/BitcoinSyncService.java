@@ -24,6 +24,7 @@ import android.provider.Settings;
 import android.net.Uri;
 import androidx.core.app.NotificationCompat;
 
+import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.Coin;
 import org.bitcoinj.base.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -77,6 +78,7 @@ public class BitcoinSyncService extends Service {
     // It therefore continues while the user views another screen or the app is backgrounded.
     private final Handler chartHandler = new Handler(Looper.getMainLooper());
     private SyncChartHistoryStore chartHistoryStore;
+    private BitcoinNetwork chartHistoryNetwork;
     private long previousChartRxBytes = -1L;
     private long previousChartTxBytes = -1L;
     private long previousChartTrafficAt;
@@ -309,14 +311,35 @@ public class BitcoinSyncService extends Service {
     }
 
     private void startChartSampling() {
-        if (chartHistoryStore == null) chartHistoryStore = new SyncChartHistoryStore(getApplicationContext());
+        MainActivityPresenter active = MainActivityPresenter.getActivePresenter();
+        BitcoinNetwork network = active != null
+                ? active.getActiveNetwork() : NetworkConfig.get(this);
+        ensureChartHistoryStore(network);
         chartHandler.removeCallbacks(chartSampler);
         chartHandler.post(chartSampler);
     }
 
+    private void ensureChartHistoryStore(BitcoinNetwork network) {
+        BitcoinNetwork selected = network == null ? NetworkConfig.get(this) : network;
+        if (chartHistoryStore != null && chartHistoryNetwork == selected) return;
+
+        SyncChartHistoryStore replacement = new SyncChartHistoryStore(
+                getApplicationContext(), selected);
+        if (chartHistoryStore != null) chartHistoryStore.close();
+        chartHistoryStore = replacement;
+        chartHistoryNetwork = selected;
+
+        // Do not calculate a traffic-rate sample across a Mainnet/Signet switch.
+        previousChartRxBytes = -1L;
+        previousChartTxBytes = -1L;
+        previousChartTrafficAt = 0L;
+    }
+
     private void sampleSyncChartHistory() {
         MainActivityPresenter active = MainActivityPresenter.getActivePresenter();
-        if (active == null || chartHistoryStore == null) return;
+        if (active == null) return;
+        ensureChartHistoryStore(active.getActiveNetwork());
+        if (chartHistoryStore == null) return;
 
         long now = System.currentTimeMillis();
         long rxBytes = TrafficStats.getUidRxBytes(Process.myUid());
@@ -834,6 +857,7 @@ public class BitcoinSyncService extends Service {
         if (chartHistoryStore != null) {
             chartHistoryStore.close();
             chartHistoryStore = null;
+            chartHistoryNetwork = null;
         }
         unregisterNetworkCallback();
         releaseSyncWakeLock();
