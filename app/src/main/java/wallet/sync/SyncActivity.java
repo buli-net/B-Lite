@@ -412,7 +412,7 @@ public class SyncActivity extends BaseActivity {
 
     private void reloadChartHistory(boolean force) {
         long now = System.currentTimeMillis();
-        if (!force && now - lastChartReloadAt < 5000L) return;
+        if (!force && now - lastChartReloadAt < 1000L) return;
         chartSamples.clear();
         chartSamples.addAll(chartHistoryStore.loadSince(now - 24L * 60L * 60L * 1000L));
         lastChartReloadAt = now;
