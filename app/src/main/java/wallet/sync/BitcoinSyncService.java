@@ -80,7 +80,7 @@ public class BitcoinSyncService extends Service {
     private long previousChartRxBytes = -1L;
     private long previousChartTxBytes = -1L;
     private long previousChartTrafficAt;
-    private static final long CHART_SAMPLE_INTERVAL_MILLIS = 5000L;
+    private static final long CHART_SAMPLE_INTERVAL_MILLIS = 1000L;
     private final Runnable chartSampler = new Runnable() {
         @Override public void run() {
             sampleSyncChartHistory();
