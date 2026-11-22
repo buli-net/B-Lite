@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card"
+    android:foreground="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/mempool_row_txid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textIsSelectable="true"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/mempool_row_wallet_related"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/mempool_row_wallet_related"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/mempool_row_result"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/mempool_row_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/mempool_row_output_sum"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/mempool_row_observations"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="11sp" />
+</LinearLayout>
