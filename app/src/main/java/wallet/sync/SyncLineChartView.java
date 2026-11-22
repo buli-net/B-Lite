@@ -91,21 +91,18 @@ public final class SyncLineChartView extends View {
     }
 
     private void refreshColors() {
+        // Use only colors supplied by the active Android theme.
+        // A zero fallback avoids introducing a fixed RGB color when an attribute is absent.
         primaryColor = resolveThemeColor(android.R.attr.colorControlActivated,
-                resolveThemeColor(android.R.attr.colorAccent, 0xff168579));
-        // Use a genuinely different system theme color for the second series.
-        // textColorPrimary contrasts with the accent on both light and dark themes.
-        secondarySeriesColor = resolveThemeColor(android.R.attr.textColorPrimary, primaryColor);
-        if (secondarySeriesColor == primaryColor) {
-            secondarySeriesColor = resolveThemeColor(android.R.attr.textColorSecondary,
-                    primaryColor ^ 0x00ffffff);
-        }
-        if (secondarySeriesColor == primaryColor) {
-            secondarySeriesColor = primaryColor ^ 0x00ffffff;
-        }
+                resolveThemeColor(android.R.attr.colorAccent,
+                        resolveThemeColor(android.R.attr.textColorPrimary, 0)));
+
+        // Keep the same theme color for both series. Their line patterns and endpoint
+        // markers (solid/circle versus dashed/square) provide the distinction.
+        secondarySeriesColor = primaryColor;
+
         labelColor = resolveThemeColor(android.R.attr.textColorSecondary, primaryColor);
-        int gridBase = resolveThemeColor(android.R.attr.textColorSecondary, labelColor);
-        gridColor = (gridBase & 0x00ffffff) | 0x38000000;
+        gridColor = resolveThemeColor(android.R.attr.textColorSecondary, labelColor);
     }
 
     @Override
@@ -195,6 +192,7 @@ public final class SyncLineChartView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(Math.max(1f, dp(0.7f)));
         paint.setColor(gridColor);
+        paint.setAlpha(56);
         for (int i = 0; i <= TICK_COUNT; i++) {
             float y = graphTop + (graphBottom - graphTop) * i / TICK_COUNT;
             float x = graphLeft + (graphRight - graphLeft) * i / TICK_COUNT;
