@@ -4,25 +4,34 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import org.bitcoinj.base.BitcoinNetwork;
+import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.Message;
+import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.RiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
+
+import wallet.network.NetworkConfig;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Observes transactions announced by the wallet's existing PeerGroup. */
+/** Observes transaction messages received by the wallet's existing PeerGroup. */
 public final class MempoolMonitor {
     private static final String PREFERENCES = "mempool_monitor_preferences";
     private static final String KEY_ENABLED = "enabled";
@@ -33,6 +42,8 @@ public final class MempoolMonitor {
     private static final LinkedHashMap<String, Entry> RECENT = new LinkedHashMap<>();
     private static final LinkedHashSet<String> SEEN_IDS = new LinkedHashSet<>();
     private static final CopyOnWriteArrayList<Observer> OBSERVERS = new CopyOnWriteArrayList<>();
+    private static final Set<Peer> FILTERED_BLOCK_PEERS =
+            Collections.newSetFromMap(new WeakHashMap<>());
     private static final ExecutorService EVENT_EXECUTOR = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "wallet-mempool-monitor");
         thread.setDaemon(true);
@@ -43,7 +54,7 @@ public final class MempoolMonitor {
     private static BitcoinNetwork network;
     private static org.bitcoinj.core.Context bitcoinContext;
     private static Wallet activeWallet;
-    private static OnTransactionBroadcastListener transactionListener;
+    private static PreMessageReceivedEventListener messageListener;
     private static PeerConnectedEventListener connectedListener;
     private static PeerDisconnectedEventListener disconnectedListener;
     private static boolean enabled = true;
@@ -161,7 +172,7 @@ public final class MempoolMonitor {
                 enabled = requestedEnabled;
                 bitcoinContext = newBitcoinContext;
                 activeWallet = newWallet;
-                updateTransactionListenerLocked();
+                updateMessageListenerLocked();
                 notify = true;
             } else {
                 boolean networkChanged = network != null && network != newNetwork;
@@ -188,7 +199,7 @@ public final class MempoolMonitor {
                 };
                 peerGroup.addConnectedEventListener(EVENT_EXECUTOR, connectedListener);
                 peerGroup.addDisconnectedEventListener(EVENT_EXECUTOR, disconnectedListener);
-                updateTransactionListenerLocked();
+                updateMessageListenerLocked();
                 notify = true;
             }
         }
@@ -200,20 +211,20 @@ public final class MempoolMonitor {
     public static void setEnabled(Context context, boolean value) {
         preferences(context).edit().putBoolean(KEY_ENABLED, value).apply();
         synchronized (LOCK) {
-            if (enabled != value || (value && peerGroup != null && transactionListener == null)
-                    || (!value && transactionListener != null)) {
+            if (enabled != value || (value && peerGroup != null && messageListener == null)
+                    || (!value && messageListener != null)) {
                 enabled = value;
-                updateTransactionListenerLocked();
+                updateMessageListenerLocked();
             }
         }
         notifyObservers();
     }
 
-    private static void updateTransactionListenerLocked() {
+    private static void updateMessageListenerLocked() {
         listenerGeneration++;
-        if (peerGroup != null && transactionListener != null) {
-            peerGroup.removeOnTransactionBroadcastListener(transactionListener);
-            transactionListener = null;
+        if (peerGroup != null && messageListener != null) {
+            peerGroup.removePreMessageReceivedEventListener(messageListener);
+            messageListener = null;
         }
         if (!enabled || peerGroup == null || bitcoinContext == null) {
             return;
@@ -222,11 +233,40 @@ public final class MempoolMonitor {
         final long expectedGroupGeneration = groupGeneration;
         final long expectedListenerGeneration = listenerGeneration;
         final org.bitcoinj.core.Context callbackContext = bitcoinContext;
-        transactionListener = (peer, transaction) -> {
-            org.bitcoinj.core.Context.propagate(callbackContext);
-            recordTransaction(expectedGroupGeneration, expectedListenerGeneration, transaction);
+        final BitcoinNetwork callbackNetwork = network;
+        messageListener = (peer, message) -> {
+            boolean filteredBlockTransaction = false;
+            synchronized (LOCK) {
+                if (message instanceof FilteredBlock) {
+                    FILTERED_BLOCK_PEERS.add(peer);
+                } else if (FILTERED_BLOCK_PEERS.contains(peer)) {
+                    if (message instanceof Transaction) {
+                        filteredBlockTransaction = true;
+                    } else {
+                        FILTERED_BLOCK_PEERS.remove(peer);
+                    }
+                }
+            }
+
+            if (message instanceof Transaction && !filteredBlockTransaction) {
+                final Transaction transaction = (Transaction) message;
+                try {
+                    EVENT_EXECUTOR.execute(() -> {
+                        org.bitcoinj.core.Context.propagate(callbackContext);
+                        recordTransaction(expectedGroupGeneration, expectedListenerGeneration,
+                                callbackNetwork, transaction);
+                    });
+                } catch (RuntimeException ignored) {
+                    // Monitoring must never interrupt bitcoinj's peer message processing.
+                }
+            }
+            return message;
         };
-        peerGroup.addOnTransactionBroadcastListener(EVENT_EXECUTOR, transactionListener);
+        // Peer.processTransaction can return before its broadcast listeners are notified
+        // when a tx satisfies a getdata future or belongs to a filtered block. Observe
+        // raw P2P tx messages first, while excluding tx messages inside FilteredBlock.
+        // Queue analysis and return every message unchanged. bitcoinj requires SAME_THREAD.
+        peerGroup.addPreMessageReceivedEventListener(Threading.SAME_THREAD, messageListener);
     }
 
     private static boolean isCurrentGroup(long expectedGeneration) {
@@ -237,6 +277,7 @@ public final class MempoolMonitor {
 
     private static void recordTransaction(long expectedGroupGeneration,
                                           long expectedListenerGeneration,
+                                          BitcoinNetwork expectedNetwork,
                                           Transaction transaction) {
         if (transaction == null) {
             return;
@@ -274,6 +315,7 @@ public final class MempoolMonitor {
 
         RiskStatus riskStatus;
         try {
+            Transaction.verify(NetworkConfig.parameters(expectedNetwork).network(), transaction);
             RiskAnalysis.Result result = DefaultRiskAnalysis.FACTORY
                     .create(currentWallet, transaction, Collections.emptyList()).analyze();
             if (result == RiskAnalysis.Result.NON_FINAL) {
@@ -283,7 +325,7 @@ public final class MempoolMonitor {
             } else {
                 riskStatus = RiskStatus.OK;
             }
-        } catch (RuntimeException failure) {
+        } catch (VerificationException | RuntimeException failure) {
             riskStatus = RiskStatus.ERROR;
         }
 
@@ -348,7 +390,7 @@ public final class MempoolMonitor {
             }
             ArrayList<Entry> entries = new ArrayList<>(RECENT.values());
             Collections.reverse(entries);
-            return new Snapshot(savedEnabled, transactionListener != null, network,
+            return new Snapshot(savedEnabled, messageListener != null, network,
                     peerCount, totalTransactions, totalBroadcastEvents, duplicateEvents,
                     walletRelatedCount, okCount, nonFinalCount, nonStandardCount, errorCount,
                     Collections.unmodifiableList(entries));
@@ -385,8 +427,8 @@ public final class MempoolMonitor {
 
     private static void detachLocked() {
         if (peerGroup != null) {
-            if (transactionListener != null) {
-                peerGroup.removeOnTransactionBroadcastListener(transactionListener);
+            if (messageListener != null) {
+                peerGroup.removePreMessageReceivedEventListener(messageListener);
             }
             if (connectedListener != null) {
                 peerGroup.removeConnectedEventListener(connectedListener);
@@ -395,7 +437,8 @@ public final class MempoolMonitor {
                 peerGroup.removeDisconnectedEventListener(disconnectedListener);
             }
         }
-        transactionListener = null;
+        messageListener = null;
+        FILTERED_BLOCK_PEERS.clear();
         connectedListener = null;
         disconnectedListener = null;
         peerGroup = null;
