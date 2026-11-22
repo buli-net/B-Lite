@@ -74,6 +74,7 @@ public class SyncActivity extends BaseActivity {
     private SyncLineChartView refreshChart;
     private Spinner chartTimeRange;
     private SyncChartHistoryStore chartHistoryStore;
+    private BitcoinNetwork chartHistoryNetwork;
     private int chartRangeIndex;
     private static final int[] CHART_RANGE_MINUTES = {1, 5, 15, 60, 360, 1440};
     private final int MAX_CHART_POINTS = 600;
@@ -94,7 +95,7 @@ public class SyncActivity extends BaseActivity {
         super.onCreate(state);
         setContentView(R.layout.activity_sync);
         bindViews();
-        chartHistoryStore = new SyncChartHistoryStore(this);
+        ensureChartHistoryStoreForCurrentNetwork();
         chartRangeIndex = getSharedPreferences("sync_chart_preferences", MODE_PRIVATE)
                 .getInt("time_range_index", 1);
         if (chartRangeIndex < 0 || chartRangeIndex >= CHART_RANGE_MINUTES.length) chartRangeIndex = 1;
@@ -283,6 +284,7 @@ public class SyncActivity extends BaseActivity {
     }
 
     private void renderCharts() {
+        ensureChartHistoryStoreForCurrentNetwork();
         reloadChartHistory(false);
         if (chartSamples.isEmpty()) { clearCharts(); return; }
         long now = System.currentTimeMillis();
@@ -410,7 +412,26 @@ public class SyncActivity extends BaseActivity {
         return result;
     }
 
+    private BitcoinNetwork getCurrentChartNetwork() {
+        MainActivityPresenter active = MainActivityPresenter.getActivePresenter();
+        return active != null ? active.getActiveNetwork() : NetworkConfig.get(this);
+    }
+
+    private void ensureChartHistoryStoreForCurrentNetwork() {
+        BitcoinNetwork selected = getCurrentChartNetwork();
+        if (chartHistoryStore != null && chartHistoryNetwork == selected) return;
+
+        SyncChartHistoryStore replacement = new SyncChartHistoryStore(
+                getApplicationContext(), selected);
+        if (chartHistoryStore != null) chartHistoryStore.close();
+        chartHistoryStore = replacement;
+        chartHistoryNetwork = selected;
+        chartSamples.clear();
+        lastChartReloadAt = 0L;
+    }
+
     private void reloadChartHistory(boolean force) {
+        ensureChartHistoryStoreForCurrentNetwork();
         long now = System.currentTimeMillis();
         if (!force && now - lastChartReloadAt < 1000L) return;
         chartSamples.clear();
@@ -526,7 +547,11 @@ public class SyncActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        if (chartHistoryStore != null) chartHistoryStore.close();
+        if (chartHistoryStore != null) {
+            chartHistoryStore.close();
+            chartHistoryStore = null;
+            chartHistoryNetwork = null;
+        }
         super.onDestroy();
     }
 
