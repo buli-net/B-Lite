@@ -6,18 +6,26 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import org.bitcoinj.base.BitcoinNetwork;
+
+import wallet.network.NetworkConfig;
+
 import java.util.ArrayList;
 import java.util.List;
 
-/** Persistent local history shared by the sync service and its UI. */
+/** Persistent local history for one selected network, shared by the sync service and its UI. */
 public final class SyncChartHistoryStore extends SQLiteOpenHelper {
     public static final long RETENTION_MILLIS = 24L * 60L * 60L * 1000L;
-    private static final String DATABASE_NAME = "sync_chart_history.db";
     private static final int DATABASE_VERSION = 1;
     private static final String TABLE = "samples";
 
-    public SyncChartHistoryStore(Context context) {
-        super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
+    public SyncChartHistoryStore(Context context, BitcoinNetwork network) {
+        super(context.getApplicationContext(), databaseName(network), null, DATABASE_VERSION);
+    }
+
+    private static String databaseName(BitcoinNetwork network) {
+        BitcoinNetwork selected = network == null ? BitcoinNetwork.MAINNET : network;
+        return "sync_chart_history_" + NetworkConfig.storageName(selected) + ".db";
     }
 
     @Override public void onCreate(SQLiteDatabase db) {
