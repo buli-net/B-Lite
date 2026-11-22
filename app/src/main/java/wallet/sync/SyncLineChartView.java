@@ -2,6 +2,7 @@ package wallet.sync;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
@@ -92,7 +93,16 @@ public final class SyncLineChartView extends View {
     private void refreshColors() {
         primaryColor = resolveThemeColor(android.R.attr.colorControlActivated,
                 resolveThemeColor(android.R.attr.colorAccent, 0xff168579));
-        secondarySeriesColor = resolveThemeColor(android.R.attr.colorAccent, primaryColor);
+        // Use a genuinely different system theme color for the second series.
+        // textColorPrimary contrasts with the accent on both light and dark themes.
+        secondarySeriesColor = resolveThemeColor(android.R.attr.textColorPrimary, primaryColor);
+        if (secondarySeriesColor == primaryColor) {
+            secondarySeriesColor = resolveThemeColor(android.R.attr.textColorSecondary,
+                    primaryColor ^ 0x00ffffff);
+        }
+        if (secondarySeriesColor == primaryColor) {
+            secondarySeriesColor = primaryColor ^ 0x00ffffff;
+        }
         labelColor = resolveThemeColor(android.R.attr.textColorSecondary, primaryColor);
         int gridBase = resolveThemeColor(android.R.attr.textColorSecondary, labelColor);
         gridColor = (gridBase & 0x00ffffff) | 0x38000000;
@@ -150,7 +160,10 @@ public final class SyncLineChartView extends View {
             String name = seriesNames[i] == null ? "" : seriesNames[i];
             paint.setColor(seriesColor(i));
             paint.setStrokeWidth(dp(2));
+            paint.setPathEffect(i == 1 ? new DashPathEffect(
+                    new float[]{dp(4), dp(2)}, 0) : null);
             canvas.drawLine(x, y - dp(3), x + dp(12), y - dp(3), paint);
+            paint.setPathEffect(null);
             x += dp(17);
             paint.setColor(labelColor);
             canvas.drawText(name, x, y, paint);
@@ -249,15 +262,23 @@ public final class SyncLineChartView extends View {
             paint.setStrokeWidth(dp(2));
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setPathEffect(s == 1 ? new DashPathEffect(
+                    new float[]{dp(6), dp(3)}, 0) : null);
             paint.setStyle(Paint.Style.STROKE);
             canvas.drawPath(path, paint);
+            paint.setPathEffect(null);
             paint.setStyle(Paint.Style.FILL);
             if (series.length > 0 && Float.isFinite(series[series.length - 1])) {
                 float x = graphLeft + (graphRight - graphLeft)
                         * (series.length - 1) / Math.max(1f, count - 1f);
                 float y = graphBottom - (series[series.length - 1] - axisMin)
                         / (axisMax - axisMin) * (graphBottom - graphTop);
-                canvas.drawCircle(x, y, dp(2.8f), paint);
+                if (s == 1) {
+                    float radius = dp(3.2f);
+                    canvas.drawRect(x - radius, y - radius, x + radius, y + radius, paint);
+                } else {
+                    canvas.drawCircle(x, y, dp(2.8f), paint);
+                }
             }
         }
     }
