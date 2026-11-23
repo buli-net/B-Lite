@@ -13,6 +13,7 @@ import androidx.appcompat.widget.Toolbar;
 import android.widget.Button;
 import android.widget.Toast;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
@@ -73,6 +74,15 @@ public class SyncActivity extends BaseActivity {
     private SyncLineChartView trafficChart;
     private SyncLineChartView refreshChart;
     private Spinner chartTimeRange;
+    private ScrollView syncScrollView;
+    private boolean chartScrollActive;
+    private boolean chartRefreshPending;
+    private long lastRenderedChartSampleTime = -1L;
+    private int lastRenderedChartRangeIndex = -1;
+    private BitcoinNetwork lastRenderedChartNetwork;
+    private boolean emptyChartsRendered;
+    private static final long CHART_REFRESH_INTERVAL_MILLIS = 1000L;
+    private static final long CHART_SCROLL_IDLE_DELAY_MILLIS = 350L;
     private SyncChartHistoryStore chartHistoryStore;
     private BitcoinNetwork chartHistoryNetwork;
     private int chartRangeIndex;
@@ -90,11 +100,36 @@ public class SyncActivity extends BaseActivity {
         }
     };
 
+    private final Runnable chartUpdater = new Runnable() {
+        @Override
+        public void run() {
+            requestChartRefresh();
+            handler.postDelayed(this, CHART_REFRESH_INTERVAL_MILLIS);
+        }
+    };
+
+    private final Runnable chartScrollIdleRunnable = new Runnable() {
+        @Override
+        public void run() {
+            chartScrollActive = false;
+            if (chartRefreshPending) {
+                chartRefreshPending = false;
+                lastChartReloadAt = 0L;
+                renderCharts();
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_sync);
         bindViews();
+        syncScrollView.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            chartScrollActive = true;
+            handler.removeCallbacks(chartScrollIdleRunnable);
+            handler.postDelayed(chartScrollIdleRunnable, CHART_SCROLL_IDLE_DELAY_MILLIS);
+        });
         ensureChartHistoryStoreForCurrentNetwork();
         chartRangeIndex = getSharedPreferences("sync_chart_preferences", MODE_PRIVATE)
                 .getInt("time_range_index", 1);
@@ -131,6 +166,7 @@ public class SyncActivity extends BaseActivity {
             }
         });
         handler.post(updater);
+        handler.postDelayed(chartUpdater, CHART_REFRESH_INTERVAL_MILLIS);
     }
 
     private void bindViews() {
@@ -177,10 +213,13 @@ public class SyncActivity extends BaseActivity {
         trafficChart = findViewById(R.id.syncChartTraffic);
         refreshChart = findViewById(R.id.syncChartRefresh);
         chartTimeRange = findViewById(R.id.syncChartTimeRange);
+        syncScrollView = findViewById(R.id.syncScrollView);
     }
 
     private void render() {
-        renderCharts();
+        if (chartHistoryNetwork != getCurrentChartNetwork()) {
+            requestChartRefresh();
+        }
         BitcoinNetwork activeNetwork = NetworkConfig.get(this);
         int networkLabel = activeNetwork == BitcoinNetwork.SIGNET
                 ? R.string.network_badge_signet
@@ -277,27 +316,56 @@ public class SyncActivity extends BaseActivity {
                 chartRangeIndex = position;
                 getSharedPreferences("sync_chart_preferences", MODE_PRIVATE).edit()
                         .putInt("time_range_index", position).apply();
-                renderCharts();
+                requestChartRefresh();
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
     }
 
+    private void requestChartRefresh() {
+        if (chartScrollActive) {
+            chartRefreshPending = true;
+            return;
+        }
+        renderCharts();
+    }
+
     private void renderCharts() {
         ensureChartHistoryStoreForCurrentNetwork();
         reloadChartHistory(false);
-        if (chartSamples.isEmpty()) { clearCharts(); return; }
+        if (chartSamples.isEmpty()) {
+            if (!emptyChartsRendered || lastRenderedChartNetwork != chartHistoryNetwork
+                    || lastRenderedChartRangeIndex != chartRangeIndex) {
+                clearCharts();
+            }
+            emptyChartsRendered = true;
+            lastRenderedChartSampleTime = -1L;
+            lastRenderedChartRangeIndex = chartRangeIndex;
+            lastRenderedChartNetwork = chartHistoryNetwork;
+            return;
+        }
+
+        long latestSampleTime = chartSamples.get(chartSamples.size() - 1).timestampMillis;
+        if (!emptyChartsRendered && latestSampleTime == lastRenderedChartSampleTime
+                && lastRenderedChartRangeIndex == chartRangeIndex
+                && lastRenderedChartNetwork == chartHistoryNetwork) {
+            return;
+        }
+
         long now = System.currentTimeMillis();
         long rangeMillis = CHART_RANGE_MINUTES[chartRangeIndex] * 60_000L;
         long cutoff = now - rangeMillis;
-        List<SyncChartHistoryStore.Sample> visible = new ArrayList<>();
-        for (SyncChartHistoryStore.Sample sample : chartSamples) {
-            if (sample.timestampMillis >= cutoff) visible.add(sample);
-        }
-        if (visible.isEmpty()) {
-            clearCharts();
+        int firstVisible = firstSampleAtOrAfter(cutoff);
+        if (firstVisible >= chartSamples.size()) {
+            if (!emptyChartsRendered) clearCharts();
+            emptyChartsRendered = true;
+            lastRenderedChartSampleTime = latestSampleTime;
+            lastRenderedChartRangeIndex = chartRangeIndex;
+            lastRenderedChartNetwork = chartHistoryNetwork;
             return;
         }
+        List<SyncChartHistoryStore.Sample> visible = chartSamples.subList(
+                firstVisible, chartSamples.size());
         List<SyncChartHistoryStore.Sample> samples = downsample(visible, MAX_CHART_POINTS);
         long[] sampleTimes = new long[samples.size()];
         for (int i = 0; i < samples.size(); i++) sampleTimes[i] = samples.get(i).timestampMillis;
@@ -332,8 +400,26 @@ public class SyncActivity extends BaseActivity {
         refreshChart.setChartData(getString(R.string.sync_chart_refresh_title),
                 new String[]{getString(R.string.sync_chart_total), getString(R.string.sync_chart_processing)},
                 new float[][]{values(samples, 11), values(samples, 12)}, getString(R.string.sync_chart_unit_ms), sampleTimes, cutoff, now);
+        lastRenderedChartSampleTime = latestSampleTime;
+        lastRenderedChartRangeIndex = chartRangeIndex;
+        lastRenderedChartNetwork = chartHistoryNetwork;
+        emptyChartsRendered = false;
     }
 
+
+    private int firstSampleAtOrAfter(long timestampMillis) {
+        int low = 0;
+        int high = chartSamples.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (chartSamples.get(middle).timestampMillis < timestampMillis) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        return low;
+    }
 
     private boolean hasFiniteValue(List<SyncChartHistoryStore.Sample> samples, int metric) {
         for (SyncChartHistoryStore.Sample sample : samples) {
@@ -428,14 +514,30 @@ public class SyncActivity extends BaseActivity {
         chartHistoryNetwork = selected;
         chartSamples.clear();
         lastChartReloadAt = 0L;
+        lastRenderedChartSampleTime = -1L;
+        lastRenderedChartRangeIndex = -1;
+        lastRenderedChartNetwork = null;
+        emptyChartsRendered = false;
     }
 
     private void reloadChartHistory(boolean force) {
         ensureChartHistoryStoreForCurrentNetwork();
         long now = System.currentTimeMillis();
-        if (!force && now - lastChartReloadAt < 1000L) return;
-        chartSamples.clear();
-        chartSamples.addAll(chartHistoryStore.loadSince(now - 24L * 60L * 60L * 1000L));
+        if (!force && now - lastChartReloadAt < CHART_REFRESH_INTERVAL_MILLIS) return;
+
+        long retentionCutoff = now - 24L * 60L * 60L * 1000L;
+        if (force || chartSamples.isEmpty()) {
+            chartSamples.clear();
+            chartSamples.addAll(chartHistoryStore.loadSince(retentionCutoff));
+        } else {
+            long lastTimestamp = chartSamples.get(chartSamples.size() - 1).timestampMillis;
+            if (lastTimestamp < now) {
+                chartSamples.addAll(chartHistoryStore.loadSince(
+                        Math.max(retentionCutoff, lastTimestamp + 1L)));
+            }
+            int firstRetained = firstSampleAtOrAfter(retentionCutoff);
+            if (firstRetained > 0) chartSamples.subList(0, firstRetained).clear();
+        }
         lastChartReloadAt = now;
     }
 
@@ -537,16 +639,25 @@ public class SyncActivity extends BaseActivity {
         super.onResume();
         handler.removeCallbacks(updater);
         handler.post(updater);
+        handler.removeCallbacks(chartUpdater);
+        handler.post(chartUpdater);
     }
 
     @Override
     protected void onPause() {
         handler.removeCallbacks(updater);
+        handler.removeCallbacks(chartUpdater);
+        handler.removeCallbacks(chartScrollIdleRunnable);
+        chartScrollActive = false;
+        chartRefreshPending = false;
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacks(updater);
+        handler.removeCallbacks(chartUpdater);
+        handler.removeCallbacks(chartScrollIdleRunnable);
         if (chartHistoryStore != null) {
             chartHistoryStore.close();
             chartHistoryStore = null;
