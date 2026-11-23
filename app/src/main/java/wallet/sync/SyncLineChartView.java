@@ -61,7 +61,6 @@ public final class SyncLineChartView extends View {
     public SyncLineChartView(Context context, AttributeSet attrs) {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);
         setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         setFocusable(true);
         setClickable(true);
