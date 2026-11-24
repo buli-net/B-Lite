@@ -1,0 +1,43 @@
+
+name: Generate Gradle Wrapper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  wrapper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.9.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.9.2'
+
+      - name: Generate wrapper
+        run: |
+          gradle wrapper --gradle-version 9.9.2
+          gradle wrapper
+
+      - name: Verify wrapper
+        run: |
+          java -jar gradle/wrapper/gradle-wrapper.jar --version
+
+      - name: Upload wrapper files
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-wrapper-9.9.2
+          path: |
+            gradle/wrapper/gradle-wrapper.jar
+            gradle/wrapper/gradle-wrapper.properties
+            gradlew
+            gradlew.bat
