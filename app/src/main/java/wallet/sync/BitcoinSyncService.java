@@ -12,7 +12,8 @@ import android.net.Network;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Handler;
-import android.os.Looper;
+import android.os.HandlerThread;
+import android.content.pm.ServiceInfo;
 import android.net.TrafficStats;
 import android.os.Process;
 import android.os.PowerManager;
@@ -76,7 +77,8 @@ public class BitcoinSyncService extends Service {
 
     // Chart collection belongs to the long-lived sync service, not SyncActivity.
     // It therefore continues while the user views another screen or the app is backgrounded.
-    private final Handler chartHandler = new Handler(Looper.getMainLooper());
+    private HandlerThread chartThread;
+    private Handler chartHandler;
     private SyncChartHistoryStore chartHistoryStore;
     private BitcoinNetwork chartHistoryNetwork;
     private long previousChartRxBytes = -1L;
@@ -86,7 +88,10 @@ public class BitcoinSyncService extends Service {
     private final Runnable chartSampler = new Runnable() {
         @Override public void run() {
             sampleSyncChartHistory();
-            chartHandler.postDelayed(this, CHART_SAMPLE_INTERVAL_MILLIS);
+            Handler handler = chartHandler;
+            if (handler != null) {
+                handler.postDelayed(this, CHART_SAMPLE_INTERVAL_MILLIS);
+            }
         }
     };
 
@@ -188,7 +193,8 @@ public class BitcoinSyncService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannels();
-        startForeground(NOTIFICATION_ID, buildSyncNotification(this, 0, 0, 0, true));
+        startSyncForeground();
+        startChartWorker();
         acquireSyncWakeLock();
         registerNetworkCallback();
         ensureWalletPresenter();
@@ -199,14 +205,32 @@ public class BitcoinSyncService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Keep the service foreground whenever Android recreates it. The service
         // owns WalletAppKit; Activities are only UI clients.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForeground(NOTIFICATION_ID, buildSyncNotification(this, 0, 0, 0, true));
-        }
+        startSyncForeground();
+        startChartWorker();
         acquireSyncWakeLock();
         registerNetworkCallback();
         ensureWalletPresenter();
         startChartSampling();
         return START_STICKY;
+    }
+
+    private void startSyncForeground() {
+        Notification notification = buildSyncNotification(this, 0, 0, 0, true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+    }
+
+    private void startChartWorker() {
+        if (chartThread != null && chartThread.isAlive()) {
+            return;
+        }
+        chartThread = new HandlerThread("sync-chart-history");
+        chartThread.start();
+        chartHandler = new Handler(chartThread.getLooper());
     }
 
     /**
@@ -311,12 +335,12 @@ public class BitcoinSyncService extends Service {
     }
 
     private void startChartSampling() {
-        MainActivityPresenter active = MainActivityPresenter.getActivePresenter();
-        BitcoinNetwork network = active != null
-                ? active.getActiveNetwork() : NetworkConfig.get(this);
-        ensureChartHistoryStore(network);
-        chartHandler.removeCallbacks(chartSampler);
-        chartHandler.post(chartSampler);
+        Handler handler = chartHandler;
+        if (handler == null) {
+            return;
+        }
+        handler.removeCallbacks(chartSampler);
+        handler.post(chartSampler);
     }
 
     private void ensureChartHistoryStore(BitcoinNetwork network) {
@@ -845,6 +869,13 @@ public class BitcoinSyncService extends Service {
     }
 
     @Override
+    public void onTimeout(int startId, int foregroundServiceType) {
+        // Defensive handling if Android ever applies a time-limited FGS type
+        // to this service. specialUse itself has no six-hour dataSync quota.
+        stopSelf(startId);
+    }
+
+    @Override
     public void onTaskRemoved(Intent rootIntent) {
         // Do not stop the service when the wallet task is removed from Recents.
         // START_STICKY keeps the sync engine alive/restartable independently of the UI task.
@@ -853,11 +884,24 @@ public class BitcoinSyncService extends Service {
 
     @Override
     public void onDestroy() {
-        chartHandler.removeCallbacks(chartSampler);
-        if (chartHistoryStore != null) {
-            chartHistoryStore.close();
-            chartHistoryStore = null;
-            chartHistoryNetwork = null;
+        Handler handler = chartHandler;
+        HandlerThread thread = chartThread;
+        chartHandler = null;
+        chartThread = null;
+        if (handler != null) {
+            handler.removeCallbacks(chartSampler);
+            handler.post(() -> {
+                if (chartHistoryStore != null) {
+                    chartHistoryStore.close();
+                    chartHistoryStore = null;
+                    chartHistoryNetwork = null;
+                }
+                if (thread != null) {
+                    thread.quitSafely();
+                }
+            });
+        } else if (thread != null) {
+            thread.quitSafely();
         }
         unregisterNetworkCallback();
         releaseSyncWakeLock();
