@@ -15,7 +15,15 @@ public final class BitcoinSyncBootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
-            BitcoinSyncService.start(context);
+            try {
+                // specialUse is not among the FGS types prohibited from
+                // BOOT_COMPLETED on Android 15+. The system can still reject
+                // a background start for other policy or device-state reasons.
+                BitcoinSyncService.start(context);
+            } catch (IllegalStateException | SecurityException ignored) {
+                // Never let a denied background start crash the receiver.
+                // The next foreground app launch starts the sync service.
+            }
         }
     }
 }
