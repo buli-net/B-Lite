@@ -22,7 +22,7 @@ final class QrHistoryStore {
     private QrHistoryStore() { }
 
     static String add(Context context, String content, String format, String type, String source) {
-        return add(context, content, format, type, source, null, -1, -1, -1, -1);
+        return add(context, content, format, type, source, null, -1, -1, -1);
     }
 
     static String add(Context context, String content, String format, String type, String source,
