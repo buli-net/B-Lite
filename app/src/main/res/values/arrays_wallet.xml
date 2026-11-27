@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="request_address_type_options">
+        <item>@string/request_address_type_legacy</item>
+        <item>@string/request_address_type_native_segwit</item>
+        <item>@string/request_address_type_nested_segwit</item>
+    </string-array>
+
+    <string-array name="wallet_import_wif_actions">
+        <item>@string/imported_wallet_show_address_qr</item>
+        <item>@string/imported_wallet_show_wif_qr</item>
+        <item>@string/imported_wallet_rename</item>
+        <item>@string/imported_wallet_remove</item>
+    </string-array>
+
+</resources>
