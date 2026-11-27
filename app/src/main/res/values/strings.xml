@@ -2246,7 +2246,7 @@ Final balance: %9$s</string>
     <string name="watch_xpub_script_p2wpkh">Native SegWit (P2WPKH)</string>
     <string name="watch_xpub_script_p2tr">Taproot (P2TR, watch-only)</string>
     <string name="watch_xpub_title">HD account public key</string>
-    <string name="watch_xpub_description">Import an account-level extended public key (xpub, ypub or zpub). B-Lite derives a bounded range of receive and change addresses. For standard xpub/tpub keys, choose the script type that matches the account derivation path; ypub/upub and zpub/vpub prefixes are checked against their script type. Re-import with a larger range to extend it; this is not automatic HD gap discovery. The key is public, but it can reveal your account's transaction history.</string>
+    <string name="watch_xpub_description">Import an account-level extended public key (xpub, ypub or zpub). B-Lite derives a bounded range of receive and change addresses. For standard xpub/tpub keys, choose the script type that matches the account derivation path; ypub/upub and zpub/vpub prefixes are checked against their script type. Re-import with a larger range to extend it; this is not automatic HD gap discovery. The key is public, but it can reveal transaction history associated with your account.</string>
     <string name="watch_xpub_hint">Account extended public key (xpub / ypub / zpub)</string>
     <string name="watch_xpub_range_hint">Addresses per branch (default 100; maximum 1000)</string>
     <string name="watch_xpub_import">IMPORT ACCOUNT PUBLIC KEY</string>
