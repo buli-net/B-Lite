@@ -3,6 +3,7 @@ package wallet.watchonly;
 import org.bitcoinj.base.Address;
 import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.ScriptType;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDPath;
@@ -63,6 +64,7 @@ public class AccountXpubRoundTripTest {
     @Test
     public void importerRejectsSlip132PrefixWhenSelectedAddressTypeDoesNotMatch() {
         NetworkParameters params = MainNetParams.get();
+        Context.propagate(Context.getOrCreate(params));
         DeterministicKeyChain chain = newChain(84, BitcoinNetwork.MAINNET);
         Wallet wallet = newWallet(params, chain);
         String zpub = AccountXpubExporter.export(wallet).getEncodedKey();
@@ -74,6 +76,10 @@ public class AccountXpubRoundTripTest {
 
     private static void assertRoundTrip(NetworkParameters params, BitcoinNetwork network,
                                         int purpose, String addressType, String expectedPrefix) {
+        // bitcoinj 0.17.1 requires a network Context on the current thread before
+        // constructing deterministic key chains or wallets. Mainnet and Signet
+        // tests must install the matching context independently.
+        Context.propagate(Context.getOrCreate(params));
         DeterministicKeyChain sourceChain = newChain(purpose, network);
         Wallet sourceWallet = newWallet(params, sourceChain);
 
