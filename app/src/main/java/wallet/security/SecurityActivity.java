@@ -224,7 +224,7 @@ public class SecurityActivity extends BaseActivity {
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.key_rotation_clear, (dialog, which) -> {
                     try {
-                        wallet.setKeyRotationTime(null);
+                        wallet.setKeyRotationTime((Instant) null);
                         MainActivityPresenter presenter = MainActivityPresenter.getActivePresenter();
                         if (presenter != null) presenter.saveWalletNow();
                         refreshStatus();
