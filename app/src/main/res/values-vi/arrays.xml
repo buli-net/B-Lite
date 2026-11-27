@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string-array name="watch_xpub_script_types">
-        <item>@string/watch_xpub_script_p2pkh</item>
-        <item>@string/watch_xpub_script_p2sh_p2wpkh</item>
-        <item>@string/watch_xpub_script_p2wpkh</item>
-        <item>@string/watch_xpub_script_p2tr</item>
-    </string-array>
-</resources>
