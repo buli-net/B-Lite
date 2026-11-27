@@ -131,7 +131,7 @@ public class AccountXpubRoundTripTest {
 
     private static DeterministicKeyChain newChain(int purpose, BitcoinNetwork network) {
         String coinType = network == BitcoinNetwork.MAINNET ? "0H" : "1H";
-        HDPath accountPath = HDPath.parsePath(purpose + "H / " + coinType + " / 0H");
+        HDPath accountPath = HDPath.parsePath("M/" + purpose + "H/" + coinType + "/0H");
         byte[] entropy = new byte[16];
         for (int i = 0; i < entropy.length; i++) entropy[i] = (byte) (i + 1);
         return DeterministicKeyChain.builder()
