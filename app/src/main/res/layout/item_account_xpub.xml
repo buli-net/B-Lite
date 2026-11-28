@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="6dp"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/bg_text_input_area">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/accountXpubItemLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textIsSelectable="true" />
+
+            <TextView
+                android:id="@+id/accountXpubItemKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textSize="11sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/accountXpubDeleteButton"
+            style="@style/WalletSecondaryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:text="@string/account_xpub_delete" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/accountXpubAddressesButton"
+        style="@style/WalletSecondaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/account_xpub_show_addresses" />
+
+    <LinearLayout
+        android:id="@+id/accountXpubAddressesContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:visibility="gone" />
+</LinearLayout>
