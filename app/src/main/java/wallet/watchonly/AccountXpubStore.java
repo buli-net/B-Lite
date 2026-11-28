@@ -33,6 +33,9 @@ import wallet.network.NetworkConfig;
 /** Persists account-level public keys and registers their receive/change scripts as watched. */
 public final class AccountXpubStore {
     private static final String PREFS = "account_xpub_watch";
+    // The legacy repair must run once only. Reclassifying both namespaces on every
+    // read/import/delete can move records while the user switches active networks.
+    private static final String PREF_NETWORK_MIGRATION_V1 = "account_keys_network_migration_v1_done";
     private static final int GAP_LIMIT = 100;
     private static final int MAX_LOOKAHEAD = 10_000;
 
@@ -249,6 +252,7 @@ public final class AccountXpubStore {
         }
         org.json.JSONObject record = new org.json.JSONObject();
         record.put("key", canonical);
+        record.put("network", network.name());
         record.put("type", format.walletType);
         record.put("birthday", Math.max(0L, creationTimeSeconds));
         records.put(record);
@@ -800,15 +804,17 @@ public final class AccountXpubStore {
     }
 
     /**
-     * Repairs account-key records that older builds may have stored under the wrong
-     * preference namespace while the global network selector and active Wallet differed.
-     * The extended-key version family is the only available network marker: xpub/ypub/zpub
-     * belongs to Mainnet; tpub/upub/vpub belongs to the Signet family in this app.
+     * One-time repair for records written by older builds under the wrong preference
+     * namespace. Never reclassify the two live lists during normal reads or imports:
+     * after this migration, each network namespace is authoritative and independent.
+     * The key version family is used only for this initial repair.
      */
     private static synchronized void migrateMisfiledAccountRecords(Context context) {
         if (context == null) return;
         SharedPreferences preferences = context.getApplicationContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (preferences.getBoolean(PREF_NETWORK_MIGRATION_V1, false)) return;
+
         String mainKey = preferencesKey(BitcoinNetwork.MAINNET);
         String signetKey = preferencesKey(BitcoinNetwork.SIGNET);
         String mainStored = preferences.getString(mainKey, "[]");
@@ -822,15 +828,18 @@ public final class AccountXpubStore {
             appendMigratedRecords(mainRecords, BitcoinNetwork.MAINNET, mainFixed, signetFixed);
             appendMigratedRecords(signetRecords, BitcoinNetwork.SIGNET, mainFixed, signetFixed);
 
-            String fixedMain = mainFixed.toString();
-            String fixedSignet = signetFixed.toString();
-            if (!fixedMain.equals(mainStored) || !fixedSignet.equals(signetStored)) {
-                if (!preferences.edit().putString(mainKey, fixedMain)
-                        .putString(signetKey, fixedSignet).commit()) {
-                    throw new IllegalStateException("Unable to separate Mainnet and Signet account-key records");
-                }
+            // Commit both repaired namespaces and the completion marker atomically.
+            // Once marked, subsequent operations never rewrite the other network's list.
+            boolean committed = preferences.edit()
+                    .putString(mainKey, mainFixed.toString())
+                    .putString(signetKey, signetFixed.toString())
+                    .putBoolean(PREF_NETWORK_MIGRATION_V1, true)
+                    .commit();
+            if (!committed) {
+                throw new IllegalStateException("Unable to separate Mainnet and Signet account-key records");
             }
         } catch (org.json.JSONException invalidStore) {
+            // Do not set the marker: a later launch can retry after the stored data is repaired.
             throw new IllegalStateException("The saved account-key list is invalid", invalidStore);
         }
     }
