@@ -155,12 +155,7 @@ public final class AccountXpubStore {
         BitcoinNetwork network = NetworkConfig.get(context);
         String canonical = encoded.replaceAll("[\\s\\p{Z}\\uFEFF\\u200B]+", "");
         Format format = detectFormat(canonical);
-        String normalized = normalizeToStandardXpub(canonical, network);
-        DeterministicKey accountKey = DeterministicKey.deserializeB58(
-                normalized, keySerializationNetwork(network));
-        if (accountKey.getDepth() != 3 || accountKey.hasPrivKey()) {
-            throw new IllegalArgumentException("An account-level extended public key is required");
-        }
+        DeterministicKey accountKey = deserializeAccountKey(canonical, network, format);
         SharedPreferences preferences = context.getApplicationContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String key = preferencesKey(network);
@@ -214,10 +209,12 @@ public final class AccountXpubStore {
                     record.optString("type", WalletAddressType.P2WPKH));
             Format format = formatForWalletType(walletType);
             if (encoded.isEmpty() || format == null) continue;
-            String normalized = normalizeToStandardXpub(encoded, network);
-            DeterministicKey account = DeterministicKey.deserializeB58(
-                    normalized, keySerializationNetwork(network));
-            if (account.getDepth() != 3 || account.hasPrivKey()) continue;
+            DeterministicKey account;
+            try {
+                account = deserializeAccountKey(encoded, network, format);
+            } catch (IllegalArgumentException invalidKey) {
+                continue;
+            }
 
             for (int branch = 0; branch <= 1; branch++) {
                 DeterministicKey branchKey = HDKeyDerivation.deriveChildKey(
@@ -283,6 +280,64 @@ public final class AccountXpubStore {
             }
         }
         return highest;
+    }
+
+    /**
+     * Decodes an account-level public key.
+     *
+     * Standard BIP32 account keys have depth 3. Some exporters deliberately clear
+     * the depth byte to hide the derivation path while retaining the account node's
+     * parent fingerprint and hardened child number. Accept that detached form too,
+     * but do not mistake an ordinary master xpub (zero depth and zero parent
+     * fingerprint) for an account key.
+     */
+    private static DeterministicKey deserializeAccountKey(String encoded,
+                                                           BitcoinNetwork network,
+                                                           Format expectedFormat) {
+        byte[] payload = Base58.decodeChecked(encoded);
+        if (payload == null || payload.length != 78) {
+            throw new IllegalArgumentException("Invalid extended public key");
+        }
+
+        Format actualFormat = detectFormat(encoded);
+        if (expectedFormat != null
+                && !expectedFormat.walletType.equals(actualFormat.walletType)) {
+            throw new IllegalArgumentException("The extended public-key format does not match the saved account type");
+        }
+
+        int depth = payload[4] & 0xff;
+        int parentFingerprint = ((payload[5] & 0xff) << 24)
+                | ((payload[6] & 0xff) << 16)
+                | ((payload[7] & 0xff) << 8)
+                | (payload[8] & 0xff);
+        int childNumber = ((payload[9] & 0xff) << 24)
+                | ((payload[10] & 0xff) << 16)
+                | ((payload[11] & 0xff) << 8)
+                | (payload[12] & 0xff);
+
+        boolean standardAccountDepth = depth == 3;
+        boolean detachedAccountDepth = depth == 0
+                && parentFingerprint != 0
+                && (childNumber & 0x80000000) != 0;
+        if (!standardAccountDepth && !detachedAccountDepth) {
+            throw new IllegalArgumentException(
+                    "An account-level extended public key is required (BIP32 depth must be 3, or a detached account key)");
+        }
+
+        // All supported xpub/ypub/zpub/tpub/upub/vpub version bytes identify
+        // public extended keys. Also verify the key-data marker before decoding.
+        int publicKeyMarker = payload[45] & 0xff;
+        if (publicKeyMarker != 0x02 && publicKeyMarker != 0x03) {
+            throw new IllegalArgumentException("A public extended key is required; private extended keys are not accepted");
+        }
+
+        String normalized = normalizeToStandardXpub(encoded, network);
+        DeterministicKey account = DeterministicKey.deserializeB58(
+                normalized, keySerializationNetwork(network));
+        if (!account.isWatching()) {
+            throw new IllegalArgumentException("A public extended key is required; private key material is not accepted");
+        }
+        return account;
     }
 
     private static Format detectFormat(String encoded) {
