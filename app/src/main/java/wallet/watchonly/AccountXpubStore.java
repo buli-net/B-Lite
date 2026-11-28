@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import org.bitcoinj.base.Base58;
 import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.ScriptType;
+import org.bitcoinj.base.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.AesKey;
@@ -142,7 +143,7 @@ public final class AccountXpubStore {
         byte[] publicPayload = Arrays.copyOfRange(payload, 4, payload.length);
         int version = network == BitcoinNetwork.MAINNET
                 ? format.mainnetVersion : format.testnetVersion;
-        return Base58.encodeChecked(version, publicPayload);
+        return encodeExtendedKey(version, publicPayload);
     }
 
     /** Imports a SLIP-132 account key and derives its addresses for the selected wallet network. */
@@ -310,7 +311,22 @@ public final class AccountXpubStore {
         }
         byte[] body = Arrays.copyOfRange(payload, 4, payload.length);
         int standardVersion = network == BitcoinNetwork.MAINNET ? 0x0488B21E : 0x043587CF;
-        return Base58.encodeChecked(standardVersion, body);
+        return encodeExtendedKey(standardVersion, body);
+    }
+
+    /** Encodes a BIP32 extended-key payload with its four-byte version prefix. */
+    private static String encodeExtendedKey(int version, byte[] keyPayload) {
+        byte[] payload = new byte[4 + keyPayload.length];
+        payload[0] = (byte) (version >>> 24);
+        payload[1] = (byte) (version >>> 16);
+        payload[2] = (byte) (version >>> 8);
+        payload[3] = (byte) version;
+        System.arraycopy(keyPayload, 0, payload, 4, keyPayload.length);
+
+        byte[] checksum = Sha256Hash.hashTwice(payload);
+        byte[] checked = Arrays.copyOf(payload, payload.length + 4);
+        System.arraycopy(checksum, 0, checked, payload.length, 4);
+        return Base58.encode(checked);
     }
 
     private static BitcoinNetwork keySerializationNetwork(BitcoinNetwork network) {
