@@ -369,10 +369,24 @@ public final class AccountXpubStore {
         return result;
     }
 
-    /** Returns imported account keys for the actual active wallet, not a global UI preference. */
+    /**
+     * Returns imported account keys for the active wallet network.
+     *
+     * During a network switch WalletAppKit is stopped before the replacement wallet is
+     * ready, so UI callers can temporarily have no Wallet instance. Returning an empty
+     * list in that interval made the saved account list look deleted. NetworkConfig is
+     * updated before the replacement kit starts; use it only while wallet is null, and
+     * prefer the Wallet's own network whenever one is available.
+     */
     public static List<AccountInfo> importedAccounts(Context context, Wallet wallet) {
-        if (context == null || wallet == null) return Collections.emptyList();
-        return importedAccountsForNetwork(context, networkForWallet(wallet));
+        if (context == null) return Collections.emptyList();
+        BitcoinNetwork network = wallet != null
+                ? networkForWallet(wallet)
+                : NetworkConfig.get(context.getApplicationContext());
+        if (network != BitcoinNetwork.MAINNET && network != BitcoinNetwork.SIGNET) {
+            return Collections.emptyList();
+        }
+        return importedAccountsForNetwork(context, network);
     }
 
     /** Backward-compatible accessor for callers that do not yet hold a wallet instance. */
