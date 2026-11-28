@@ -119,6 +119,10 @@ public final class WatchOnlyWalletActivity extends BaseActivity {
     private void show(int messageId) {
         Toast.makeText(this, messageId, Toast.LENGTH_LONG).show();
     }
+
+    private void show(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
